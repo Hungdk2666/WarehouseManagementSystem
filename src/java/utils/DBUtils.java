@@ -7,7 +7,7 @@ public class DBUtils {
     // Database connection details
     private static final String URL = "jdbc:mysql://localhost:3306/wms_db?useUnicode=true&characterEncoding=UTF-8";
     private static final String USER = "root";
-    private static final String PASSWORD = "Vietanh14032000@";
+    private static final String PASSWORD = "123456";
 
     public static Connection getConnection() throws Exception {
         // Load the MySQL JDBC Driver
