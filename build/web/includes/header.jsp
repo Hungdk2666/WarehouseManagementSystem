@@ -5,9 +5,6 @@
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="<%= request.getContextPath() %>/profile">Profile</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link text-danger" href="<%= request.getContextPath() %>/logout">Logout</a>
                 </li>
             </ul>
