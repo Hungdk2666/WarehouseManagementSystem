@@ -16,6 +16,5 @@
         <a href="<%= request.getContextPath() %>/admin/user?action=list" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= requestURI.contains("user") ? "active" : "" %>">
             User Management
         </a>
-        <% } %>
     </div>
 </div>
