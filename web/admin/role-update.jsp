@@ -27,7 +27,6 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 <div class="row justify-content-center">
-        <div class="row justify-content-center">
             <div class="col-md-5">
                 <div class="card shadow-sm">
                     <div class="card-header bg-warning">
@@ -54,7 +53,6 @@
                     </div>
                 </div>
             </div>
-        </div>
                 </div>
             </div>
         </div>
