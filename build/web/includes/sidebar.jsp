@@ -10,8 +10,6 @@
             <i class="bi bi-folder-fill me-2"></i>Categories
         </div>
         <a href="<%= request.getContextPath() %>/index.jsp" class="list-group-item list-group-item-action <%= requestURI.endsWith("index.jsp") || requestURI.endsWith("/") ? "active" : "" %>">Dashboard</a>
-        <a href="<%= request.getContextPath() %>/profile" class="list-group-item list-group-item-action <%= requestURI.contains("profile") ? "active" : "" %>">Profile</a>
-        <a href="<%= request.getContextPath() %>/change-password" class="list-group-item list-group-item-action <%= requestURI.contains("change-password") || requestURI.contains("change_password") ? "active" : "" %>">Change Password</a>
         <% if (loggedInUserSidebar != null && loggedInUserSidebar.getRoleId() == 1) { %>
         <a href="<%= request.getContextPath() %>/admin/user?action=list" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= requestURI.contains("user") ? "active" : "" %>">
             User Management
