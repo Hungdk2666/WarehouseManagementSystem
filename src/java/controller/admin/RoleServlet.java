@@ -38,7 +38,9 @@ public class RoleServlet extends HttpServlet {
         switch (action) {
             case "list":
                 List<Role> list = dao.getAllRoles();
+                List<Permission> permList = dao.getAllPermissions();
                 request.setAttribute("roleList", list);
+                request.setAttribute("permissionList", permList);
                 request.getRequestDispatcher("/admin/role-list.jsp").forward(request, response);
                 break;
             case "update":
@@ -105,7 +107,29 @@ public class RoleServlet extends HttpServlet {
                     int roleId = Integer.parseInt(request.getParameter("id"));
                     String[] selectedPerms = request.getParameterValues("permissions");
                     
+                    // Backend protection: do not allow assigning Business Admin permissions (4 and 5) to System Admin (1)
+                    if (roleId == 1 && selectedPerms != null) {
+                        java.util.List<String> filtered = new java.util.ArrayList<>();
+                        for (String pIdStr : selectedPerms) {
+                            int pId = Integer.parseInt(pIdStr);
+                            if (pId != 4 && pId != 5) {
+                                filtered.add(pIdStr);
+                            }
+                        }
+                        selectedPerms = filtered.toArray(new String[0]);
+                    }
+                    
                     dao.updateRolePermissions(roleId, selectedPerms);
+                    break;
+                case "addRole":
+                    String roleName = request.getParameter("role_name");
+                    boolean roleStatus = "true".equalsIgnoreCase(request.getParameter("status"));
+                    dao.addRole(roleName, roleStatus);
+                    break;
+                case "addPermission":
+                    String permName = request.getParameter("permission_name");
+                    String permDesc = request.getParameter("description");
+                    dao.addPermission(permName, permDesc);
                     break;
             }
         } catch (Exception e) {

@@ -151,4 +151,31 @@ public class RoleDAO {
         }
         return false;
     }
+
+    public boolean addRole(String roleName, boolean status) {
+        String query = "INSERT INTO Roles (role_name, status) VALUES (?, ?)";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, roleName);
+            ps.setBoolean(2, status);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean addPermission(String permissionName, String description) {
+        String query = "INSERT INTO Permissions (permission_name, description) VALUES (?, ?)";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, permissionName);
+            ps.setString(2, description);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
+
