@@ -50,7 +50,7 @@
                                                 } else {
                                                     for (Permission p : allPerms) {
                                                         boolean hasPerm = assignedPerms != null && assignedPerms.contains(p.getId());
-                                                        boolean isDisabled = roleInfo.getId() == 1 && (p.getId() == 4 || p.getId() == 5);
+                                                        boolean isDisabled = roleInfo.getId() == 1 || p.getId() == 1 || p.getId() == 2 || p.getId() == 3;
                                             %>
                                                 <label class="list-group-item d-flex gap-2 <%= isDisabled ? "bg-light text-muted" : "" %>">
                                                     <input class="form-check-input flex-shrink-0" type="checkbox" name="permissions" value="<%= p.getId() %>" 
