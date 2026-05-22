@@ -113,7 +113,11 @@ public class RoleServlet extends HttpServlet {
                         java.util.List<String> filtered = new java.util.ArrayList<>();
                         for (String pIdStr : selectedPerms) {
                             int pId = Integer.parseInt(pIdStr);
-                            if (roleId != 1 && pId != 1 && pId != 2 && pId != 3) {
+                            
+                            boolean isSystemAdmin = (roleId == 1);
+                            boolean isSystemAdminPerm = (pId == 1 || pId == 2 || pId == 3);
+                            
+                            if (isSystemAdmin == isSystemAdminPerm) {
                                 filtered.add(pIdStr);
                             }
                         }
