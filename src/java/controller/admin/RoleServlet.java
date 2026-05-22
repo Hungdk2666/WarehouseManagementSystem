@@ -22,10 +22,11 @@ public class RoleServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
         
-        // Authorization check (Admin only, role_id = 1)
-        if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
+        if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
+        } else if (loggedInUser.getRoleId() != 1){
+            response.sendRedirect(request.getContextPath());
         }
 
         String action = request.getParameter("action");
@@ -73,10 +74,11 @@ public class RoleServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
         
-        // Authorization check
-        if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
+        if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
+        } else if (loggedInUser.getRoleId() != 1){
+            response.sendRedirect(request.getContextPath());
         }
 
         String action = request.getParameter("action");
@@ -107,12 +109,15 @@ public class RoleServlet extends HttpServlet {
                     int roleId = Integer.parseInt(request.getParameter("id"));
                     String[] selectedPerms = request.getParameterValues("permissions");
                     
-                    // Backend protection: do not allow assigning Business Admin permissions (4 and 5) to System Admin (1)
-                    if (roleId == 1 && selectedPerms != null) {
+                    if (selectedPerms != null) {
                         java.util.List<String> filtered = new java.util.ArrayList<>();
                         for (String pIdStr : selectedPerms) {
                             int pId = Integer.parseInt(pIdStr);
-                            if (pId != 4 && pId != 5) {
+                            
+                            boolean isSystemAdmin = (roleId == 1);
+                            boolean isSystemAdminPerm = (pId == 1 || pId == 2 || pId == 3);
+                            
+                            if (isSystemAdmin == isSystemAdminPerm) {
                                 filtered.add(pIdStr);
                             }
                         }
