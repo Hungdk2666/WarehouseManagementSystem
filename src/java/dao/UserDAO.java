@@ -44,7 +44,7 @@ public class UserDAO {
     }
 
     public User getUserById(int id) {
-        String query = "SELECT * FROM Users WHERE id = ?";
+        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.id = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setInt(1, id);
@@ -75,12 +75,46 @@ public class UserDAO {
 
     public List<User> getAllUsers() {
         List<User> list = new ArrayList<>();
-        String query = "SELECT * FROM Users";
+        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 list.add(mapResultSetToUser(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public List<User> searchAndFilterUsers(String search, String roleFilter) {
+        List<User> list = new ArrayList<>();
+        StringBuilder query = new StringBuilder("SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (search != null && !search.trim().isEmpty()) {
+            query.append(" AND (u.username LIKE ? OR u.email LIKE ? OR u.full_name LIKE ?)");
+            String searchPattern = "%" + search.trim() + "%";
+            params.add(searchPattern);
+            params.add(searchPattern);
+            params.add(searchPattern);
+        }
+
+        if (roleFilter != null && !roleFilter.trim().isEmpty()) {
+            query.append(" AND r.role_name = ?");
+            params.add(roleFilter.trim());
+        }
+
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapResultSetToUser(rs));
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -163,7 +197,7 @@ public class UserDAO {
     }
 
     private User mapResultSetToUser(ResultSet rs) throws Exception {
-        return new User(
+        User u = new User(
             rs.getInt("id"),
             rs.getString("username"),
             rs.getString("password"),
@@ -173,5 +207,6 @@ public class UserDAO {
             rs.getInt("role_id"),
             rs.getString("reset_code")
         );
+        return u;
     }
 }
