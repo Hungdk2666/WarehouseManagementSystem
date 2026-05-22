@@ -2,7 +2,9 @@ package controller.admin;
 
 import dao.UserDAO;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -10,6 +12,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.User;
+import model.Role;
+import dao.RoleDAO;
 import utils.SecurityUtils;
 
 @WebServlet(name = "AdminUserServlet", urlPatterns = {"/admin/user"})
@@ -33,11 +37,26 @@ public class UserServlet extends HttpServlet {
         }
 
         UserDAO dao = new UserDAO();
+        RoleDAO roleDao = new RoleDAO();
 
         switch (action) {
             case "list":
-                List<User> list = dao.getAllUsers();
+                String search = request.getParameter("search");
+                String roleFilter = request.getParameter("roleFilter");
+                List<User> list;
+                if ((search != null && !search.trim().isEmpty()) || (roleFilter != null && !roleFilter.trim().isEmpty())) {
+                    list = dao.searchAndFilterUsers(search, roleFilter);
+                } else {
+                    list = dao.getAllUsers();
+                }
+                List<Role> roleList = roleDao.getAllRoles();
+                Map<Integer, String> roleMap = new HashMap<>();
+                for (Role r : roleList) {
+                    roleMap.put(r.getId(), r.getRoleName());
+                }
                 request.setAttribute("userList", list);
+                request.setAttribute("roleList", roleList);
+                request.setAttribute("roleMap", roleMap);
                 request.getRequestDispatcher("/admin/user-list.jsp").forward(request, response);
                 break;
             case "add":
