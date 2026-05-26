@@ -22,11 +22,10 @@ public class RoleServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
         
-        if (loggedInUser == null) {
+        // Authorization check (Admin only, role_id = 1)
+        if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
-        } else if (loggedInUser.getRoleId() != 1){
-            response.sendRedirect(request.getContextPath());
         }
 
         String action = request.getParameter("action");
@@ -39,9 +38,7 @@ public class RoleServlet extends HttpServlet {
         switch (action) {
             case "list":
                 List<Role> list = dao.getAllRoles();
-                List<Permission> permList = dao.getAllPermissions();
                 request.setAttribute("roleList", list);
-                request.setAttribute("permissionList", permList);
                 request.getRequestDispatcher("/admin/role-list.jsp").forward(request, response);
                 break;
             case "update":
@@ -74,11 +71,10 @@ public class RoleServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
         
-        if (loggedInUser == null) {
+        // Authorization check
+        if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
-        } else if (loggedInUser.getRoleId() != 1){
-            response.sendRedirect(request.getContextPath());
         }
 
         String action = request.getParameter("action");
@@ -109,11 +105,10 @@ public class RoleServlet extends HttpServlet {
                     int roleId = Integer.parseInt(request.getParameter("id"));
                     String[] selectedPerms = request.getParameterValues("permissions");
                     
-                    if (selectedPerms != null) {
+                    if (roleId == 1 && selectedPerms != null) {
                         java.util.List<String> filtered = new java.util.ArrayList<>();
                         for (String pIdStr : selectedPerms) {
                             int pId = Integer.parseInt(pIdStr);
-                            
                             boolean isSystemAdmin = (roleId == 1);
                             boolean isSystemAdminPerm = (pId == 1 || pId == 2 || pId == 3);
                             
@@ -130,11 +125,6 @@ public class RoleServlet extends HttpServlet {
                     String roleName = request.getParameter("role_name");
                     boolean roleStatus = "true".equalsIgnoreCase(request.getParameter("status"));
                     dao.addRole(roleName, roleStatus);
-                    break;
-                case "addPermission":
-                    String permName = request.getParameter("permission_name");
-                    String permDesc = request.getParameter("description");
-                    dao.addPermission(permName, permDesc);
                     break;
             }
         } catch (Exception e) {
