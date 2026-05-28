@@ -106,6 +106,19 @@ public class RoleServlet extends HttpServlet {
                 case "permissions":
                     int roleId = Integer.parseInt(request.getParameter("id"));
                     String[] selectedPerms = request.getParameterValues("permissions");
+                    if (roleId == 1 && selectedPerms != null) {
+                        java.util.List<String> filtered = new java.util.ArrayList<>();
+                        for (String pIdStr : selectedPerms) {
+                            int pId = Integer.parseInt(pIdStr);
+                            boolean isSystemAdmin = (roleId == 1);
+                            boolean isSystemAdminPerm = (pId == 1 || pId == 2 || pId == 3);
+                            
+                            if (isSystemAdmin == isSystemAdminPerm) {
+                                filtered.add(pIdStr);
+                            }
+                        }
+                        selectedPerms = filtered.toArray(new String[0]);
+                    }
                     
                     // Backend protection: do not allow assigning Business Admin permissions (4 and 5) to System Admin (1)
                     if (roleId == 1 && selectedPerms != null) {
@@ -125,11 +138,6 @@ public class RoleServlet extends HttpServlet {
                     String roleName = request.getParameter("role_name");
                     boolean roleStatus = "true".equalsIgnoreCase(request.getParameter("status"));
                     dao.addRole(roleName, roleStatus);
-                    break;
-                case "addPermission":
-                    String permName = request.getParameter("permission_name");
-                    String permDesc = request.getParameter("description");
-                    dao.addPermission(permName, permDesc);
                     break;
             }
         } catch (Exception e) {
