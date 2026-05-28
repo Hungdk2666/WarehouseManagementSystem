@@ -93,6 +93,38 @@ public class ProductServlet extends HttpServlet {
                 request.setAttribute("product", product);
                 request.getRequestDispatcher("/products/product-detail.jsp").forward(request, response);
                 break;
+
+            case "add":
+                if (!canAdd(loggedInUser)) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add products.");
+                    return;
+                }
+                List<Category> addCategories = catDao.getAllCategories();
+                List<Brand> addBrands = brandDao.getAllBrands();
+                request.setAttribute("categoryList", addCategories);
+                request.setAttribute("brandList", addBrands);
+                request.getRequestDispatcher("/products/product-add.jsp").forward(request, response);
+                break;
+
+            case "update":
+                if (!canUpdate(loggedInUser)) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to update products.");
+                    return;
+                }
+                int updateId = Integer.parseInt(request.getParameter("id"));
+                Product updateProd = dao.getProductById(updateId);
+                if (updateProd == null) {
+                    response.sendRedirect(request.getContextPath() + "/warehouse/product?action=list");
+                    return;
+                }
+                List<Category> updateCategories = catDao.getAllCategories();
+                List<Brand> updateBrands = brandDao.getAllBrands();
+                request.setAttribute("product", updateProd);
+                request.setAttribute("categoryList", updateCategories);
+                request.setAttribute("brandList", updateBrands);
+                request.getRequestDispatcher("/products/product-update.jsp").forward(request, response);
+                break;
+
             default:
                 response.sendRedirect(request.getContextPath() + "/warehouse/product?action=list");
                 break;
@@ -120,7 +152,84 @@ public class ProductServlet extends HttpServlet {
 
         try {
             switch (action) {
-                
+                case "add":
+                    if (!canAdd(loggedInUser)) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add products.");
+                        return;
+                    }
+                    String productName = request.getParameter("product_name");
+                    String sku = request.getParameter("sku");
+                    String unit = request.getParameter("unit");
+                    int minStock = Integer.parseInt(request.getParameter("min_stock"));
+                    double defaultCost = Double.parseDouble(request.getParameter("default_cost"));
+                    
+                    String catIdStr = request.getParameter("category_id");
+                    String brandIdStr = request.getParameter("brand_id");
+                    Integer categoryId = (catIdStr != null && !catIdStr.isEmpty()) ? Integer.parseInt(catIdStr) : null;
+                    Integer brandId = (brandIdStr != null && !brandIdStr.isEmpty()) ? Integer.parseInt(brandIdStr) : null;
+                    String specs = request.getParameter("technical_specifications");
+
+                    // Validation checks
+                    if (dao.isSkuExists(sku, 0)) {
+                        request.setAttribute("error", "SKU unique constraint violated! Product SKU already exists.");
+                        doGet(request, response); // re-populate and forward
+                        return;
+                    }
+
+                    Product newP = new Product();
+                    newP.setProductName(productName);
+                    newP.setSku(sku);
+                    newP.setUnit(unit);
+                    newP.setMinStock(minStock);
+                    newP.setDefaultCost(defaultCost);
+                    newP.setAverageCost(defaultCost); // average cost initially is equal to default cost
+                    newP.setStatus(true);
+                    newP.setCategoryId(categoryId);
+                    newP.setBrandId(brandId);
+                    newP.setTechnicalSpecifications(specs);
+
+                    dao.addProduct(newP);
+                    break;
+
+                case "update":
+                    if (!canUpdate(loggedInUser)) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to update products.");
+                        return;
+                    }
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    String updateName = request.getParameter("product_name");
+                    String updateSku = request.getParameter("sku");
+                    String updateUnit = request.getParameter("unit");
+                    int updateMinStock = Integer.parseInt(request.getParameter("min_stock"));
+                    double updateDefaultCost = Double.parseDouble(request.getParameter("default_cost"));
+                    
+                    String updateCatIdStr = request.getParameter("category_id");
+                    String updateBrandIdStr = request.getParameter("brand_id");
+                    Integer updateCategoryId = (updateCatIdStr != null && !updateCatIdStr.isEmpty()) ? Integer.parseInt(updateCatIdStr) : null;
+                    Integer updateBrandId = (updateBrandIdStr != null && !updateBrandIdStr.isEmpty()) ? Integer.parseInt(updateBrandIdStr) : null;
+                    String updateSpecs = request.getParameter("technical_specifications");
+
+                    // Validation checks
+                    if (dao.isSkuExists(updateSku, id)) {
+                        request.setAttribute("error", "SKU unique constraint violated! Product SKU already exists.");
+                        doGet(request, response); // re-populate and forward
+                        return;
+                    }
+
+                    Product updateP = new Product();
+                    updateP.setId(id);
+                    updateP.setProductName(updateName);
+                    updateP.setSku(updateSku);
+                    updateP.setUnit(updateUnit);
+                    updateP.setMinStock(updateMinStock);
+                    updateP.setDefaultCost(updateDefaultCost);
+                    updateP.setCategoryId(updateCategoryId);
+                    updateP.setBrandId(updateBrandId);
+                    updateP.setTechnicalSpecifications(updateSpecs);
+
+                    dao.updateProduct(updateP);
+                    break;
+
                 case "toggle":
                     if (!canToggle(loggedInUser)) {
                         response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to change product status.");
