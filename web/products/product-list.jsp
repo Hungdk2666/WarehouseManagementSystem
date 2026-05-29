@@ -6,16 +6,16 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || !loggedInUser.hasPermission("product.view")) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("PRODUCT_VIEW")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
     List<Product> productList = (List<Product>) request.getAttribute("productList");
     List<Category> categoryList = (List<Category>) request.getAttribute("categoryList");
     List<Brand> brandList = (List<Brand>) request.getAttribute("brandList");
-    boolean canAdd = loggedInUser.hasPermission("product.add");
-    boolean canUpdate = loggedInUser.hasPermission("product.edit");
-    boolean canToggle = loggedInUser.hasPermission("product.toggle");
+    boolean canAdd = loggedInUser.hasPermission("PRODUCT_ADD");
+    boolean canEdit = loggedInUser.hasPermission("PRODUCT_EDIT");
+    boolean canToggle = loggedInUser.hasPermission("PRODUCT_TOGGLE");
 
     // Retrieve active filter values
     String searchVal = request.getParameter("search");
@@ -188,7 +188,7 @@
                                                 <a href="product?action=details&id=<%= p.getId() %>" class="btn btn-sm btn-info text-white d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Details">
                                                     <i class="bi bi-eye-fill"></i> View
                                                 </a>
-                                                <% if (canUpdate) { %>
+                                                <% if (canEdit) { %>
                                                 <a href="product?action=update&id=<%= p.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
                                                     <i class="bi bi-pencil-square"></i> Edit
                                                 </a>

@@ -19,22 +19,6 @@ import model.User;
 @WebServlet(name = "ProductServlet", urlPatterns = {"/warehouse/product"})
 public class ProductServlet extends HttpServlet {
 
-    private boolean canView(User user) {
-        return user != null && user.hasPermission("product.view");
-    }
-
-    private boolean canAdd(User user) {
-        return user != null && user.hasPermission("product.add");
-    }
-
-    private boolean canUpdate(User user) {
-        return user != null && user.hasPermission("product.edit");
-    }
-
-    private boolean canToggle(User user) {
-        return user != null && user.hasPermission("product.toggle");
-    }
-
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -43,6 +27,12 @@ public class ProductServlet extends HttpServlet {
 
         if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
+            return;
+        }
+
+        // RBAC check: read actions require PRODUCT_VIEW
+        if (!loggedInUser.hasPermission("PRODUCT_VIEW")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view products.");
             return;
         }
 
@@ -57,10 +47,6 @@ public class ProductServlet extends HttpServlet {
 
         switch (action) {
             case "list":
-                if (!canView(loggedInUser)) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view products.");
-                    return;
-                }
                 String search = request.getParameter("search");
                 String catIdStr = request.getParameter("categoryId");
                 String brandIdStr = request.getParameter("brandId");
@@ -80,10 +66,6 @@ public class ProductServlet extends HttpServlet {
                 break;
 
             case "details":
-                if (!canView(loggedInUser)) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view product details.");
-                    return;
-                }
                 int id = Integer.parseInt(request.getParameter("id"));
                 Product product = dao.getProductById(id);
                 if (product == null) {
@@ -95,7 +77,8 @@ public class ProductServlet extends HttpServlet {
                 break;
 
             case "add":
-                if (!canAdd(loggedInUser)) {
+                // Write actions require PRODUCT_ADD
+                if (!loggedInUser.hasPermission("PRODUCT_ADD")) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add products.");
                     return;
                 }
@@ -107,7 +90,8 @@ public class ProductServlet extends HttpServlet {
                 break;
 
             case "update":
-                if (!canUpdate(loggedInUser)) {
+                // Write actions require PRODUCT_EDIT
+                if (!loggedInUser.hasPermission("PRODUCT_EDIT")) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to update products.");
                     return;
                 }
@@ -148,15 +132,29 @@ public class ProductServlet extends HttpServlet {
             return;
         }
 
+        // RBAC check: Action-based permissions
+        if ("add".equals(action)) {
+            if (!loggedInUser.hasPermission("PRODUCT_ADD")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add products.");
+                return;
+            }
+        } else if ("update".equals(action)) {
+            if (!loggedInUser.hasPermission("PRODUCT_EDIT")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify products.");
+                return;
+            }
+        } else if ("toggle".equals(action)) {
+            if (!loggedInUser.hasPermission("PRODUCT_TOGGLE")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to enable/disable products.");
+                return;
+            }
+        }
+
         ProductDAO dao = new ProductDAO();
 
         try {
             switch (action) {
                 case "add":
-                    if (!canAdd(loggedInUser)) {
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add products.");
-                        return;
-                    }
                     String productName = request.getParameter("product_name");
                     String sku = request.getParameter("sku");
                     String unit = request.getParameter("unit");
@@ -192,10 +190,6 @@ public class ProductServlet extends HttpServlet {
                     break;
 
                 case "update":
-                    if (!canUpdate(loggedInUser)) {
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to update products.");
-                        return;
-                    }
                     int id = Integer.parseInt(request.getParameter("id"));
                     String updateName = request.getParameter("product_name");
                     String updateSku = request.getParameter("sku");
@@ -231,10 +225,6 @@ public class ProductServlet extends HttpServlet {
                     break;
 
                 case "toggle":
-                    if (!canToggle(loggedInUser)) {
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to change product status.");
-                        return;
-                    }
                     int toggleId = Integer.parseInt(request.getParameter("id"));
                     dao.toggleProductStatus(toggleId);
                     break;
