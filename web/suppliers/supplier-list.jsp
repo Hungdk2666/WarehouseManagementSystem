@@ -1,0 +1,382 @@
+<%@page import="model.Supplier"%>
+<%@page import="java.util.List"%>
+<%@page import="model.User"%>
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%
+    User loggedInUser = (User) session.getAttribute("user");
+    if (loggedInUser == null || !loggedInUser.hasPermission("SUPPLIER_VIEW")) {
+        response.sendRedirect(request.getContextPath() + "/login");
+        return;
+    }
+    List<Supplier> supplierList = (List<Supplier>) request.getAttribute("supplierList");
+    boolean canAdd = loggedInUser.hasPermission("SUPPLIER_ADD");
+    boolean canEdit = loggedInUser.hasPermission("SUPPLIER_EDIT");
+    boolean canToggle = loggedInUser.hasPermission("SUPPLIER_TOGGLE");
+    boolean canManage = canEdit || canToggle;
+%>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Supplier Registry - WMS</title>
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+</head>
+<body>
+    <jsp:include page="/includes/header.jsp" />
+    <div class="container-fluid mt-4 px-4 animated-fade-in">
+        <div class="row">
+            <jsp:include page="/includes/sidebar.jsp" />
+            <div class="col-md-9 col-lg-10">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="fw-bold text-slate-800 mb-1">Supplier Directory</h2>
+                        <p class="text-muted small mb-0">Manage manufacturer suppliers and partners</p>
+                    </div>
+                    <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                </div>
+
+                <div class="card shadow-sm border-0 bg-white mb-4">
+                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-truck me-2"></i>Suppliers Directory</h5>
+                        <% if (canAdd) { %>
+                        <button class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                            <i class="bi bi-plus-circle-fill"></i> Add Supplier
+                        </button>
+                        <% } %>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table id="supplierTable" class="table table-hover align-middle text-center mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Supplier Name</th>
+                                        <th>Contact Person</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Address</th>
+                                        <th>Status</th>
+                                        <% if (canManage) { %>
+                                        <th>Actions</th>
+                                        <% } %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <%
+                                        if (supplierList != null && !supplierList.isEmpty()) {
+                                            for (Supplier s : supplierList) {
+                                    %>
+                                    <tr>
+                                        <td class="fw-semibold text-muted">#<%= s.getId() %></td>
+                                        <td class="fw-bold text-slate-800 text-start ps-3"><%= s.getSupplierName() %></td>
+                                        <td><%= s.getContactName() != null ? s.getContactName() : "-" %></td>
+                                        <td><%= s.getPhone() != null ? s.getPhone() : "-" %></td>
+                                        <td><%= s.getEmail() != null ? s.getEmail() : "-" %></td>
+                                        <td class="text-muted text-start text-truncate" style="max-width: 250px;"><%= s.getAddress() != null ? s.getAddress() : "" %></td>
+                                        <td>
+                                            <% if (s.isStatus()) { %>
+                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Active</span>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Inactive</span>
+                                            <% } %>
+                                        </td>
+                                        <% if (canManage) { %>
+                                        <td>
+                                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                                <% if (canEdit) { %>
+                                                <button onclick="openEditModal(<%= s.getId() %>, '<%= s.getSupplierName().replace("'", "\\'") %>', '<%= s.getContactName() != null ? s.getContactName().replace("'", "\\'") : "" %>', '<%= s.getPhone() != null ? s.getPhone().replace("'", "\\'") : "" %>', '<%= s.getEmail() != null ? s.getEmail().replace("'", "\\'") : "" %>', '<%= s.getAddress() != null ? s.getAddress().replace("'", "\\'") : "" %>')" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
+                                                    <i class="bi bi-pencil-square"></i> Edit
+                                                </button>
+                                                <% } %>
+                                                <% if (canToggle) { %>
+                                                <form action="supplier?action=toggle" method="POST" class="d-inline m-0">
+                                                    <input type="hidden" name="id" value="<%= s.getId() %>">
+                                                    <button type="submit" class="btn btn-sm <%= s.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= s.isStatus() ? "Disable Supplier" : "Enable Supplier" %>">
+                                                        <i class="bi bi-power"></i> <%= s.isStatus() ? "Disable" : "Enable" %>
+                                                    </button>
+                                                </form>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                        <% } %>
+                                    </tr>
+                                    <%
+                                            }
+                                        } else {
+                                    %>
+                                    <tr>
+                                        <td colspan="<%= canManage ? 8 : 7 %>" class="text-center text-muted py-5">
+                                            <i class="bi bi-truck text-muted display-4 d-block mb-3"></i>
+                                            No suppliers registered in the database.
+                                        </td>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0 d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 bg-light rounded-bottom-3 gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="text-muted small mb-0 flex-shrink-0">Show</label>
+                            <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="text-muted small">entries</span>
+                        </div>
+                        <div id="paginationContainer" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
+                            <!-- Dynamically populated entries info & pagination list -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <% if (canAdd) { %>
+    <!-- ADD SUPPLIER MODAL -->
+    <div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-3">
+                <div class="modal-header border-0 bg-primary bg-opacity-10 py-3">
+                    <h5 class="modal-title fw-bold text-primary" id="addSupplierModalLabel"><i class="bi bi-plus-circle-fill me-2"></i>Create New Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="supplier?action=add" method="POST" class="m-0">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label for="supplierName" class="form-label">Supplier Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="supplierName" name="supplier_name" placeholder="Enter supplier name (e.g. Panasonic VN)" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactName" class="form-label">Contact Person</label>
+                            <input type="text" class="form-control" id="contactName" name="contact_name" placeholder="Enter contact name...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="phone" name="phone" placeholder="Enter phone number...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" placeholder="Enter full address..." rows="2"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label for="status" class="form-label">Initial Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="true" selected>Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i> Cancel</button>
+                        <button type="submit" class="btn btn-primary px-3"><i class="bi bi-plus-lg me-1"></i> Create Supplier</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+    <% if (canEdit) { %>
+    <!-- EDIT SUPPLIER MODAL -->
+    <div class="modal fade" id="editSupplierModal" tabindex="-1" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-3">
+                <div class="modal-header border-0 bg-warning bg-opacity-10 py-3">
+                    <h5 class="modal-title fw-bold text-warning-emphasis" id="editSupplierModalLabel"><i class="bi bi-pencil-square me-2"></i>Edit Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="supplier?action=update" method="POST" class="m-0">
+                    <input type="hidden" id="editId" name="id">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label for="editSupplierName" class="form-label">Supplier Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editSupplierName" name="supplier_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editContactName" class="form-label">Contact Person</label>
+                            <input type="text" class="form-control" id="editContactName" name="contact_name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPhone" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="editPhone" name="phone">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editEmail" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="editEmail" name="email">
+                        </div>
+                        <div class="mb-2">
+                            <label for="editAddress" class="form-label">Address</label>
+                            <textarea class="form-control" id="editAddress" name="address" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i> Cancel</button>
+                        <button type="submit" class="btn btn-warning text-dark px-3"><i class="bi bi-check-circle-fill me-1"></i> Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <% } %>
+    
+    <script>
+        function openEditModal(id, name, contact, phone, email, address) {
+            const editId = document.getElementById('editId');
+            const editName = document.getElementById('editSupplierName');
+            const editContact = document.getElementById('editContactName');
+            const editPhone = document.getElementById('editPhone');
+            const editEmail = document.getElementById('editEmail');
+            const editAddress = document.getElementById('editAddress');
+            
+            if (editId) editId.value = id;
+            if (editName) editName.value = name;
+            if (editContact) editContact.value = contact;
+            if (editPhone) editPhone.value = phone;
+            if (editEmail) editEmail.value = email;
+            if (editAddress) editAddress.value = address;
+            
+            var editModal = new bootstrap.Modal(document.getElementById('editSupplierModal'));
+            editModal.show();
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            initPagination("supplierTable", "paginationContainer", "entriesPerPage");
+        });
+
+        function initPagination(tableId, containerId, selectId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const tbody = table.querySelector("tbody");
+            if (!tbody) return;
+            
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            if (rows.length === 1 && rows[0].querySelector("td[colspan]")) {
+                return;
+            }
+            
+            const container = document.getElementById(containerId);
+            const select = document.getElementById(selectId);
+            if (!container || !select) return;
+            
+            let currentPage = 1;
+            let pageSize = parseInt(select.value) || 10;
+            
+            function updateTable() {
+                const totalRows = rows.length;
+                const totalPages = Math.ceil(totalRows / pageSize);
+                
+                if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+                
+                const start = (currentPage - 1) * pageSize;
+                const end = Math.min(start + pageSize, totalRows);
+                
+                rows.forEach((row, index) => {
+                    if (index >= start && index < end) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+                
+                renderPaginationControls(totalPages);
+            }
+            
+            function renderPaginationControls(totalPages) {
+                container.innerHTML = "";
+                
+                const infoSpan = document.createElement("span");
+                infoSpan.className = "text-muted small";
+                const startIdx = (currentPage - 1) * pageSize + 1;
+                const endIdx = Math.min(currentPage * pageSize, rows.length);
+                infoSpan.textContent = `Showing ${startIdx} to ${endIdx} of ${rows.length} entries`;
+                container.appendChild(infoSpan);
+                
+                const nav = document.createElement("nav");
+                const ul = document.createElement("ul");
+                ul.className = "pagination pagination-sm m-0 border-0";
+                
+                // Prev
+                const prevLi = document.createElement("li");
+                prevLi.className = "page-item " + (currentPage === 1 ? "disabled" : "");
+                const prevA = document.createElement("a");
+                prevA.className = "page-link";
+                prevA.href = "#";
+                prevA.innerHTML = '<i class="bi bi-chevron-left"></i>';
+                prevA.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        currentPage--;
+                        updateTable();
+                    }
+                });
+                prevLi.appendChild(prevA);
+                ul.appendChild(prevLi);
+                
+                // Pages
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = document.createElement("li");
+                    li.className = "page-item " + (currentPage === i ? "active" : "");
+                    const a = document.createElement("a");
+                    a.className = "page-link";
+                    a.href = "#";
+                    a.textContent = i;
+                    a.addEventListener("click", function(e) {
+                        e.preventDefault();
+                        currentPage = i;
+                        updateTable();
+                    });
+                    li.appendChild(a);
+                    ul.appendChild(li);
+                }
+                
+                // Next
+                const nextLi = document.createElement("li");
+                nextLi.className = "page-item " + (currentPage === totalPages ? "disabled" : "");
+                const nextA = document.createElement("a");
+                nextA.className = "page-link";
+                nextA.href = "#";
+                nextA.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                nextA.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        updateTable();
+                    }
+                });
+                nextLi.appendChild(nextA);
+                ul.appendChild(nextLi);
+                
+                nav.appendChild(ul);
+                container.appendChild(nav);
+            }
+            
+            select.addEventListener("change", function() {
+                pageSize = parseInt(this.value) || 10;
+                currentPage = 1;
+                updateTable();
+            });
+            
+            updateTable();
+        }
+    </script>
+</body>
+</html>
