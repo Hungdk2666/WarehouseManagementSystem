@@ -3,7 +3,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("ROLE_EDIT")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
