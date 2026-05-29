@@ -2,9 +2,7 @@ package controller.admin;
 
 import dao.UserDAO;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -25,8 +23,7 @@ public class UserServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
         
-        // Authorization check (Admin only, role_id = 1)
-        if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
+        if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
         }
@@ -34,6 +31,24 @@ public class UserServlet extends HttpServlet {
         String action = request.getParameter("action");
         if (action == null) {
             action = "list";
+        }
+
+        // Action-based permission checks
+        if ("list".equals(action) || "info".equals(action)) {
+            if (!loggedInUser.hasPermission("USER_VIEW")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view users.");
+                return;
+            }
+        } else if ("add".equals(action)) {
+            if (!loggedInUser.hasPermission("USER_ADD")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add users.");
+                return;
+            }
+        } else if ("update".equals(action)) {
+            if (!loggedInUser.hasPermission("USER_EDIT")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit users.");
+                return;
+            }
         }
 
         UserDAO dao = new UserDAO();
@@ -50,16 +65,13 @@ public class UserServlet extends HttpServlet {
                     list = dao.getAllUsers();
                 }
                 List<Role> roleList = roleDao.getAllRoles();
-                Map<Integer, String> roleMap = new HashMap<>();
-                for (Role r : roleList) {
-                    roleMap.put(r.getId(), r.getRoleName());
-                }
                 request.setAttribute("userList", list);
                 request.setAttribute("roleList", roleList);
-                request.setAttribute("roleMap", roleMap);
                 request.getRequestDispatcher("/admin/user-list.jsp").forward(request, response);
                 break;
             case "add":
+                List<Role> addRoleList = roleDao.getAllRoles();
+                request.setAttribute("roleList", addRoleList);
                 request.getRequestDispatcher("/admin/user-add.jsp").forward(request, response);
                 break;
             case "info":
@@ -71,6 +83,8 @@ public class UserServlet extends HttpServlet {
             case "update":
                 int idUpdate = Integer.parseInt(request.getParameter("id"));
                 User userUpdate = dao.getUserById(idUpdate);
+                List<Role> updateRoleList = roleDao.getAllRoles();
+                request.setAttribute("roleList", updateRoleList);
                 request.setAttribute("userInfo", userUpdate);
                 request.getRequestDispatcher("/admin/user-update.jsp").forward(request, response);
                 break;
@@ -86,8 +100,7 @@ public class UserServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
         
-        // Authorization check
-        if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
+        if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
         }
@@ -96,6 +109,24 @@ public class UserServlet extends HttpServlet {
         if (action == null) {
             response.sendRedirect(request.getContextPath() + "/admin/user?action=list");
             return;
+        }
+
+        // Action-based permission checks
+        if ("add".equals(action)) {
+            if (!loggedInUser.hasPermission("USER_ADD")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add users.");
+                return;
+            }
+        } else if ("update".equals(action)) {
+            if (!loggedInUser.hasPermission("USER_EDIT")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit users.");
+                return;
+            }
+        } else if ("toggle".equals(action)) {
+            if (!loggedInUser.hasPermission("USER_TOGGLE")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to disable/enable users.");
+                return;
+            }
         }
 
         UserDAO dao = new UserDAO();

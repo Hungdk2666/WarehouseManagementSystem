@@ -3,7 +3,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || !loggedInUser.hasPermission("product.view")) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("PRODUCT_VIEW")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
@@ -12,7 +12,7 @@
         response.sendRedirect("product?action=list");
         return;
     }
-    boolean canUpdate = loggedInUser.hasPermission("product.edit");
+    boolean canEdit = loggedInUser.hasPermission("PRODUCT_EDIT");
     boolean isLowStock = product.getQuantity() <= product.getMinStock();
 %>
 <!DOCTYPE html>
@@ -64,7 +64,7 @@
                         <a href="product?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
                             <i class="bi bi-arrow-left"></i> Back
                         </a>
-                        <% if (canUpdate) { %>
+                        <% if (canEdit) { %>
                         <a href="product?action=update&id=<%= product.getId() %>" class="btn btn-warning text-dark d-inline-flex align-items-center gap-1">
                             <i class="bi bi-pencil-square"></i> Edit Profile
                         </a>

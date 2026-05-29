@@ -6,7 +6,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || !loggedInUser.hasPermission("product.edit")) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("PRODUCT_EDIT")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }

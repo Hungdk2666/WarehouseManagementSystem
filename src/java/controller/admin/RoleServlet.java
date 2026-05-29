@@ -22,8 +22,7 @@ public class RoleServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
         
-        // Authorization check (Admin only, role_id = 1)
-        if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
+        if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
         }
@@ -31,6 +30,19 @@ public class RoleServlet extends HttpServlet {
         String action = request.getParameter("action");
         if (action == null) {
             action = "list";
+        }
+
+        // Action-based permission checks
+        if ("list".equals(action) || "permissions".equals(action)) {
+            if (!loggedInUser.hasPermission("ROLE_VIEW")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view roles.");
+                return;
+            }
+        } else if ("update".equals(action)) {
+            if (!loggedInUser.hasPermission("ROLE_EDIT")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit roles.");
+                return;
+            }
         }
 
         RoleDAO dao = new RoleDAO();
@@ -73,8 +85,7 @@ public class RoleServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
         
-        // Authorization check
-        if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
+        if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
         }
@@ -83,6 +94,29 @@ public class RoleServlet extends HttpServlet {
         if (action == null) {
             response.sendRedirect(request.getContextPath() + "/admin/role?action=list");
             return;
+        }
+
+        // Action-based permission checks
+        if ("update".equals(action)) {
+            if (!loggedInUser.hasPermission("ROLE_EDIT")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit roles.");
+                return;
+            }
+        } else if ("toggle".equals(action)) {
+            if (!loggedInUser.hasPermission("ROLE_TOGGLE")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to disable/enable roles.");
+                return;
+            }
+        } else if ("addRole".equals(action)) {
+            if (!loggedInUser.hasPermission("ROLE_ADD")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add roles.");
+                return;
+            }
+        } else if ("permissions".equals(action)) {
+            if (!loggedInUser.hasPermission("ROLE_ASSIGN")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to assign permissions.");
+                return;
+            }
         }
 
         RoleDAO dao = new RoleDAO();
@@ -106,14 +140,13 @@ public class RoleServlet extends HttpServlet {
                 case "permissions":
                     int roleId = Integer.parseInt(request.getParameter("id"));
                     String[] selectedPerms = request.getParameterValues("permissions");
+                    
+                    // Backend protection: only allow assigning System Admin permissions (1 to 10) to System Admin (1)
                     if (roleId == 1 && selectedPerms != null) {
                         java.util.List<String> filtered = new java.util.ArrayList<>();
                         for (String pIdStr : selectedPerms) {
                             int pId = Integer.parseInt(pIdStr);
-                            boolean isSystemAdmin = (roleId == 1);
-                            boolean isSystemAdminPerm = (pId == 1 || pId == 2 || pId == 3);
-                            
-                            if (isSystemAdmin == isSystemAdminPerm) {
+                            if (pId >= 1 && pId <= 10) {
                                 filtered.add(pIdStr);
                             }
                         }

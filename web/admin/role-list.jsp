@@ -1,14 +1,10 @@
 <%@page import="model.Role"%>
-<<<<<<< HEAD
-<%@page import="model.Permission"%>
-=======
->>>>>>> origin/main
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || loggedInUser.getRoleId() != 1) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("ROLE_VIEW")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
@@ -63,9 +59,11 @@
                         <div class="card shadow-sm border-0 bg-white mb-4">
                             <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-safe-fill me-2"></i>System Access Roles</h5>
+                                <% if (loggedInUser.hasPermission("ROLE_ADD")) { %>
                                 <button class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#addRoleModal">
                                     <i class="bi bi-plus-circle-fill"></i> Add New Role
                                 </button>
+                                <% } %>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
@@ -95,18 +93,24 @@
                                                 </td>
                                                 <td>
                                                     <div class="d-flex align-items-center justify-content-center gap-1">
+                                                        <% if (loggedInUser.hasPermission("ROLE_ASSIGN")) { %>
                                                         <a href="role?action=permissions&id=<%= r.getId() %>" class="btn btn-sm btn-info text-white d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Manage Permissions">
                                                             <i class="bi bi-shield-lock"></i> Permissions
                                                         </a>
+                                                        <% } %>
+                                                        <% if (loggedInUser.hasPermission("ROLE_EDIT")) { %>
                                                         <a href="role?action=update&id=<%= r.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
                                                             <i class="bi bi-pencil-square"></i> Edit
                                                         </a>
+                                                        <% } %>
+                                                        <% if (loggedInUser.hasPermission("ROLE_TOGGLE")) { %>
                                                         <form action="role?action=toggle" method="POST" class="d-inline m-0">
                                                             <input type="hidden" name="id" value="<%= r.getId() %>">
                                                             <button type="submit" class="btn btn-sm <%= r.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= r.isStatus() ? "Deactivate Role" : "Activate Role" %>">
                                                                 <i class="bi bi-power"></i> <%= r.isStatus() ? "Disable" : "Enable" %>
                                                             </button>
                                                         </form>
+                                                        <% } %>
                                                     </div>
                                                 </td>
                                             </tr>

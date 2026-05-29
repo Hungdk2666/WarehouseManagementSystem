@@ -5,7 +5,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || !loggedInUser.hasPermission("product.add")) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("PRODUCT_ADD")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
