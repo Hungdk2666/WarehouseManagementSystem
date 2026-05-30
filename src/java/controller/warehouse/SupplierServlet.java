@@ -45,6 +45,27 @@ public class SupplierServlet extends HttpServlet {
                 request.setAttribute("supplierList", list);
                 request.getRequestDispatcher("/suppliers/supplier-list.jsp").forward(request, response);
                 break;
+            case "add":
+                if (!loggedInUser.hasPermission("SUPPLIER_ADD")) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add suppliers.");
+                    return;
+                }
+                request.getRequestDispatcher("/suppliers/supplier-add.jsp").forward(request, response);
+                break;
+            case "update":
+                if (!loggedInUser.hasPermission("SUPPLIER_EDIT")) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify suppliers.");
+                    return;
+                }
+                int updateId = Integer.parseInt(request.getParameter("id"));
+                Supplier supplier = dao.getSupplierById(updateId);
+                if (supplier == null) {
+                    response.sendRedirect(request.getContextPath() + "/warehouse/supplier?action=list");
+                    return;
+                }
+                request.setAttribute("supplier", supplier);
+                request.getRequestDispatcher("/suppliers/supplier-update.jsp").forward(request, response);
+                break;
             default:
                 response.sendRedirect(request.getContextPath() + "/warehouse/supplier?action=list");
                 break;
