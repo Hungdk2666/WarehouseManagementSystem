@@ -15,22 +15,6 @@ import model.User;
 @WebServlet(name = "CategoryServlet", urlPatterns = {"/warehouse/category"})
 public class CategoryServlet extends HttpServlet {
 
-    private boolean canView(User user) {
-        return user != null && user.hasPermission("category.view");
-    }
-
-    private boolean canAdd(User user) {
-        return user != null && user.hasPermission("category.add");
-    }
-
-    private boolean canUpdate(User user) {
-        return user != null && user.hasPermission("category.edit");
-    }
-
-    private boolean canToggle(User user) {
-        return user != null && user.hasPermission("category.toggle");
-    }
-
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -42,7 +26,8 @@ public class CategoryServlet extends HttpServlet {
             return;
         }
 
-        if (!canView(loggedInUser)) {
+        // RBAC check: Read actions require CATEGORY_VIEW
+        if (!loggedInUser.hasPermission("CATEGORY_VIEW")) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view categories.");
             return;
         }
@@ -59,6 +44,27 @@ public class CategoryServlet extends HttpServlet {
                 List<Category> list = dao.getAllCategories();
                 request.setAttribute("categoryList", list);
                 request.getRequestDispatcher("/categories/category-list.jsp").forward(request, response);
+                break;
+            case "add":
+                if (!loggedInUser.hasPermission("CATEGORY_ADD")) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add categories.");
+                    return;
+                }
+                request.getRequestDispatcher("/categories/category-add.jsp").forward(request, response);
+                break;
+            case "update":
+                if (!loggedInUser.hasPermission("CATEGORY_EDIT")) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify categories.");
+                    return;
+                }
+                int updateId = Integer.parseInt(request.getParameter("id"));
+                Category category = dao.getCategoryById(updateId);
+                if (category == null) {
+                    response.sendRedirect(request.getContextPath() + "/warehouse/category?action=list");
+                    return;
+                }
+                request.setAttribute("category", category);
+                request.getRequestDispatcher("/categories/category-update.jsp").forward(request, response);
                 break;
             default:
                 response.sendRedirect(request.getContextPath() + "/warehouse/category?action=list");
@@ -83,15 +89,29 @@ public class CategoryServlet extends HttpServlet {
             return;
         }
 
+        // RBAC check: Action-based permissions
+        if ("add".equals(action)) {
+            if (!loggedInUser.hasPermission("CATEGORY_ADD")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add categories.");
+                return;
+            }
+        } else if ("update".equals(action)) {
+            if (!loggedInUser.hasPermission("CATEGORY_EDIT")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify categories.");
+                return;
+            }
+        } else if ("toggle".equals(action)) {
+            if (!loggedInUser.hasPermission("CATEGORY_TOGGLE")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to enable/disable categories.");
+                return;
+            }
+        }
+
         CategoryDAO dao = new CategoryDAO();
 
         try {
             switch (action) {
                 case "add":
-                    if (!canAdd(loggedInUser)) {
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add categories.");
-                        return;
-                    }
                     String categoryName = request.getParameter("category_name");
                     String description = request.getParameter("description");
                     boolean status = Boolean.parseBoolean(request.getParameter("status"));
@@ -104,10 +124,6 @@ public class CategoryServlet extends HttpServlet {
                     dao.addCategory(newCat);
                     break;
                 case "update":
-                    if (!canUpdate(loggedInUser)) {
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to update categories.");
-                        return;
-                    }
                     int id = Integer.parseInt(request.getParameter("id"));
                     String updateName = request.getParameter("category_name");
                     String updateDesc = request.getParameter("description");
@@ -120,10 +136,6 @@ public class CategoryServlet extends HttpServlet {
                     dao.updateCategory(updateCat);
                     break;
                 case "toggle":
-                    if (!canToggle(loggedInUser)) {
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to change category status.");
-                        return;
-                    }
                     int toggleId = Integer.parseInt(request.getParameter("id"));
                     dao.toggleCategoryStatus(toggleId);
                     break;

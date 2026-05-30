@@ -4,15 +4,15 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || !loggedInUser.hasPermission("category.view")) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("CATEGORY_VIEW")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
     List<Category> categoryList = (List<Category>) request.getAttribute("categoryList");
-    boolean canAdd = loggedInUser.hasPermission("category.add");
-    boolean canUpdate = loggedInUser.hasPermission("category.edit");
-    boolean canToggle = loggedInUser.hasPermission("category.toggle");
-    boolean canManage = canAdd || canUpdate || canToggle;
+    boolean canAdd = loggedInUser.hasPermission("CATEGORY_ADD");
+    boolean canEdit = loggedInUser.hasPermission("CATEGORY_EDIT");
+    boolean canToggle = loggedInUser.hasPermission("CATEGORY_TOGGLE");
+    boolean canManage = canEdit || canToggle;
 %>
 <!DOCTYPE html>
 <html>
@@ -50,9 +50,9 @@
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-tags-fill me-2"></i>Categories Registry</h5>
                         <% if (canAdd) { %>
-                        <button class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                        <a class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" href="category?action=add">
                             <i class="bi bi-plus-circle-fill"></i> Add Category
-                        </button>
+                        </a>
                         <% } %>
                     </div>
                     <div class="card-body p-0">
@@ -88,11 +88,11 @@
                                         <% if (canManage) { %>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <% if (canUpdate) { %>
-                                                <button onclick="openEditModal(<%= c.getId() %>, '<%= c.getCategoryName().replace("'", "\\'") %>', '<%= c.getDescription() != null ? c.getDescription().replace("'", "\\'") : "" %>')" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
-                                                    <i class="bi bi-pencil-square"></i> Edit
-                                                </button>
-                                                <% } %>
+                                                 <% if (canEdit) { %>
+                                                 <a href="category?action=update&id=<%= c.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
+                                                     <i class="bi bi-pencil-square"></i> Edit
+                                                 </a>
+                                                 <% } %>
                                                 <% if (canToggle) { %>
                                                 <form action="category?action=toggle" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= c.getId() %>">
@@ -140,81 +140,7 @@
         </div>
     </div>
 
-    <% if (canManage) { %>
-    <!-- ADD CATEGORY MODAL -->
-    <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-3">
-                <div class="modal-header border-0 bg-primary bg-opacity-10 py-3">
-                    <h5 class="modal-title fw-bold text-primary" id="addCategoryModalLabel"><i class="bi bi-plus-circle-fill me-2"></i>Create New Category</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="category?action=add" method="POST" class="m-0">
-                    <div class="modal-body p-4">
-                        <div class="mb-3">
-                            <label for="categoryName" class="form-label">Category Name</label>
-                            <input type="text" class="form-control" id="categoryName" name="category_name" placeholder="Enter category name (e.g. Điều hòa)" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" placeholder="Enter description..." rows="3"></textarea>
-                        </div>
-                        <div class="mb-2">
-                            <label for="status" class="form-label">Initial Status</label>
-                            <select class="form-select" id="status" name="status">
-                                <option value="true" selected>Active</option>
-                                <option value="false">Inactive</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i> Cancel</button>
-                        <button type="submit" class="btn btn-primary px-3"><i class="bi bi-plus-lg me-1"></i> Create Category</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- EDIT CATEGORY MODAL -->
-    <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-3">
-                <div class="modal-header border-0 bg-warning bg-opacity-10 py-3">
-                    <h5 class="modal-title fw-bold text-warning-emphasis" id="editCategoryModalLabel"><i class="bi bi-pencil-square me-2"></i>Edit Category</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="category?action=update" method="POST" class="m-0">
-                    <input type="hidden" id="editId" name="id">
-                    <div class="modal-body p-4">
-                        <div class="mb-3">
-                            <label for="editCategoryName" class="form-label">Category Name</label>
-                            <input type="text" class="form-control" id="editCategoryName" name="category_name" required>
-                        </div>
-                        <div class="mb-2">
-                            <label for="editDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="editDescription" name="description" rows="3"></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i> Cancel</button>
-                        <button type="submit" class="btn btn-warning text-dark px-3"><i class="bi bi-check-circle-fill me-1"></i> Save Changes</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
     <script>
-        function openEditModal(id, name, desc) {
-            document.getElementById('editId').value = id;
-            document.getElementById('editCategoryName').value = name;
-            document.getElementById('editDescription').value = desc;
-            
-            var editModal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
-            editModal.show();
-        }
-
         document.addEventListener("DOMContentLoaded", function() {
             initPagination("categoryTable", "paginationContainer", "entriesPerPage");
         });
@@ -336,7 +262,6 @@
             updateTable();
         }
     </script>
-    <% } %>
 
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
