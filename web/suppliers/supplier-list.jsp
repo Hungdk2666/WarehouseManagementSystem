@@ -50,9 +50,9 @@
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-truck me-2"></i>Suppliers Directory</h5>
                         <% if (canAdd) { %>
-                        <button class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                        <a class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" href="supplier?action=add">
                             <i class="bi bi-plus-circle-fill"></i> Add Supplier
-                        </button>
+                        </a>
                         <% } %>
                     </div>
                     <div class="card-body p-0">
@@ -94,11 +94,11 @@
                                         <% if (canManage) { %>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <% if (canEdit) { %>
-                                                <button onclick="openEditModal(<%= s.getId() %>, '<%= s.getSupplierName().replace("'", "\\'") %>', '<%= s.getContactName() != null ? s.getContactName().replace("'", "\\'") : "" %>', '<%= s.getPhone() != null ? s.getPhone().replace("'", "\\'") : "" %>', '<%= s.getEmail() != null ? s.getEmail().replace("'", "\\'") : "" %>', '<%= s.getAddress() != null ? s.getAddress().replace("'", "\\'") : "" %>')" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
-                                                    <i class="bi bi-pencil-square"></i> Edit
-                                                </button>
-                                                <% } %>
+                                                 <% if (canEdit) { %>
+                                                 <a href="supplier?action=update&id=<%= s.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
+                                                     <i class="bi bi-pencil-square"></i> Edit
+                                                 </a>
+                                                 <% } %>
                                                 <% if (canToggle) { %>
                                                 <form action="supplier?action=toggle" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= s.getId() %>">
@@ -146,118 +146,7 @@
         </div>
     </div>
 
-    <% if (canAdd) { %>
-    <!-- ADD SUPPLIER MODAL -->
-    <div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-3">
-                <div class="modal-header border-0 bg-primary bg-opacity-10 py-3">
-                    <h5 class="modal-title fw-bold text-primary" id="addSupplierModalLabel"><i class="bi bi-plus-circle-fill me-2"></i>Create New Supplier</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="supplier?action=add" method="POST" class="m-0">
-                    <div class="modal-body p-4">
-                        <div class="mb-3">
-                            <label for="supplierName" class="form-label">Supplier Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="supplierName" name="supplier_name" placeholder="Enter supplier name (e.g. Panasonic VN)" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="contactName" class="form-label">Contact Person</label>
-                            <input type="text" class="form-control" id="contactName" name="contact_name" placeholder="Enter contact name...">
-                        </div>
-                        <div class="mb-3">
-                            <label for="phone" class="form-label">Phone Number</label>
-                            <input type="text" class="form-control" id="phone" name="phone" placeholder="Enter phone number...">
-                        </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email Address</label>
-                            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email...">
-                        </div>
-                        <div class="mb-3">
-                            <label for="address" class="form-label">Address</label>
-                            <textarea class="form-control" id="address" name="address" placeholder="Enter full address..." rows="2"></textarea>
-                        </div>
-                        <div class="mb-2">
-                            <label for="status" class="form-label">Initial Status</label>
-                            <select class="form-select" id="status" name="status">
-                                <option value="true" selected>Active</option>
-                                <option value="false">Inactive</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i> Cancel</button>
-                        <button type="submit" class="btn btn-primary px-3"><i class="bi bi-plus-lg me-1"></i> Create Supplier</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <% } %>
-
-    <% if (canEdit) { %>
-    <!-- EDIT SUPPLIER MODAL -->
-    <div class="modal fade" id="editSupplierModal" tabindex="-1" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-3">
-                <div class="modal-header border-0 bg-warning bg-opacity-10 py-3">
-                    <h5 class="modal-title fw-bold text-warning-emphasis" id="editSupplierModalLabel"><i class="bi bi-pencil-square me-2"></i>Edit Supplier</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="supplier?action=update" method="POST" class="m-0">
-                    <input type="hidden" id="editId" name="id">
-                    <div class="modal-body p-4">
-                        <div class="mb-3">
-                            <label for="editSupplierName" class="form-label">Supplier Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="editSupplierName" name="supplier_name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editContactName" class="form-label">Contact Person</label>
-                            <input type="text" class="form-control" id="editContactName" name="contact_name">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editPhone" class="form-label">Phone Number</label>
-                            <input type="text" class="form-control" id="editPhone" name="phone">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editEmail" class="form-label">Email Address</label>
-                            <input type="email" class="form-control" id="editEmail" name="email">
-                        </div>
-                        <div class="mb-2">
-                            <label for="editAddress" class="form-label">Address</label>
-                            <textarea class="form-control" id="editAddress" name="address" rows="2"></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i> Cancel</button>
-                        <button type="submit" class="btn btn-warning text-dark px-3"><i class="bi bi-check-circle-fill me-1"></i> Save Changes</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <% } %>
-    
     <script>
-        function openEditModal(id, name, contact, phone, email, address) {
-            const editId = document.getElementById('editId');
-            const editName = document.getElementById('editSupplierName');
-            const editContact = document.getElementById('editContactName');
-            const editPhone = document.getElementById('editPhone');
-            const editEmail = document.getElementById('editEmail');
-            const editAddress = document.getElementById('editAddress');
-            
-            if (editId) editId.value = id;
-            if (editName) editName.value = name;
-            if (editContact) editContact.value = contact;
-            if (editPhone) editPhone.value = phone;
-            if (editEmail) editEmail.value = email;
-            if (editAddress) editAddress.value = address;
-            
-            var editModal = new bootstrap.Modal(document.getElementById('editSupplierModal'));
-            editModal.show();
-        }
-
         document.addEventListener("DOMContentLoaded", function() {
             initPagination("supplierTable", "paginationContainer", "entriesPerPage");
         });
@@ -307,7 +196,7 @@
                 infoSpan.className = "text-muted small";
                 const startIdx = (currentPage - 1) * pageSize + 1;
                 const endIdx = Math.min(currentPage * pageSize, rows.length);
-                infoSpan.textContent = `Showing ${startIdx} to ${endIdx} of ${rows.length} entries`;
+                infoSpan.textContent = "Showing " + startIdx + " to " + endIdx + " of " + rows.length + " entries";
                 container.appendChild(infoSpan);
                 
                 const nav = document.createElement("nav");
