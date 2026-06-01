@@ -43,9 +43,19 @@
             <i class="bi bi-tags-fill me-2"></i> Category List
         </a>
         <% } %>
+        <% if (loggedInUserSidebar.hasPermission("BRAND_VIEW")) { %>
+        <a href="<%= request.getContextPath() %>/warehouse/brand?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("brand") ? "active" : "" %>">
+            <i class="bi bi-award-fill me-2"></i> Brand List
+        </a>
+        <% } %>
         <% if (loggedInUserSidebar.hasPermission("SUPPLIER_VIEW")) { %>
         <a href="<%= request.getContextPath() %>/warehouse/supplier?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("supplier") ? "active" : "" %>">
             <i class="bi bi-truck me-2"></i> Suppliers List
+        </a>
+        <% } %>
+        <% if (loggedInUserSidebar.hasPermission("DESTINATION_VIEW")) { %>
+        <a href="<%= request.getContextPath() %>/warehouse/destination?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("destination") ? "active" : "" %>">
+            <i class="bi bi-geo-alt-fill me-2"></i> Destinations
         </a>
         <% } %>
         <% } %>
