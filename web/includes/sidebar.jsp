@@ -4,61 +4,159 @@
     User loggedInUserSidebar = (User) session.getAttribute("user");
     String requestURI = request.getRequestURI();
 %>
+<style>
+    .list-group-custom .sidebar-header {
+        background-color: transparent !important;
+        transform: none !important;
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.2s ease;
+    }
+    .list-group-custom .sidebar-header:hover {
+        color: var(--slate-900) !important;
+        background-color: rgba(0,0,0,0.02) !important;
+    }
+    .list-group-custom .chevron-icon {
+        transition: transform 0.2s ease;
+        font-size: 0.75rem;
+    }
+    .list-group-custom .sidebar-header[aria-expanded="true"] .chevron-icon {
+        transform: rotate(90deg);
+    }
+    .list-group-custom .collapse {
+        transition: max-height 0.25s ease-out, opacity 0.2s ease-in-out;
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        display: block !important;
+    }
+    .list-group-custom .collapse.show {
+        max-height: 350px;
+        opacity: 1;
+    }
+</style>
+
 <div class="col-md-3 col-lg-2 mb-4">
     <div class="list-group list-group-custom shadow-sm bg-white p-2 rounded-3 border">
-        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mb-2" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;">
-            <i class="bi bi-grid-fill me-2"></i>Navigation
-        </div>
-        <a href="<%= request.getContextPath() %>/index.jsp" class="list-group-item list-group-item-action <%= requestURI.endsWith("index.jsp") || requestURI.endsWith("/") || requestURI.endsWith("WareHouseManagementSystem") || requestURI.endsWith("WareHouseManagementSystem/") ? "active" : "" %>">
-            <i class="bi bi-speedometer2 me-2"></i> Dashboard
-        </a>
         
+        <!-- Navigation Section -->
+        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
+             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
+             data-custom-toggle="collapse" data-custom-target="#collapseNavigation" aria-expanded="false">
+            <span><i class="bi bi-grid-fill me-2"></i>Navigation</span>
+            <i class="bi bi-chevron-right chevron-icon"></i>
+        </div>
+        <div class="collapse" id="collapseNavigation">
+            <a href="<%= request.getContextPath() %>/index.jsp" class="list-group-item list-group-item-action <%= requestURI.endsWith("index.jsp") || requestURI.endsWith("/") || requestURI.endsWith("WareHouseManagementSystem") || requestURI.endsWith("WareHouseManagementSystem/") ? "active" : "" %>">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+        </div>
+        
+        <!-- Administration Section -->
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("USER_VIEW") || loggedInUserSidebar.hasPermission("ROLE_VIEW"))) { %>
-        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;">
-            <i class="bi bi-gear-fill me-2"></i> Administration
+        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
+             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
+             data-custom-toggle="collapse" data-custom-target="#collapseAdmin" aria-expanded="false">
+            <span><i class="bi bi-gear-fill me-2"></i> Administration</span>
+            <i class="bi bi-chevron-right chevron-icon"></i>
         </div>
-        <% if (loggedInUserSidebar.hasPermission("USER_VIEW")) { %>
-        <a href="<%= request.getContextPath() %>/admin/user?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("user") ? "active" : "" %>">
-            <i class="bi bi-people-fill me-2"></i> User Management
-        </a>
+        <div class="collapse" id="collapseAdmin">
+            <% if (loggedInUserSidebar.hasPermission("USER_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/admin/user?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("user") ? "active" : "" %>">
+                <i class="bi bi-people-fill me-2"></i> User Management
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("ROLE_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/admin/role?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("role") ? "active" : "" %>">
+                <i class="bi bi-shield-lock-fill me-2"></i> Role Management
+            </a>
+            <% } %>
+        </div>
         <% } %>
-        <% if (loggedInUserSidebar.hasPermission("ROLE_VIEW")) { %>
-        <a href="<%= request.getContextPath() %>/admin/role?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("role") ? "active" : "" %>">
-            <i class="bi bi-shield-lock-fill me-2"></i> Role Management
-        </a>
-        <% } %>
-        <% } %>
-
+        
+        <!-- Master Data Section -->
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PRODUCT_VIEW") || loggedInUserSidebar.hasPermission("CATEGORY_VIEW") || loggedInUserSidebar.hasPermission("BRAND_VIEW") || loggedInUserSidebar.hasPermission("DESTINATION_VIEW") || loggedInUserSidebar.hasPermission("SUPPLIER_VIEW"))) { %>
-        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;">
-            <i class="bi bi-database-fill me-2"></i> Master Data
+        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
+             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
+             data-custom-toggle="collapse" data-custom-target="#collapseMasterData" aria-expanded="false">
+            <span><i class="bi bi-database-fill me-2"></i> Master Data</span>
+            <i class="bi bi-chevron-right chevron-icon"></i>
         </div>
-        <% if (loggedInUserSidebar.hasPermission("PRODUCT_VIEW")) { %>
-        <a href="<%= request.getContextPath() %>/warehouse/product?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("product") ? "active" : "" %>">
-            <i class="bi bi-box-seam-fill me-2"></i> Products Catalog
-        </a>
-        <% } %>
-        <% if (loggedInUserSidebar.hasPermission("CATEGORY_VIEW")) { %>
-        <a href="<%= request.getContextPath() %>/warehouse/category?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("category") ? "active" : "" %>">
-            <i class="bi bi-tags-fill me-2"></i> Category List
-        </a>
-        <% } %>
-        <% if (loggedInUserSidebar.hasPermission("BRAND_VIEW")) { %>
-        <a href="<%= request.getContextPath() %>/warehouse/brand?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("brand") ? "active" : "" %>">
-            <i class="bi bi-award-fill me-2"></i> Brand List
-        </a>
-        <% } %>
-        <% if (loggedInUserSidebar.hasPermission("SUPPLIER_VIEW")) { %>
-        <a href="<%= request.getContextPath() %>/warehouse/supplier?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("supplier") ? "active" : "" %>">
-            <i class="bi bi-truck me-2"></i> Suppliers List
-        </a>
-        <% } %>
-        <% if (loggedInUserSidebar.hasPermission("DESTINATION_VIEW")) { %>
-        <a href="<%= request.getContextPath() %>/warehouse/destination?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("destination") ? "active" : "" %>">
-            <i class="bi bi-geo-alt-fill me-2"></i> Destinations
-        </a>
-        <% } %>
+        <div class="collapse" id="collapseMasterData">
+            <% if (loggedInUserSidebar.hasPermission("PRODUCT_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/product?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("product") ? "active" : "" %>">
+                <i class="bi bi-box-seam-fill me-2"></i> Products Catalog
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("CATEGORY_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/category?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("category") ? "active" : "" %>">
+                <i class="bi bi-tags-fill me-2"></i> Category List
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("BRAND_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/brand?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("brand") ? "active" : "" %>">
+                <i class="bi bi-award-fill me-2"></i> Brand List
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("SUPPLIER_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/supplier?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("supplier") ? "active" : "" %>">
+                <i class="bi bi-truck me-2"></i> Suppliers List
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("DESTINATION_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/destination?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("destination") ? "active" : "" %>">
+                <i class="bi bi-geo-alt-fill me-2"></i> Destinations
+            </a>
+            <% } %>
+        </div>
         <% } %>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Toggle collapse sections manually (independent of Bootstrap JS)
+        const headers = document.querySelectorAll('.list-group-custom .sidebar-header');
+        headers.forEach(header => {
+            header.addEventListener('click', function() {
+                const targetSelector = this.getAttribute('data-custom-target');
+                const targetCollapse = document.querySelector(targetSelector);
+                
+                if (targetCollapse) {
+                    const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                    if (isExpanded) {
+                        targetCollapse.classList.remove('show');
+                        this.setAttribute('aria-expanded', 'false');
+                    } else {
+                        targetCollapse.classList.add('show');
+                        this.setAttribute('aria-expanded', 'true');
+                    }
+                }
+            });
+        });
+
+        // Auto-expand the active section on load
+        const activeLink = document.querySelector('.list-group-custom .list-group-item.active');
+        if (activeLink) {
+            const parentCollapse = activeLink.closest('.collapse');
+            if (parentCollapse) {
+                parentCollapse.classList.add('show');
+                const header = document.querySelector(`[data-custom-target="#${parentCollapse.id}"]`);
+                if (header) {
+                    header.setAttribute('aria-expanded', 'true');
+                }
+            }
+        } else {
+            // Default expand Navigation if no active link
+            const firstCollapse = document.getElementById('collapseNavigation');
+            if (firstCollapse) {
+                firstCollapse.classList.add('show');
+                const header = document.querySelector('[data-custom-target="#collapseNavigation"]');
+                if (header) {
+                    header.setAttribute('aria-expanded', 'true');
+                }
+            }
+        }
+    });
+</script>
 
