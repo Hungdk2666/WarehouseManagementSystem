@@ -11,14 +11,14 @@ import utils.DBUtils;
 public class UserDAO {
 
     public User login(String username, String hashedPassword) {
-        String query = "SELECT * FROM Users WHERE username = ? AND password = ? AND status = true";
+        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.username = ? AND u.password = ? AND u.status = true";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, username);
             ps.setString(2, hashedPassword);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapResultSetToUser(rs);
+                    return mapResultSetToUser(rs, conn);
                 }
             }
         } catch (Exception e) {
@@ -28,13 +28,13 @@ public class UserDAO {
     }
 
     public User getUserByEmail(String email) {
-        String query = "SELECT * FROM Users WHERE email = ?";
+        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.email = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapResultSetToUser(rs);
+                    return mapResultSetToUser(rs, conn);
                 }
             }
         } catch (Exception e) {
@@ -50,7 +50,7 @@ public class UserDAO {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapResultSetToUser(rs);
+                    return mapResultSetToUser(rs, conn);
                 }
             }
         } catch (Exception e) {
@@ -80,7 +80,7 @@ public class UserDAO {
              PreparedStatement ps = conn.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                list.add(mapResultSetToUser(rs));
+                list.add(mapResultSetToUser(rs, conn));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -113,7 +113,7 @@ public class UserDAO {
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    list.add(mapResultSetToUser(rs));
+                    list.add(mapResultSetToUser(rs, conn));
                 }
             }
         } catch (Exception e) {
@@ -180,14 +180,14 @@ public class UserDAO {
     }
 
     public User verifyResetCode(String email, String code) {
-        String query = "SELECT * FROM Users WHERE email = ? AND reset_code = ?";
+        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.email = ? AND u.reset_code = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, email);
             ps.setString(2, code);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapResultSetToUser(rs);
+                    return mapResultSetToUser(rs, conn);
                 }
             }
         } catch (Exception e) {
@@ -196,7 +196,22 @@ public class UserDAO {
         return null;
     }
 
-    private User mapResultSetToUser(ResultSet rs) throws Exception {
+    private List<String> getPermissionNamesByRoleId(int roleId, Connection conn) throws Exception {
+        List<String> list = new ArrayList<>();
+        String query = "SELECT p.permission_name FROM Role_Permissions rp "
+                     + "JOIN Permissions p ON rp.permission_id = p.id WHERE rp.role_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, roleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(rs.getString("permission_name"));
+                }
+            }
+        }
+        return list;
+    }
+
+    private User mapResultSetToUser(ResultSet rs, Connection conn) throws Exception {
         User u = new User(
             rs.getInt("id"),
             rs.getString("username"),
@@ -207,6 +222,12 @@ public class UserDAO {
             rs.getInt("role_id"),
             rs.getString("reset_code")
         );
+        try {
+            u.setRoleName(rs.getString("role_name"));
+        } catch (Exception e) {
+            // Ignore if role_name is not present
+        }
+        u.setPermissions(getPermissionNamesByRoleId(u.getRoleId(), conn));
         return u;
     }
 }
