@@ -74,6 +74,23 @@
         </div>
         <% } %>
         
+        <!-- Inbound Operations Section -->
+        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PO_VIEW") || loggedInUserSidebar.hasPermission("IMPORT_TICKET_VIEW"))) { %>
+        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
+             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
+             data-custom-toggle="collapse" data-custom-target="#collapseInbound" aria-expanded="false">
+            <span><i class="bi bi-arrow-down-left-square-fill me-2"></i> Inbound Operations</span>
+            <i class="bi bi-chevron-right chevron-icon"></i>
+        </div>
+        <div class="collapse" id="collapseInbound">
+            <% if (loggedInUserSidebar.hasPermission("PO_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/po?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/po") ? "active" : "" %>">
+                <i class="bi bi-receipt me-2"></i> Purchase Orders
+            </a>
+            <% } %>
+        </div>
+        <% } %>
+        
         <!-- Master Data Section -->
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PRODUCT_VIEW") || loggedInUserSidebar.hasPermission("CATEGORY_VIEW") || loggedInUserSidebar.hasPermission("BRAND_VIEW") || loggedInUserSidebar.hasPermission("DESTINATION_VIEW") || loggedInUserSidebar.hasPermission("SUPPLIER_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
