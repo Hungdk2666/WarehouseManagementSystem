@@ -214,4 +214,22 @@ public class ImportRequestDAO {
         }
         return false;
     }
+    
+    public boolean updateStatus(int id, String status, Integer approvedBy) {
+        String query = "UPDATE Import_Requests SET status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP WHERE id = ?";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, status);
+            if (approvedBy != null) {
+                ps.setInt(2, approvedBy);
+            } else {
+                ps.setNull(2, java.sql.Types.INTEGER);
+            }
+            ps.setInt(3, id);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

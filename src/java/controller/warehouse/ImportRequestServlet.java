@@ -154,6 +154,14 @@ public class ImportRequestServlet extends HttpServlet {
                         }
                     }
                     break;
+                case "approve":
+                    int approveId = Integer.parseInt(request.getParameter("id"));
+                    dao.updateStatus(approveId, "APPROVED", loggedInUser.getId());
+                    break;
+                case "reject":
+                    int rejectId = Integer.parseInt(request.getParameter("id"));
+                    dao.updateStatus(rejectId, "REJECTED", loggedInUser.getId());
+                    break;
             }
         } catch (Exception e) {
             e.printStackTrace();
