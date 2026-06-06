@@ -88,6 +88,11 @@
                 <i class="bi bi-receipt me-2"></i> Purchase Orders
             </a>
             <% } %>
+            <% if (loggedInUserSidebar.hasPermission("IMPORT_TICKET_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/import?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/import") ? "active" : "" %>">
+                <i class="bi bi-box-arrow-in-down-left me-2"></i> Import Tickets
+            </a>
+            <% } %>
         </div>
         <% } %>
         
