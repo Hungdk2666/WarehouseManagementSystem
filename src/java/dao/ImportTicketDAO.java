@@ -112,6 +112,84 @@ public class ImportTicketDAO {
         return list;
     }
     
+    public boolean addImportTicket(ImportTicket ticket, List<ImportTicketDetail> details) {
+        Connection conn = null;
+        try {
+            conn = DBUtils.getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. Generate unique ticketCode: TKT-[YEAR]-[RANDOM_4_DIGIT] or sequence
+            Calendar cal = Calendar.getInstance();
+            int year = cal.get(Calendar.YEAR);
+            String code = "TKT-" + year + "-" + String.format("%04d", (int)(Math.random() * 10000));
+            
+            // Validate code uniqueness
+            boolean isUnique = false;
+            int retries = 0;
+            while (!isUnique && retries < 5) {
+                String checkQuery = "SELECT COUNT(*) FROM Import_Tickets WHERE ticket_code = ?";
+                try (PreparedStatement psCheck = conn.prepareStatement(checkQuery)) {
+                    psCheck.setString(1, code);
+                    try (ResultSet rsCheck = psCheck.executeQuery()) {
+                        if (rsCheck.next() && rsCheck.getInt(1) == 0) {
+                            isUnique = true;
+                        } else {
+                            code = "TKT-" + year + "-" + String.format("%04d", (int)(Math.random() * 10000));
+                            retries++;
+                        }
+                    }
+                }
+            }
+
+            // 2. Insert into Import_Tickets
+            String insertTicket = "INSERT INTO Import_Tickets (ticket_code, request_id, keeper_id, status) "
+                                + "VALUES (?, ?, ?, 'DRAFT')";
+            int ticketId = 0;
+            try (PreparedStatement ps = conn.prepareStatement(insertTicket, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, code);
+                ps.setInt(2, ticket.getRequestId());
+                ps.setInt(3, ticket.getKeeperId());
+                ps.executeUpdate();
+                
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        ticketId = rs.getInt(1);
+                    }
+                }
+            }
+
+            // 3. Insert into Import_Ticket_Details
+            if (ticketId > 0) {
+                String insertDetail = "INSERT INTO Import_Ticket_Details (ticket_id, product_id, quantity, unit_price) "
+                                    + "VALUES (?, ?, ?, ?)";
+                try (PreparedStatement psd = conn.prepareStatement(insertDetail)) {
+                    for (ImportTicketDetail d : details) {
+                        psd.setInt(1, ticketId);
+                        psd.setInt(2, d.getProductId());
+                        psd.setInt(3, d.getQuantity());
+                        psd.setDouble(4, d.getUnitPrice());
+                        psd.addBatch();
+                    }
+                    psd.executeBatch();
+                }
+                conn.commit();
+                return true;
+            } else {
+                conn.rollback();
+            }
+        } catch (Exception e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (Exception ex) { ex.printStackTrace(); }
+            }
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (Exception ex) { ex.printStackTrace(); }
+            }
+        }
+        return false;
+    }
+    
     public List<ImportTicket> getImportTicketsByRequestId(int requestId) {
         List<ImportTicket> list = new ArrayList<>();
         String query = "SELECT t.*, r.request_code, k.full_name AS keeper_name, c.full_name AS confirmed_name, s.supplier_name "

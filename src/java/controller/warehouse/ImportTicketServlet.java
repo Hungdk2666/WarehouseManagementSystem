@@ -3,6 +3,7 @@ package controller.warehouse;
 import dao.ImportRequestDAO;
 import dao.ImportTicketDAO;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -10,7 +11,9 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import model.ImportRequest;
 import model.ImportTicket;
+import model.ImportTicketDetail;
 import model.User;
 
 @WebServlet(name = "ImportTicketServlet", urlPatterns = {"/warehouse/import"})
@@ -46,6 +49,7 @@ public class ImportTicketServlet extends HttpServlet {
         }
 
         ImportTicketDAO dao = new ImportTicketDAO();
+        ImportRequestDAO rDao = new ImportRequestDAO();
 
         switch (action) {
             case "list":
@@ -62,6 +66,20 @@ public class ImportTicketServlet extends HttpServlet {
                 }
                 request.setAttribute("ticket", ticket);
                 request.getRequestDispatcher("/import/import-detail.jsp").forward(request, response);
+                break;
+            case "add":
+                // Get POs that are approved or partially received
+                List<ImportRequest> pendingRequests = rDao.getApprovedRequests();
+                request.setAttribute("poList", pendingRequests);
+
+                String reqIdParam = request.getParameter("request_id");
+                if (reqIdParam != null && !reqIdParam.trim().isEmpty()) {
+                    int reqId = Integer.parseInt(reqIdParam);
+                    ImportRequest selectedPO = rDao.getImportRequestById(reqId);
+                    request.setAttribute("selectedPO", selectedPO);
+                }
+
+                request.getRequestDispatcher("/import/import-add.jsp").forward(request, response);
                 break;
             default:
                 response.sendRedirect(request.getContextPath() + "/warehouse/import?action=list");
@@ -86,6 +104,67 @@ public class ImportTicketServlet extends HttpServlet {
             return;
         }
 
+        if ("add".equals(action)) {
+            if (!loggedInUser.hasPermission("IMPORT_TICKET_ADD")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create import tickets.");
+                return;
+            }
+        }
+        
+        ImportTicketDAO dao = new ImportTicketDAO();
+
+        try {
+            switch (action) {
+                case "add":
+                    int poId = Integer.parseInt(request.getParameter("po_id"));
+                    ImportRequestDAO poDAO = new ImportRequestDAO();
+                    model.ImportRequest po = poDAO.getImportRequestById(poId);
+                    if (po == null || po.getCancelRequestedAt() != null || "CANCELLED".equals(po.getStatus())) {
+                        response.sendRedirect(request.getContextPath() + "/warehouse/import?action=add&error=CancelRequested");
+                        return;
+                    }
+                    String[] productIds = request.getParameterValues("product_id");
+                    String[] quantities = request.getParameterValues("quantity");
+                    String[] unitPrices = request.getParameterValues("unit_price");
+                    
+                    if (productIds != null && productIds.length > 0) {
+                        List<ImportTicketDetail> details = new ArrayList<>();
+                        for (int i = 0; i < productIds.length; i++) {
+                            int pId = Integer.parseInt(productIds[i]);
+                            int qty = Integer.parseInt(quantities[i]);
+                            double price = Double.parseDouble(unitPrices[i]);
+                            
+                            // Only add items where actual quantity received is greater than 0
+                            if (qty > 0) {
+                                ImportTicketDetail d = new ImportTicketDetail();
+                                d.setProductId(pId);
+                                d.setQuantity(qty);
+                                d.setUnitPrice(price);
+                                details.add(d);
+                            }
+                        }
+                        
+                        if (details.isEmpty()) {
+                            response.sendRedirect(request.getContextPath() + "/warehouse/import?action=add&request_id=" + poId + "&error=NoItemsReceived");
+                            return;
+                        }
+                        
+                        ImportTicket ticket = new ImportTicket();
+                        ticket.setRequestId(poId);
+                        ticket.setKeeperId(loggedInUser.getId());
+                        
+                        boolean success = dao.addImportTicket(ticket, details);
+                        if (!success) {
+                            response.sendRedirect(request.getContextPath() + "/warehouse/import?action=add&request_id=" + poId + "&error=FailedToCreate");
+                            return;
+                        }
+                    }
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
         response.sendRedirect(request.getContextPath() + "/warehouse/import?action=list");
     }
 }

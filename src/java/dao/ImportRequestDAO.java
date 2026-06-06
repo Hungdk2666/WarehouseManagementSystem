@@ -57,6 +57,37 @@ public class ImportRequestDAO {
         return list;
     }
 
+    public List<ImportRequest> getApprovedRequests() {
+        List<ImportRequest> list = new ArrayList<>();
+        String query = "SELECT r.*, s.supplier_name, u.full_name AS creator_name "
+                     + "FROM Import_Requests r "
+                     + "JOIN Suppliers s ON r.supplier_id = s.id "
+                     + "JOIN Users u ON r.staff_id = u.id "
+                     + "WHERE r.status = 'APPROVED' AND r.cancel_requested_at IS NULL "
+                     + "ORDER BY r.created_at DESC";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                ImportRequest r = new ImportRequest();
+                r.setId(rs.getInt("id"));
+                r.setRequestCode(rs.getString("request_code"));
+                r.setSupplierId(rs.getInt("supplier_id"));
+                r.setCreatorId(rs.getInt("staff_id"));
+                r.setStatus(rs.getString("status"));
+                r.setExpectedDate(rs.getDate("expected_date"));
+                r.setCreatedAt(rs.getTimestamp("created_at"));
+                
+                r.setSupplierName(rs.getString("supplier_name"));
+                r.setCreatorFullName(rs.getString("creator_name"));
+                list.add(r);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
     public ImportRequest getImportRequestById(int id) {
         String query = "SELECT r.*, s.supplier_name, u.full_name AS creator_name, a.full_name AS approver_name, "
                      + "cr.full_name AS cancel_requested_name, cb.full_name AS cancelled_name "
