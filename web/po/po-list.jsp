@@ -199,59 +199,123 @@
     
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            initPagination("poTable", "paginationContainer", "entriesPerPage");
+            initPaginationAndFilter("poTable", "paginationContainer", "entriesPerPage", "poSearch", "dateFilter", "statusFilter", "creatorFilter");
         });
 
-        function initPagination(tableId, containerId, selectId) {
+        function initPaginationAndFilter(tableId, containerId, selectId, searchInputId, dateFilterId, statusFilterId, creatorFilterId) {
             const table = document.getElementById(tableId);
             if (!table) return;
             const tbody = table.querySelector("tbody");
             if (!tbody) return;
-
+            
             const allRows = Array.from(tbody.querySelectorAll("tr"));
             if (allRows.length === 1 && allRows[0].querySelector("td[colspan]")) {
                 return;
             }
-
+            
             const container = document.getElementById(containerId);
             const select = document.getElementById(selectId);
+            const searchInput = document.getElementById(searchInputId);
+            const dateFilter = document.getElementById(dateFilterId);
+            const statusFilter = document.getElementById(statusFilterId);
+            const creatorFilter = document.getElementById(creatorFilterId);
             if (!container || !select) return;
-
+            
             let currentPage = 1;
             let pageSize = parseInt(select.value) || 10;
+            let filteredRows = allRows;
 
-            function paginate() {
-                allRows.forEach(row => row.style.display = "none");
-
-                const totalRows = allRows.length;
-                const totalPages = Math.ceil(totalRows / pageSize);
-
-                if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
-
-                const start = (currentPage - 1) * pageSize;
-                const end = Math.min(start + pageSize, totalRows);
-
-                for (let i = start; i < end; i++) {
-                    allRows[i].style.display = "";
+            // Dynamically populate Creator dropdown filter
+            if (creatorFilter) {
+                const creators = new Set();
+                allRows.forEach(row => {
+                    if (row.cells.length > 3) {
+                        const cText = row.cells[3].textContent.trim();
+                        if (cText) creators.add(cText);
+                    }
+                });
+                const datalist = document.getElementById("creatorDatalist");
+                if (datalist) {
+                    creators.forEach(c => {
+                        const opt = document.createElement("option");
+                        opt.value = c;
+                        datalist.appendChild(opt);
+                    });
                 }
-
-                renderPaginationControls(totalPages, totalRows);
             }
 
+            function filterAndPaginate() {
+                const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : "";
+                const selectedDate = dateFilter ? dateFilter.value : "";
+                const selectedStatus = statusFilter ? statusFilter.value : "";
+                const selectedCreator = creatorFilter ? creatorFilter.value.trim() : "";
+                
+                filteredRows = allRows.filter(row => {
+                    if (row.cells.length < 6) return false;
+                    
+                    // 1. Text Search (Matches Code, Supplier, Creator)
+                    const code = row.cells[0].textContent.toLowerCase();
+                    const supplier = row.cells[1].textContent.toLowerCase();
+                    const creator = row.cells[3].textContent.toLowerCase();
+                    const matchesSearch = searchQuery === "" || 
+                                          code.includes(searchQuery) || 
+                                          supplier.includes(searchQuery) || 
+                                          creator.includes(searchQuery);
+
+                    // 2. Date Filter (Matches Created At date part: YYYY-MM-DD)
+                    const createdAtText = row.cells[5].textContent.trim();
+                    const createdAtDatePart = createdAtText.split(" ")[0]; // Get 'YYYY-MM-DD'
+                    const matchesDate = selectedDate === "" || createdAtDatePart === selectedDate;
+
+                    // 3. Status Filter (Matches Status)
+                    const status = row.cells[4].textContent.trim();
+                    const matchesStatus = selectedStatus === "" || status === selectedStatus;
+
+                    // 4. Creator Filter (Matches Creator)
+                    const creatorText = row.cells[3].textContent.trim();
+                    const matchesCreator = selectedCreator === "" || creatorText.toLowerCase().includes(selectedCreator.toLowerCase());
+
+                    return matchesSearch && matchesDate && matchesStatus && matchesCreator;
+                });
+                
+                // Hide all rows first
+                allRows.forEach(row => row.style.display = "none");
+                
+                const totalRows = filteredRows.length;
+                const totalPages = Math.ceil(totalRows / pageSize);
+                
+                if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+                
+                const start = (currentPage - 1) * pageSize;
+                const end = Math.min(start + pageSize, totalRows);
+                
+                // Show only the current page rows of the filtered set
+                for (let i = start; i < end; i++) {
+                    filteredRows[i].style.display = "";
+                }
+                
+                renderPaginationControls(totalPages, totalRows);
+            }
+            
             function renderPaginationControls(totalPages, totalRows) {
                 container.innerHTML = "";
-
+                if (totalRows === 0) {
+                    container.innerHTML = "<span class='text-muted small'>No matching entries found</span>";
+                    return;
+                }
+                
                 const infoSpan = document.createElement("span");
                 infoSpan.className = "text-muted small";
                 const startIdx = (currentPage - 1) * pageSize + 1;
                 const endIdx = Math.min(currentPage * pageSize, totalRows);
-                infoSpan.textContent = "Showing " + startIdx + " to " + endIdx + " of " + totalRows + " entries";
+                infoSpan.textContent = "Showing " + startIdx + " to " + endIdx + " of " + totalRows + " entries (filtered from " + allRows.length + " total)";
                 container.appendChild(infoSpan);
-
+                
                 const nav = document.createElement("nav");
                 const ul = document.createElement("ul");
                 ul.className = "pagination pagination-sm m-0 border-0";
-
+                
+                // Prev
                 const prevLi = document.createElement("li");
                 prevLi.className = "page-item " + (currentPage === 1 ? "disabled" : "");
                 const prevA = document.createElement("a");
@@ -262,12 +326,13 @@
                     e.preventDefault();
                     if (currentPage > 1) {
                         currentPage--;
-                        paginate();
+                        filterAndPaginate();
                     }
                 });
                 prevLi.appendChild(prevA);
                 ul.appendChild(prevLi);
-
+                
+                // Pages
                 for (let i = 1; i <= totalPages; i++) {
                     const li = document.createElement("li");
                     li.className = "page-item " + (currentPage === i ? "active" : "");
@@ -278,12 +343,13 @@
                     a.addEventListener("click", function(e) {
                         e.preventDefault();
                         currentPage = i;
-                        paginate();
+                        filterAndPaginate();
                     });
                     li.appendChild(a);
                     ul.appendChild(li);
                 }
-
+                
+                // Next
                 const nextLi = document.createElement("li");
                 nextLi.className = "page-item " + (currentPage === totalPages ? "disabled" : "");
                 const nextA = document.createElement("a");
@@ -294,23 +360,48 @@
                     e.preventDefault();
                     if (currentPage < totalPages) {
                         currentPage++;
-                        paginate();
+                        filterAndPaginate();
                     }
                 });
                 nextLi.appendChild(nextA);
                 ul.appendChild(nextLi);
-
+                
                 nav.appendChild(ul);
                 container.appendChild(nav);
             }
-
+            
             select.addEventListener("change", function() {
                 pageSize = parseInt(this.value) || 10;
                 currentPage = 1;
-                paginate();
+                filterAndPaginate();
             });
 
-            paginate();
+            if (searchInput) {
+                searchInput.addEventListener("input", function() {
+                    currentPage = 1;
+                    filterAndPaginate();
+                });
+            }
+            if (dateFilter) {
+                dateFilter.addEventListener("change", function() {
+                    currentPage = 1;
+                    filterAndPaginate();
+                });
+            }
+            if (statusFilter) {
+                statusFilter.addEventListener("change", function() {
+                    currentPage = 1;
+                    filterAndPaginate();
+                });
+            }
+            if (creatorFilter) {
+                creatorFilter.addEventListener("input", function() {
+                    currentPage = 1;
+                    filterAndPaginate();
+                });
+            }
+            
+            filterAndPaginate();
         }
     </script>
 </body>
