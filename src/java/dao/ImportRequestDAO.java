@@ -3,8 +3,10 @@ package dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Calendar;
 import model.ImportRequest;
 import model.ImportRequestDetail;
 import utils.DBUtils;
@@ -132,5 +134,84 @@ public class ImportRequestDAO {
             }
         }
         return list;
+    }
+    
+    public boolean addImportRequest(ImportRequest req, List<ImportRequestDetail> details) {
+        Connection conn = null;
+        try {
+            conn = DBUtils.getConnection();
+            conn.setAutoCommit(false);
+            
+            // 1. Generate unique request_code: REQ-[YEAR]-[RANDOM_4_DIGIT] or sequence
+            Calendar cal = Calendar.getInstance();
+            int year = cal.get(Calendar.YEAR);
+            String code = "REQ-" + year + "-" + String.format("%04d", (int)(Math.random() * 10000));
+            
+            // Validate code uniqueness
+            boolean isUnique = false;
+            int retries = 0;
+            while (!isUnique && retries < 5) {
+                String checkQuery = "SELECT COUNT(*) FROM Import_Requests WHERE request_code = ?";
+                try (PreparedStatement psCheck = conn.prepareStatement(checkQuery)) {
+                    psCheck.setString(1, code);
+                    try (ResultSet rsCheck = psCheck.executeQuery()) {
+                        if (rsCheck.next() && rsCheck.getInt(1) == 0) {
+                            isUnique = true;
+                        } else {
+                            code = "REQ-" + year + "-" + String.format("%04d", (int)(Math.random() * 10000));
+                            retries++;
+                        }
+                    }
+                }
+            }
+
+            // 2. Insert into Import_Requests
+            String insertReq = "INSERT INTO Import_Requests (request_code, supplier_id, staff_id, status, expected_date) "
+                             + "VALUES (?, ?, ?, 'PENDING', ?)";
+            int requestId = 0;
+            try (PreparedStatement ps = conn.prepareStatement(insertReq, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, code);
+                ps.setInt(2, req.getSupplierId());
+                ps.setInt(3, req.getCreatorId());
+                ps.setDate(4, req.getExpectedDate());
+                ps.executeUpdate();
+                
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        requestId = rs.getInt(1);
+                    }
+                }
+            }
+            
+            // 3. Insert into Import_Request_Details
+            if (requestId > 0) {
+                String insertDetail = "INSERT INTO Import_Request_Details (request_id, product_id, quantity, unit_price) "
+                                    + "VALUES (?, ?, ?, ?)";
+                try (PreparedStatement psd = conn.prepareStatement(insertDetail)) {
+                    for (ImportRequestDetail d : details) {
+                        psd.setInt(1, requestId);
+                        psd.setInt(2, d.getProductId());
+                        psd.setInt(3, d.getQuantity());
+                        psd.setDouble(4, d.getUnitPrice());
+                        psd.addBatch();
+                    }
+                    psd.executeBatch();
+                }
+                conn.commit();
+                return true;
+            } else {
+                conn.rollback();
+            }
+        } catch (Exception e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (Exception ex) { ex.printStackTrace(); }
+            }
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (Exception ex) { ex.printStackTrace(); }
+            }
+        }
+        return false;
     }
 }

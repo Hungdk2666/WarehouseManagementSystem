@@ -73,6 +73,17 @@ public class ImportRequestServlet extends HttpServlet {
                 request.setAttribute("ticketList", tickets);
                 request.getRequestDispatcher("/po/po-detail.jsp").forward(request, response);
                 break;
+            case "add":
+                SupplierDAO sDao = new SupplierDAO();
+                ProductDAO pDao = new ProductDAO();
+                
+                List<Supplier> suppliers = sDao.getAllSuppliers();
+                List<Product> products = pDao.getAllProducts();
+                
+                request.setAttribute("supplierList", suppliers);
+                request.setAttribute("productList", products);
+                request.getRequestDispatcher("/po/po-add.jsp").forward(request, response);
+                break;
             default:
                 response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
                 break;
@@ -94,6 +105,58 @@ public class ImportRequestServlet extends HttpServlet {
         if (action == null) {
             response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
             return;
+        }
+        
+        if ("add".equals(action)) {
+            if (!loggedInUser.hasPermission("PO_ADD")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create POs.");
+                return;
+            }
+        }
+        
+        ImportRequestDAO dao = new ImportRequestDAO();
+        
+        try {
+            switch (action) {
+                case "add":
+                    int supplierId = Integer.parseInt(request.getParameter("supplier_id"));
+                    Date expectedDate = Date.valueOf(request.getParameter("expected_date"));
+                    
+                    String[] productIds = request.getParameterValues("product_id");
+                    String[] quantities = request.getParameterValues("quantity");
+                    String[] unitPrices = request.getParameterValues("unit_price");
+                    
+                    if (productIds != null && productIds.length > 0) {
+                        List<ImportRequestDetail> details = new ArrayList<>();
+                        for (int i = 0; i < productIds.length; i++) {
+                            if (productIds[i] == null || productIds[i].trim().isEmpty()) continue;
+                            int pId = Integer.parseInt(productIds[i]);
+                            int qty = Integer.parseInt(quantities[i]);
+                            double price = Double.parseDouble(unitPrices[i]);
+                            
+                            ImportRequestDetail d = new ImportRequestDetail();
+                            d.setProductId(pId);
+                            d.setQuantity(qty);
+                            d.setUnitPrice(price);
+                            details.add(d);
+                        }
+                        
+                        ImportRequest req = new ImportRequest();
+                        req.setSupplierId(supplierId);
+                        req.setCreatorId(loggedInUser.getId());
+                        req.setExpectedDate(expectedDate);
+                        
+                        boolean success = dao.addImportRequest(req, details);
+                        if (!success) {
+                            request.setAttribute("error", "Failed to save Purchase Order. Please try again.");
+                            response.sendRedirect(request.getContextPath() + "/warehouse/po?action=add");
+                            return;
+                        }
+                    }
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         
         response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
