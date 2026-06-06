@@ -66,7 +66,11 @@ public class ImportRequestServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
                     return;
                 }
+                dao.ImportTicketDAO ticketDao = new dao.ImportTicketDAO();
+                List<model.ImportTicket> tickets = ticketDao.getImportTicketsByRequestId(id);
+                
                 request.setAttribute("po", req);
+                request.setAttribute("ticketList", tickets);
                 request.getRequestDispatcher("/po/po-detail.jsp").forward(request, response);
                 break;
             default:

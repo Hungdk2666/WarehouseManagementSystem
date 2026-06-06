@@ -1,5 +1,7 @@
 <%@page import="model.ImportRequest"%>
 <%@page import="model.ImportRequestDetail"%>
+<%@page import="model.ImportTicket"%>
+<%@page import="java.util.List"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
@@ -13,6 +15,7 @@
         response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
         return;
     }
+    List<ImportTicket> ticketList = (List<ImportTicket>) request.getAttribute("ticketList");
     boolean canApprove = loggedInUser.hasPermission("PO_APPROVE");
     boolean canCancel = loggedInUser.hasPermission("PO_CANCEL");
     boolean canRequestCancel = loggedInUser.hasPermission("PO_REQUEST_CANCEL");
@@ -170,13 +173,25 @@
                 </div>
 
                 <div class="card shadow-sm border-0 bg-white mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary">
-                            <i class="bi bi-list-check me-2"></i>Requested Items & Progress
-                        </h5>
+                    <div class="card-header bg-white pt-3 pb-0 border-0">
+                        <ul class="nav nav-tabs border-bottom-0" id="poTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active fw-bold text-primary" id="items-tab" data-bs-toggle="tab" data-bs-target="#items-pane" type="button" role="tab" aria-controls="items-pane" aria-selected="true" style="border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                                    <i class="bi bi-list-check me-2"></i>Requested Items & Progress
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-bold text-secondary" id="tickets-tab" data-bs-toggle="tab" data-bs-target="#tickets-pane" type="button" role="tab" aria-controls="tickets-pane" aria-selected="false" style="border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                                    <i class="bi bi-box-arrow-in-down me-2"></i>Linked Import Tickets (<%= ticketList != null ? ticketList.size() : 0 %>)
+                                </button>
+                            </li>
+                        </ul>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
+                        <div class="tab-content" id="poTabsContent">
+                            <!-- Items Pane -->
+                            <div class="tab-pane fade show active" id="items-pane" role="tabpanel" aria-labelledby="items-tab">
+                                <div class="table-responsive">
                                     <table class="table align-middle text-center mb-0">
                                         <thead class="table-light">
                                             <tr>
@@ -238,6 +253,62 @@
                                             </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                            <!-- Tickets Pane -->
+                            <div class="tab-pane fade" id="tickets-pane" role="tabpanel" aria-labelledby="tickets-tab">
+                                <div class="table-responsive">
+                                    <table class="table align-middle text-center mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Ticket Code</th>
+                                                <th>Status</th>
+                                                <th>Keeper (Staff)</th>
+                                                <th>Created At</th>
+                                                <th>Confirmed By</th>
+                                                <th>Confirmed At</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <%
+                                                if (ticketList != null && !ticketList.isEmpty()) {
+                                                    for (ImportTicket t : ticketList) {
+                                                        String tStatusBadge = "bg-secondary text-secondary";
+                                                        if ("DRAFT".equals(t.getStatus())) tStatusBadge = "bg-warning text-warning";
+                                                        else if ("CONFIRMED".equals(t.getStatus())) tStatusBadge = "bg-success text-success";
+                                                        else if ("CANCELLED".equals(t.getStatus())) tStatusBadge = "bg-secondary text-secondary";
+                                            %>
+                                            <tr>
+                                                <td class="fw-bold text-slate-800">#<%= t.getTicketCode() %></td>
+                                                <td>
+                                                    <span class="badge <%= tStatusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= t.getStatus() %></span>
+                                                </td>
+                                                <td><%= t.getKeeperFullName() %></td>
+                                                <td class="text-muted small"><%= t.getCreatedAt() %></td>
+                                                <td><%= t.getConfirmedByFullName() != null ? t.getConfirmedByFullName() : "-" %></td>
+                                                <td class="text-muted small"><%= t.getConfirmedAt() != null ? t.getConfirmedAt() : "-" %></td>
+                                                <td>
+                                                    <a href="<%= request.getContextPath() %>/warehouse/import?action=detail&id=<%= t.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5">
+                                                        <i class="bi bi-eye"></i> Details
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <%
+                                                    }
+                                                } else {
+                                            %>
+                                            <tr>
+                                                <td colspan="7" class="text-center text-muted py-5">
+                                                    <i class="bi bi-box-arrow-in-down text-muted display-4 d-block mb-3"></i>
+                                                    No Linked Import Tickets found.
+                                                </td>
+                                            </tr>
+                                            <% } %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
