@@ -112,6 +112,11 @@ public class ImportRequestServlet extends HttpServlet {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create POs.");
                 return;
             }
+        } else if ("approve".equals(action) || "reject".equals(action)) {
+            if (!loggedInUser.hasPermission("PO_APPROVE")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to approve/reject POs.");
+                return;
+            }
         }
         
         ImportRequestDAO dao = new ImportRequestDAO();
