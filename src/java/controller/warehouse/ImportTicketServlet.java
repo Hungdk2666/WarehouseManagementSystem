@@ -109,6 +109,16 @@ public class ImportTicketServlet extends HttpServlet {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create import tickets.");
                 return;
             }
+        } else if ("confirm".equals(action)) {
+            if (!loggedInUser.hasPermission("IMPORT_TICKET_CONFIRM")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to confirm import tickets.");
+                return;
+            }
+        } else if ("cancel".equals(action)) {
+            if (!loggedInUser.hasPermission("IMPORT_TICKET_CANCEL")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to cancel import tickets.");
+                return;
+            }
         }
         
         ImportTicketDAO dao = new ImportTicketDAO();
@@ -159,6 +169,14 @@ public class ImportTicketServlet extends HttpServlet {
                             return;
                         }
                     }
+                    break;
+                case "confirm":
+                    int confirmId = Integer.parseInt(request.getParameter("id"));
+                    dao.confirmTicket(confirmId, loggedInUser.getId());
+                    break;
+                case "cancel":
+                    int cancelId = Integer.parseInt(request.getParameter("id"));
+                    dao.cancelTicket(cancelId);
                     break;
             }
         } catch (Exception e) {
