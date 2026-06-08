@@ -2,6 +2,7 @@ package controller.warehouse;
 
 import dao.ImportRequestDAO;
 import dao.ImportTicketDAO;
+import dao.ProductItemDAO;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +65,14 @@ public class ImportTicketServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/import?action=list");
                     return;
                 }
+                
+                // Fetch generated serial numbers if ticket is confirmed
+                if ("CONFIRMED".equals(ticket.getStatus())) {
+                    ProductItemDAO itemDAO = new ProductItemDAO();
+                    List<model.ProductItem> importedSerials = itemDAO.getItemsByImportTicketId(id);
+                    request.setAttribute("importedSerials", importedSerials);
+                }
+                
                 request.setAttribute("ticket", ticket);
                 request.getRequestDispatcher("/import/import-detail.jsp").forward(request, response);
                 break;

@@ -1,6 +1,8 @@
 <%@page import="model.ImportTicket"%>
 <%@page import="model.ImportTicketDetail"%>
 <%@page import="model.User"%>
+<%@page import="model.ProductItem"%>
+<%@page import="java.util.List"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
@@ -13,6 +15,8 @@
         response.sendRedirect(request.getContextPath() + "/warehouse/import?action=list");
         return;
     }
+    boolean canConfirm = loggedInUser.hasPermission("IMPORT_TICKET_CONFIRM");
+    boolean canCancel = loggedInUser.hasPermission("IMPORT_TICKET_CANCEL");
 %>
 <!DOCTYPE html>
 <html>
@@ -141,7 +145,105 @@
                         </table>
                     </div>
                     
+                    <% if ("DRAFT".equals(ticket.getStatus()) && (canConfirm || canCancel)) { %>
+                    <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0">
+                        <% if (canCancel) { %>
+                        <form action="import?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to cancel this ticket?');">
+                            <input type="hidden" name="id" value="<%= ticket.getId() %>">
+                            <button type="submit" class="btn btn-outline-danger px-4"><i class="bi bi-x-circle me-1"></i> Cancel Ticket</button>
+                        </form>
+                        <% } %>
+                        <% if (canConfirm) { %>
+                        <form action="import?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to confirm this ticket?');">
+                            <input type="hidden" name="id" value="<%= ticket.getId() %>">
+                            <button type="submit" class="btn btn-success px-4"><i class="bi bi-check-circle-fill me-1"></i> Confirm & Post Stock</button>
+                        </form>
+                        <% } %>
+                    </div>
+                    <% } %>
                 </div>
+
+                <%
+                    List<ProductItem> importedSerials = (List<ProductItem>) request.getAttribute("importedSerials");
+                    if (importedSerials != null && !importedSerials.isEmpty()) {
+                %>
+                <div class="card shadow-sm border-0 bg-white mb-4">
+                    <div class="card-header bg-success bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-success"><i class="bi bi-qr-code-scan me-2"></i>Generated Serial Numbers & Barcodes</h5>
+                        <button class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" onclick="printBarcodes()">
+                            <i class="bi bi-printer-fill"></i> Print All Barcode Labels
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3" id="barcode-list-container">
+                            <% for (ProductItem item : importedSerials) { %>
+                            <div class="col-md-4 col-sm-6 text-center barcode-card-item mb-2">
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="fw-semibold text-slate-800 small text-truncate mb-1" title="<%= item.getProductName() %>"><%= item.getProductName() %></div>
+                                    <svg class="barcode-svg" data-value="<%= item.getSerialNumber() %>"></svg>
+                                </div>
+                            </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hidden Printable Area -->
+                <div class="d-none">
+                    <div id="printable-barcodes-section">
+                        <div style="display: flex; flex-wrap: wrap; justify-content: space-around; padding: 20px; font-family: 'Inter', sans-serif;">
+                            <% for (ProductItem item : importedSerials) { %>
+                            <div style="border: 1px solid #ccc; border-radius: 4px; padding: 15px; margin: 10px; background-color: #fff; text-align: center; width: 280px; page-break-inside: avoid; box-sizing: border-box;">
+                                <div style="font-weight: bold; color: #333; margin-bottom: 5px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= item.getProductName() %>"><%= item.getProductName() %></div>
+                                <svg class="printable-barcode-svg" data-value="<%= item.getSerialNumber() %>" style="max-width: 100%; height: auto;"></svg>
+                            </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        // Render standard display barcodes
+                        document.querySelectorAll(".barcode-svg").forEach(function(el) {
+                            const val = el.getAttribute("data-value");
+                            JsBarcode(el, val, {
+                                format: "CODE128",
+                                width: 1.5,
+                                height: 40,
+                                displayValue: true,
+                                fontSize: 11
+                            });
+                        });
+                        
+                        // Render printable barcodes
+                        document.querySelectorAll(".printable-barcode-svg").forEach(function(el) {
+                            const val = el.getAttribute("data-value");
+                            JsBarcode(el, val, {
+                                format: "CODE128",
+                                width: 1.1,
+                                height: 35,
+                                displayValue: true,
+                                fontSize: 11
+                            });
+                        });
+                    });
+                    
+                    function printBarcodes() {
+                        const printContent = document.getElementById("printable-barcodes-section").innerHTML;
+                        const originalContent = document.body.innerHTML;
+                        
+                        // Replace body with print-only content
+                        document.body.innerHTML = '<div>' + printContent + '</div>';
+                        window.print();
+                        
+                        // Restore original page content
+                        document.body.innerHTML = originalContent;
+                        window.location.reload(); // reload to restore scripts/events
+                    }
+                </script>
+                <% } %>
 
             </div>
         </div>

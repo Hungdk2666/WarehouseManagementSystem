@@ -3,7 +3,10 @@ package dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 import model.ProductItem;
+import utils.DBUtils;
 
 public class ProductItemDAO {
 
@@ -41,5 +44,41 @@ public class ProductItemDAO {
             }
         }
         return true;
+    }
+    
+    /**
+     * Returns serial numbers linked to an import ticket.
+     */
+    public List<ProductItem> getItemsByImportTicketId(int ticketId) {
+        List<ProductItem> list = new ArrayList<>();
+        String query = "SELECT i.*, p.product_name, p.sku, p.unit "
+                     + "FROM Product_Items i "
+                     + "JOIN Products p ON i.product_id = p.id "
+                     + "WHERE i.import_ticket_id = ? "
+                     + "ORDER BY i.id ASC";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, ticketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ProductItem item = new ProductItem();
+                    item.setId(rs.getInt("id"));
+                    item.setProductId(rs.getInt("product_id"));
+                    item.setSerialNumber(rs.getString("serial_number"));
+                    item.setStatus(rs.getString("status"));
+                    item.setImportTicketId(rs.getInt("import_ticket_id"));
+                    item.setExportTicketId((Integer) rs.getObject("export_ticket_id"));
+                    item.setCreatedAt(rs.getTimestamp("created_at"));
+                    
+                    item.setProductName(rs.getString("product_name"));
+                    item.setSku(rs.getString("sku"));
+                    item.setUnit(rs.getString("unit"));
+                    list.add(item);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 }
