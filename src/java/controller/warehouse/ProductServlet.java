@@ -14,7 +14,9 @@ import jakarta.servlet.http.HttpSession;
 import model.Brand;
 import model.Category;
 import model.Product;
+import model.ProductItem;
 import model.User;
+import dao.ProductItemDAO;
 
 @WebServlet(name = "ProductServlet", urlPatterns = {"/warehouse/product"})
 public class ProductServlet extends HttpServlet {
@@ -72,7 +74,10 @@ public class ProductServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/product?action=list");
                     return;
                 }
+                ProductItemDAO itemDao = new ProductItemDAO();
+                List<ProductItem> inStockSerials = itemDao.getInStockItemsByProductId(id);
                 request.setAttribute("product", product);
+                request.setAttribute("inStockSerials", inStockSerials);
                 request.getRequestDispatcher("/products/product-detail.jsp").forward(request, response);
                 break;
 
