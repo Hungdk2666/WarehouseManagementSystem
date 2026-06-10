@@ -28,6 +28,7 @@ public class ExportRequest {
     private String approvedByFullName;
     private String cancelRequestedByFullName;
     private String cancelledByFullName;
+    private List<ExportRequestDetail> details;
 
     public ExportRequest() {
     }
@@ -190,5 +191,13 @@ public class ExportRequest {
 
     public void setCancelledByFullName(String cancelledByFullName) {
         this.cancelledByFullName = cancelledByFullName;
+    }
+
+    public List<ExportRequestDetail> getDetails() {
+        return details;
+    }
+
+    public void setDetails(List<ExportRequestDetail> details) {
+        this.details = details;
     }
 }

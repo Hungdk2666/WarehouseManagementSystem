@@ -1,6 +1,7 @@
 package controller.warehouse;
 
 import dao.ExportRequestDAO;
+import dao.ExportTicketDAO;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -50,6 +51,20 @@ public class ExportRequestServlet extends HttpServlet {
                 List<ExportRequest> list = dao.getAllExportRequests();
                 request.setAttribute("requestList", list);
                 request.getRequestDispatcher("/export_request/request-list.jsp").forward(request, response);
+                break;
+            case "detail":
+                int id = Integer.parseInt(request.getParameter("id"));
+                ExportRequest req = dao.getExportRequestById(id);
+                if (req == null) {
+                    response.sendRedirect(request.getContextPath() + "/warehouse/export-request?action=list");
+                    return;
+                }
+                ExportTicketDAO ticketDao = new ExportTicketDAO();
+                List<model.ExportTicket> tickets = ticketDao.getExportTicketsByRequestId(id);
+                
+                request.setAttribute("req", req);
+                request.setAttribute("ticketList", tickets);
+                request.getRequestDispatcher("/export_request/request-detail.jsp").forward(request, response);
                 break;
             default:
                 response.sendRedirect(request.getContextPath() + "/warehouse/export-request?action=list");
