@@ -19,6 +19,7 @@ public class ExportTicket {
     private String confirmedByFullName;
     private String destinationName;
     private String exportReason;
+    private List<ExportTicketDetail> details;
 
     public ExportTicket() {
     }
@@ -125,5 +126,13 @@ public class ExportTicket {
 
     public void setExportReason(String exportReason) {
         this.exportReason = exportReason;
+    }
+
+    public List<ExportTicketDetail> getDetails() {
+        return details;
+    }
+
+    public void setDetails(List<ExportTicketDetail> details) {
+        this.details = details;
     }
 }
