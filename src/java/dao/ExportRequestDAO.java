@@ -56,6 +56,38 @@ public class ExportRequestDAO {
         return list;
     }
     
+    public List<ExportRequest> getApprovedRequests() {
+        List<ExportRequest> list = new ArrayList<>();
+        String query = "SELECT r.*, d.destination_name, u.full_name AS creator_name "
+                     + "FROM Export_Requests r "
+                     + "JOIN Internal_Destinations d ON r.destination_id = d.id "
+                     + "JOIN Users u ON r.staff_id = u.id "
+                     + "WHERE r.status = 'APPROVED' AND r.cancel_requested_at IS NULL "
+                     + "ORDER BY r.created_at DESC";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                ExportRequest r = new ExportRequest();
+                r.setId(rs.getInt("id"));
+                r.setRequestCode(rs.getString("request_code"));
+                r.setDestinationId(rs.getInt("destination_id"));
+                r.setExportReason(rs.getString("export_reason"));
+                r.setCreatorId(rs.getInt("staff_id"));
+                r.setStatus(rs.getString("status"));
+                r.setExpectedDate(rs.getDate("expected_date"));
+                r.setCreatedAt(rs.getTimestamp("created_at"));
+                
+                r.setDestinationName(rs.getString("destination_name"));
+                r.setCreatorFullName(rs.getString("creator_name"));
+                list.add(r);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
     public ExportRequest getExportRequestById(int id) {
         String query = "SELECT r.*, d.destination_name, u.full_name AS creator_name, a.full_name AS approver_name, "
                      + "cr.full_name AS cancel_requested_name, cb.full_name AS cancelled_name "
