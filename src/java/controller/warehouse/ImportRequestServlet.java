@@ -117,10 +117,15 @@ public class ImportRequestServlet extends HttpServlet {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to approve/reject POs.");
                 return;
             }
+        } else if ("approveCancel".equals(action) || "rejectCancel".equals(action)) {
+            if (!loggedInUser.hasPermission("PO_APPROVECANCEL")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to approve/reject PO cancel requests.");
+                return;
+            }
         }
-        
+
         ImportRequestDAO dao = new ImportRequestDAO();
-        
+
         try {
             switch (action) {
                 case "add":
@@ -167,11 +172,45 @@ public class ImportRequestServlet extends HttpServlet {
                     int rejectId = Integer.parseInt(request.getParameter("id"));
                     dao.updateStatus(rejectId, "REJECTED", loggedInUser.getId());
                     break;
+                case "cancel":
+                    int cancelId = Integer.parseInt(request.getParameter("id"));
+                    ImportRequest po = dao.getImportRequestById(cancelId);
+                    if (po != null) {
+                        if ("PENDING".equals(po.getStatus())) {
+                            if (!loggedInUser.hasPermission("PO_CANCEL")) {
+                                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to cancel POs.");
+                                return;
+                            }
+                            dao.cancelRequest(cancelId, loggedInUser.getId());
+                            response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
+                            return;
+                        } else if ("APPROVED".equals(po.getStatus())) {
+                            if (!loggedInUser.hasPermission("PO_REQUESTCANCEL")) {
+                                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to request PO cancellation.");
+                                return;
+                            }
+                            String reason = request.getParameter("reason");
+                            dao.requestCancel(cancelId, loggedInUser.getId(), reason);
+                            response.sendRedirect(request.getContextPath() + "/warehouse/po?action=detail&id=" + cancelId);
+                            return;
+                        }
+                    }
+                    break;
+                case "approveCancel":
+                    int appCancelId = Integer.parseInt(request.getParameter("id"));
+                    dao.approveCancel(appCancelId, loggedInUser.getId());
+                    response.sendRedirect(request.getContextPath() + "/warehouse/po?action=detail&id=" + appCancelId);
+                    return;
+                case "rejectCancel":
+                    int rejCancelId = Integer.parseInt(request.getParameter("id"));
+                    dao.rejectCancel(rejCancelId);
+                    response.sendRedirect(request.getContextPath() + "/warehouse/po?action=detail&id=" + rejCancelId);
+                    return;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
     }
 }

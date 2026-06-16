@@ -18,8 +18,8 @@
     List<ImportTicket> ticketList = (List<ImportTicket>) request.getAttribute("ticketList");
     boolean canApprove = loggedInUser.hasPermission("PO_APPROVE");
     boolean canCancel = loggedInUser.hasPermission("PO_CANCEL");
-    boolean canRequestCancel = loggedInUser.hasPermission("PO_REQUEST_CANCEL");
-    boolean canApproveCancel = loggedInUser.hasPermission("PO_APPROVE_CANCEL");
+    boolean canRequestCancel = loggedInUser.hasPermission("PO_REQUESTCANCEL");
+    boolean canApproveCancel = loggedInUser.hasPermission("PO_APPROVECANCEL");
     
     int totalReqQty = 0;
     int totalRecQty = 0;

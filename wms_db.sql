@@ -410,10 +410,10 @@ INSERT INTO Permissions (id, permission_name, description) VALUES
 (56, 'EXPORT_REQ_EDIT',         'Sửa yêu cầu xuất kho'),
 (57, 'EXPORT_REQ_CANCEL',       'Hủy yêu cầu xuất kho'),
 (58, 'EXPORT_REQ_APPROVE',      'Duyệt/từ chối yêu cầu xuất kho'),
-(59, 'PO_REQUEST_CANCEL',       'Đề xuất hủy PO đã được duyệt'),
-(60, 'PO_APPROVE_CANCEL',       'Duyệt yêu cầu hủy PO'),
-(61, 'EXPORT_REQ_REQUEST_CANCEL', 'Đề xuất hủy yêu cầu xuất kho đã được duyệt'),
-(62, 'EXPORT_REQ_APPROVE_CANCEL', 'Duyệt yêu cầu hủy xuất kho');
+(59, 'PO_REQUESTCANCEL',       'Đề xuất hủy PO đã được duyệt'),
+(60, 'PO_APPROVECANCEL',       'Duyệt yêu cầu hủy PO'),
+(61, 'EXPORT_REQ_REQUESTCANCEL', 'Đề xuất hủy yêu cầu xuất kho đã được duyệt'),
+(62, 'EXPORT_REQ_APPROVECANCEL', 'Duyệt yêu cầu hủy xuất kho');
 
 -- Map Permissions to Roles
 -- 1. System Admin

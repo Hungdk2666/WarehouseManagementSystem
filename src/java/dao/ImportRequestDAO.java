@@ -263,4 +263,63 @@ public class ImportRequestDAO {
         }
         return false;
     }
+    
+    public boolean cancelRequest(int id, Integer userId) {
+        String query = "UPDATE Import_Requests SET status = 'CANCELLED', cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'PENDING'";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            if (userId != null) {
+                ps.setInt(1, userId);
+            } else {
+                ps.setNull(1, java.sql.Types.INTEGER);
+            }
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean requestCancel(int id, int userId, String reason) {
+        String query = "UPDATE Import_Requests SET cancel_requested_by = ?, cancel_requested_at = CURRENT_TIMESTAMP, cancel_reason = ? "
+                     + "WHERE id = ? AND status = 'APPROVED' AND cancel_requested_at IS NULL";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, userId);
+            ps.setString(2, reason);
+            ps.setInt(3, id);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean approveCancel(int id, int userId) {
+        String query = "UPDATE Import_Requests SET status = 'CANCELLED', cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP "
+                     + "WHERE id = ? AND status = 'APPROVED' AND cancel_requested_at IS NOT NULL";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean rejectCancel(int id) {
+        String query = "UPDATE Import_Requests SET cancel_requested_by = NULL, cancel_requested_at = NULL, cancel_reason = NULL "
+                     + "WHERE id = ? AND status = 'APPROVED' AND cancel_requested_at IS NOT NULL";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
