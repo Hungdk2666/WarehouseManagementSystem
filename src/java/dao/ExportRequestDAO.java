@@ -3,7 +3,9 @@ package dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import model.ExportRequest;
 import model.ExportRequestDetail;
@@ -166,4 +168,84 @@ public class ExportRequestDAO {
         }
         return list;
     }
+    
+    public boolean addExportRequest(ExportRequest req, List<ExportRequestDetail> details) {
+        Connection conn = null;
+        try {
+            conn = DBUtils.getConnection();
+            conn.setAutoCommit(false);
+            
+            // 1. Generate unique request_code: REQ-EXP-[YEAR]-[RANDOM_4_DIGIT]
+            Calendar cal = Calendar.getInstance();
+            int year = cal.get(Calendar.YEAR);
+            String code = "REQ-EXP-" + year + "-" + String.format("%04d", (int)(Math.random() * 10000));
+            
+            // Validate code uniqueness
+            boolean isUnique = false;
+            int retries = 0;
+            while (!isUnique && retries < 5) {
+                String checkQuery = "SELECT COUNT(*) FROM Export_Requests WHERE request_code = ?";
+                try (PreparedStatement psCheck = conn.prepareStatement(checkQuery)) {
+                    psCheck.setString(1, code);
+                    try (ResultSet rsCheck = psCheck.executeQuery()) {
+                        if (rsCheck.next() && rsCheck.getInt(1) == 0) {
+                            isUnique = true;
+                        } else {
+                            code = "REQ-EXP-" + year + "-" + String.format("%04d", (int)(Math.random() * 10000));
+                            retries++;
+                        }
+                    }
+                }
+            }
+
+            // 2. Insert into Export_Requests
+            String insertReq = "INSERT INTO Export_Requests (request_code, destination_id, export_reason, staff_id, status, expected_date) "
+                             + "VALUES (?, ?, ?, ?, 'PENDING', ?)";
+            int requestId = 0;
+            try (PreparedStatement ps = conn.prepareStatement(insertReq, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, code);
+                ps.setInt(2, req.getDestinationId());
+                ps.setString(3, req.getExportReason());
+                ps.setInt(4, req.getCreatorId());
+                ps.setDate(5, req.getExpectedDate());
+                ps.executeUpdate();
+                
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        requestId = rs.getInt(1);
+                    }
+                }
+            }
+            
+            // 3. Insert into Export_Request_Details
+            if (requestId > 0) {
+                String insertDetail = "INSERT INTO Export_Request_Details (request_id, product_id, quantity) "
+                                    + "VALUES (?, ?, ?)";
+                try (PreparedStatement psd = conn.prepareStatement(insertDetail)) {
+                    for (ExportRequestDetail d : details) {
+                        psd.setInt(1, requestId);
+                        psd.setInt(2, d.getProductId());
+                        psd.setInt(3, d.getQuantity());
+                        psd.addBatch();
+                    }
+                    psd.executeBatch();
+                }
+                conn.commit();
+                return true;
+            } else {
+                conn.rollback();
+            }
+        } catch (Exception e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (Exception ex) { ex.printStackTrace(); }
+            }
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (Exception ex) { ex.printStackTrace(); }
+            }
+        }
+        return false;
+    }
+
 }
