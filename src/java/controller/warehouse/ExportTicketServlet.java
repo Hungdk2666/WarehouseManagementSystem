@@ -67,7 +67,8 @@ public class ExportTicketServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=list");
                     return;
                 }
-
+                
+                // Serial Numbers Integration
                 dao.ProductItemDAO itemDAO = new dao.ProductItemDAO();
                 if ("CONFIRMED".equals(ticket.getStatus())) {
                     List<model.ProductItem> exportedSerials = itemDAO.getItemsByExportTicketId(id);
@@ -97,7 +98,7 @@ public class ExportTicketServlet extends HttpServlet {
                 if (reqIdParam != null && !reqIdParam.trim().isEmpty()) {
                     int reqId = Integer.parseInt(reqIdParam);
                     ExportRequest selectedReq = rDao.getExportRequestById(reqId);
-
+                    
                     // Attach current inventory stock to details for frontend check helper
                     ProductDAO pDao = new ProductDAO();
                     if (selectedReq != null && selectedReq.getDetails() != null) {
@@ -134,10 +135,25 @@ public class ExportTicketServlet extends HttpServlet {
         }
 
         String action = request.getParameter("action");
+        if (action == null) {
+            response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=list");
+            return;
+        }
 
+        // Permission Checks
         if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("EXPORT_TICKET_ADD")) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create export tickets.");
+                return;
+            }
+        } else if ("confirm".equals(action)) {
+            if (!loggedInUser.hasPermission("EXPORT_TICKET_CONFIRM")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to confirm export tickets.");
+                return;
+            }
+        } else if ("cancel".equals(action)) {
+            if (!loggedInUser.hasPermission("EXPORT_TICKET_CANCEL")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to cancel export tickets.");
                 return;
             }
         }
@@ -151,7 +167,7 @@ public class ExportTicketServlet extends HttpServlet {
                     int reqId = Integer.parseInt(request.getParameter("request_id"));
                     String[] productIds = request.getParameterValues("product_id");
                     String[] quantities = request.getParameterValues("quantity");
-
+                    
                     ExportRequest selectedReq = rDao.getExportRequestById(reqId);
                     if (selectedReq == null || selectedReq.getCancelRequestedAt() != null || "CANCELLED".equals(selectedReq.getStatus())) {
                         response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&error=CancelRequested");
@@ -164,7 +180,7 @@ public class ExportTicketServlet extends HttpServlet {
                         for (int i = 0; i < productIds.length; i++) {
                             int pId = Integer.parseInt(productIds[i]);
                             int qty = Integer.parseInt(quantities[i]);
-
+                            
                             if (qty > 0) {
                                 // Find matching request detail to validate quantity
                                 ExportRequestDetail reqD = null;
@@ -198,22 +214,43 @@ public class ExportTicketServlet extends HttpServlet {
                                 details.add(d);
                             }
                         }
-
+                        
                         if (details.isEmpty()) {
                             response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=NoItemsDispatched");
                             return;
                         }
-
+                        
                         ExportTicket ticket = new ExportTicket();
                         ticket.setRequestId(reqId);
                         ticket.setKeeperId(loggedInUser.getId());
-
+                        
                         boolean success = dao.addExportTicket(ticket, details);
                         if (!success) {
                             response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=FailedToCreate");
                             return;
                         }
                     }
+                    break;
+                case "confirm":
+                    int confirmId = Integer.parseInt(request.getParameter("id"));
+                    String[] scannedSerialsArr = request.getParameterValues("scanned_serials");
+                    List<String> scannedSerials = new ArrayList<>();
+                    if (scannedSerialsArr != null) {
+                        for (String s : scannedSerialsArr) {
+                            if (s != null && !s.trim().isEmpty()) {
+                                scannedSerials.add(s.trim());
+                            }
+                        }
+                    }
+                    boolean successConfirm = dao.confirmTicket(confirmId, loggedInUser.getId(), scannedSerials);
+                    if (!successConfirm) {
+                        response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + confirmId + "&error=ConfirmFailed");
+                        return;
+                    }
+                    break;
+                case "cancel":
+                    int cancelId = Integer.parseInt(request.getParameter("id"));
+                    dao.cancelTicket(cancelId);
                     break;
             }
         } catch (Exception e) {
