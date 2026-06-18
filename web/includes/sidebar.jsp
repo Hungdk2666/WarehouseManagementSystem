@@ -96,6 +96,27 @@
         </div>
         <% } %>
         
+        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("EXPORT_REQ_VIEW") || loggedInUserSidebar.hasPermission("EXPORT_TICKET_VIEW"))) { %>
+        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
+             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
+             data-custom-toggle="collapse" data-custom-target="#collapseOutbound" aria-expanded="false">
+            <span><i class="bi bi-arrow-up-right-square-fill me-2"></i> Outbound Operations</span>
+            <i class="bi bi-chevron-right chevron-icon"></i>
+        </div>
+        <div class="collapse" id="collapseOutbound">
+            <% if (loggedInUserSidebar.hasPermission("EXPORT_REQ_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/export-request?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("export-request") || requestURI.contains("export_request") ? "active" : "" %>">
+                <i class="bi bi-receipt me-2"></i> Export Requests
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("EXPORT_TICKET_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("export-ticket") || requestURI.contains("export_ticket") ? "active" : "" %>">
+                <i class="bi bi-box-arrow-up-right me-2"></i> Export Tickets
+            </a>
+            <% } %>
+        </div>
+        <% } %>
+        
         <!-- Master Data Section -->
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PRODUCT_VIEW") || loggedInUserSidebar.hasPermission("CATEGORY_VIEW") || loggedInUserSidebar.hasPermission("BRAND_VIEW") || loggedInUserSidebar.hasPermission("DESTINATION_VIEW") || loggedInUserSidebar.hasPermission("SUPPLIER_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 

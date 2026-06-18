@@ -21,8 +21,8 @@
     boolean canApprove = loggedInUser.hasPermission("EXPORT_REQ_APPROVE");
     boolean canCancel = loggedInUser.hasPermission("EXPORT_REQ_CANCEL");
     boolean canCreateTicket = loggedInUser.hasPermission("EXPORT_TICKET_ADD");
-    boolean canRequestCancel = loggedInUser.hasPermission("EXPORT_REQ_REQUEST_CANCEL");
-    boolean canApproveCancel = loggedInUser.hasPermission("EXPORT_REQ_APPROVE_CANCEL");
+    boolean canRequestCancel = loggedInUser.hasPermission("EXPORT_REQ_REQUESTCANCEL");
+    boolean canApproveCancel = loggedInUser.hasPermission("EXPORT_REQ_APPROVECANCEL");
 
     int totalReqQty = 0;
     int totalIssuedQty = 0;
