@@ -1,10 +1,14 @@
 package controller.warehouse;
 
-import dao.ImportRequestDAO;
+import dao.RequestDAO;
+import dao.TicketDAO;
 import dao.SupplierDAO;
 import dao.ProductDAO;
+import dao.WarehouseDAO;
 import java.io.IOException;
 import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -13,204 +17,374 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import model.ImportRequest;
-import model.ImportRequestDetail;
+import model.Request;
+import model.RequestDetail;
+import model.Ticket;
+import model.TicketDetail;
 import model.Supplier;
 import model.Product;
 import model.User;
+import model.Warehouse;
 
-@WebServlet(name = "ImportRequestServlet", urlPatterns = {"/warehouse/po"})
+@WebServlet(name = "ImportRequestServlet", urlPatterns = { "/warehouse/import-request" })
 public class ImportRequestServlet extends HttpServlet {
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        HttpSession session = request.getSession();
-        User loggedInUser = (User) session.getAttribute("user");
+    private static final String TYPE = Request.TYPE_IN;
 
+    @Override
+    protected void doGet(HttpServletRequest httpReq, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = httpReq.getSession();
+        User loggedInUser = (User) session.getAttribute("user");
         if (loggedInUser == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
+            response.sendRedirect(httpReq.getContextPath() + "/login");
             return;
         }
 
-        String action = request.getParameter("action");
-        if (action == null) {
+        String action = httpReq.getParameter("action");
+        if (action == null)
             action = "list";
+
+        if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("REQUEST_VIEW_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem yêu cầu nhập.");
+            return;
+        }
+        if (("add".equals(action) || "addReturn".equals(action) || "lookupSerial".equals(action)) && !loggedInUser.hasPermission("REQUEST_ADD_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo yêu cầu nhập.");
+            return;
         }
 
-        // Permission Checks
-        if ("list".equals(action) || "detail".equals(action)) {
-            if (!loggedInUser.hasPermission("PO_VIEW")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view POs.");
-                return;
-            }
-        } else if ("add".equals(action)) {
-            if (!loggedInUser.hasPermission("PO_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create POs.");
-                return;
-            }
-        }
-
-        ImportRequestDAO dao = new ImportRequestDAO();
+        RequestDAO dao = new RequestDAO();
+        TicketDAO ticketDao = new TicketDAO();
 
         switch (action) {
             case "list":
-                List<ImportRequest> list = dao.getAllImportRequests();
-                request.setAttribute("poList", list);
-                request.getRequestDispatcher("/po/po-list.jsp").forward(request, response);
+                httpReq.setAttribute("requestList", dao.getAll(TYPE));
+                httpReq.getRequestDispatcher("/import_request/request-list.jsp").forward(httpReq, response);
                 break;
-            case "detail":
-                int id = Integer.parseInt(request.getParameter("id"));
-                ImportRequest req = dao.getImportRequestById(id);
+            case "detail": {
+                int id = Integer.parseInt(httpReq.getParameter("id"));
+                Request req = dao.getById(id);
                 if (req == null) {
-                    response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
+                    response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list");
                     return;
                 }
-                dao.ImportTicketDAO ticketDao = new dao.ImportTicketDAO();
-                List<model.ImportTicket> tickets = ticketDao.getImportTicketsByRequestId(id);
-                
-                request.setAttribute("po", req);
-                request.setAttribute("ticketList", tickets);
-                request.getRequestDispatcher("/po/po-detail.jsp").forward(request, response);
+                List<Ticket> tickets = ticketDao.getByRequestId(id);
+                httpReq.setAttribute("req", req);
+                httpReq.setAttribute("ticketList", tickets);
+                httpReq.getRequestDispatcher("/import_request/request-detail.jsp").forward(httpReq, response);
                 break;
-            case "add":
-                SupplierDAO sDao = new SupplierDAO();
-                ProductDAO pDao = new ProductDAO();
-                
-                List<Supplier> suppliers = sDao.getAllSuppliers();
-                List<Product> products = pDao.getAllProducts();
-                
-                request.setAttribute("supplierList", suppliers);
-                request.setAttribute("productList", products);
-                request.getRequestDispatcher("/po/po-add.jsp").forward(request, response);
+            }
+            case "add": {
+                httpReq.setAttribute("supplierList", new SupplierDAO().getAllSuppliers());
+                httpReq.setAttribute("productList", new ProductDAO().getAllProducts());
+                httpReq.setAttribute("warehouseList", new WarehouseDAO().getAllActiveWarehouses());
+                httpReq.getRequestDispatcher("/import_request/request-add.jsp").forward(httpReq, response);
                 break;
+            }
+            case "addReturn": {
+                httpReq.setAttribute("warehouseList", new WarehouseDAO().getAllActiveWarehouses());
+                httpReq.getRequestDispatcher("/import_request/return-add.jsp").forward(httpReq, response);
+                break;
+            }
+            case "lookupSerial": {
+                String serial = httpReq.getParameter("serial");
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                java.io.PrintWriter out = response.getWriter();
+                
+                if (serial == null || serial.trim().isEmpty()) {
+                    out.print("{\"success\":false,\"message\":\"Thiếu số Serial.\"}");
+                    out.flush();
+                    return;
+                }
+                
+                String sql = 
+                    "SELECT pi.id AS item_id, pi.product_id, p.product_name, p.sku, p.unit, "
+                  + "       t.id AS ticket_id, t.ticket_code, r.partner_type, r.partner_id, "
+                  + "       CASE r.partner_type "
+                  + "           WHEN 'SUPPLIER' THEN (SELECT supplier_name FROM Suppliers WHERE id = r.partner_id) "
+                  + "           WHEN 'CUSTOMER' THEN (SELECT customer_name FROM Customers WHERE id = r.partner_id) "
+                  + "           WHEN 'WAREHOUSE' THEN (SELECT warehouse_name FROM Warehouses WHERE id = r.partner_id) "
+                  + "           WHEN 'INTERNAL_DEST' THEN (SELECT destination_name FROM Internal_Destinations WHERE id = r.partner_id) "
+                  + "           ELSE NULL END AS partner_name "
+                  + "FROM Product_Items pi "
+                  + "JOIN Products p ON p.id = pi.product_id "
+                  + "LEFT JOIN Product_Item_Movements m ON m.product_item_id = pi.id AND m.action IN ('EXPORT_OUT','TRANSFER_OUT') "
+                  + "LEFT JOIN Tickets t ON t.id = m.ticket_id "
+                  + "LEFT JOIN Requests r ON r.id = t.request_id "
+                  + "WHERE pi.serial_number = ? AND pi.status = 'EXPORTED' "
+                  + "ORDER BY m.id DESC LIMIT 1";
+                  
+                try (java.sql.Connection conn = utils.DBUtils.getConnection();
+                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, serial.trim());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            StringBuilder json = new StringBuilder();
+                            json.append("{\"success\":true,")
+                                .append("\"productId\":").append(rs.getInt("product_id")).append(",")
+                                .append("\"productName\":\"").append(rs.getString("product_name").replace("\"", "\\\"")).append("\",")
+                                .append("\"sku\":\"").append(rs.getString("sku")).append("\",")
+                                .append("\"unit\":\"").append(rs.getString("unit")).append("\",")
+                                .append("\"ticketId\":").append(rs.getInt("ticket_id")).append(",")
+                                .append("\"ticketCode\":\"").append(rs.getString("ticket_code")).append("\",")
+                                .append("\"partnerName\":\"").append(rs.getString("partner_name") != null ? rs.getString("partner_name").replace("\"", "\\\"") : "").append("\"")
+                                .append("}");
+                            out.print(json.toString());
+                        } else {
+                            String checkSql = "SELECT status FROM Product_Items WHERE serial_number = ?";
+                            try (PreparedStatement ps2 = conn.prepareStatement(checkSql)) {
+                                ps2.setString(1, serial.trim());
+                                try (ResultSet rs2 = ps2.executeQuery()) {
+                                    if (rs2.next()) {
+                                        String status = rs2.getString("status");
+                                        String msg = "Mã Serial đang ở trạng thái '" + status + "' (Không thể trả lại).";
+                                        out.print("{\"success\":false,\"message\":\"" + msg + "\"}");
+                                    } else {
+                                        out.print("{\"success\":false,\"message\":\"Mã Serial không tồn tại trên hệ thống.\"}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    out.print("{\"success\":false,\"message\":\"Lỗi truy vấn cơ sở dữ liệu.\"}");
+                }
+                out.flush();
+                return;
+            }
             default:
-                response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
-                break;
+                response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list");
         }
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest httpReq, HttpServletResponse response)
             throws ServletException, IOException {
-        HttpSession session = request.getSession();
+        HttpSession session = httpReq.getSession();
         User loggedInUser = (User) session.getAttribute("user");
-
         if (loggedInUser == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
+            response.sendRedirect(httpReq.getContextPath() + "/login");
             return;
         }
 
-        String action = request.getParameter("action");
+        String action = httpReq.getParameter("action");
         if (action == null) {
-            response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
+            response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list");
             return;
         }
-        
-        if ("add".equals(action)) {
-            if (!loggedInUser.hasPermission("PO_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create POs.");
-                return;
-            }
-        } else if ("approve".equals(action) || "reject".equals(action)) {
-            if (!loggedInUser.hasPermission("PO_APPROVE")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to approve/reject POs.");
-                return;
-            }
-        } else if ("approveCancel".equals(action) || "rejectCancel".equals(action)) {
-            if (!loggedInUser.hasPermission("PO_APPROVECANCEL")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to approve/reject PO cancel requests.");
-                return;
-            }
+
+        if (("add".equals(action) || "addReturn".equals(action)) && !loggedInUser.hasPermission("REQUEST_ADD_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo yêu cầu nhập.");
+            return;
+        }
+        if (("approve".equals(action) || "reject".equals(action))
+                && !loggedInUser.hasPermission("REQUEST_APPROVE_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt yêu cầu nhập.");
+            return;
+        }
+        if (("approveCancel".equals(action) || "rejectCancel".equals(action))
+                && !loggedInUser.hasPermission("REQUEST_APPROVE_CANCEL_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt hủy.");
+            return;
         }
 
-        ImportRequestDAO dao = new ImportRequestDAO();
+        RequestDAO dao = new RequestDAO();
 
         try {
             switch (action) {
-                case "add":
-                    int supplierId = Integer.parseInt(request.getParameter("supplier_id"));
-                    Date expectedDate = Date.valueOf(request.getParameter("expected_date"));
-                    
-                    String[] productIds = request.getParameterValues("product_id");
-                    String[] quantities = request.getParameterValues("quantity");
-                    String[] unitPrices = request.getParameterValues("unit_price");
-                    
-                    if (productIds != null && productIds.length > 0) {
-                        List<ImportRequestDetail> details = new ArrayList<>();
-                        for (int i = 0; i < productIds.length; i++) {
-                            if (productIds[i] == null || productIds[i].trim().isEmpty()) continue;
-                            int pId = Integer.parseInt(productIds[i]);
-                            int qty = Integer.parseInt(quantities[i]);
-                            double price = Double.parseDouble(unitPrices[i]);
-                            
-                            ImportRequestDetail d = new ImportRequestDetail();
-                            d.setProductId(pId);
-                            d.setQuantity(qty);
-                            d.setUnitPrice(price);
-                            details.add(d);
-                        }
-                        
-                        ImportRequest req = new ImportRequest();
-                        req.setSupplierId(supplierId);
-                        req.setCreatorId(loggedInUser.getId());
-                        req.setExpectedDate(expectedDate);
-                        
-                        boolean success = dao.addImportRequest(req, details);
-                        if (!success) {
-                            request.setAttribute("error", "Failed to save Purchase Order. Please try again.");
-                            response.sendRedirect(request.getContextPath() + "/warehouse/po?action=add");
-                            return;
-                        }
+                case "add": {
+                    int supplierId = Integer.parseInt(httpReq.getParameter("supplier_id"));
+                    int warehouseId = parseWarehouseId(httpReq, loggedInUser);
+                    Date expectedDate = Date.valueOf(httpReq.getParameter("expected_date"));
+                    String[] productIds = httpReq.getParameterValues("product_id");
+                    String[] quantities = httpReq.getParameterValues("quantity");
+                    String[] unitPrices = httpReq.getParameterValues("unit_price");
+
+                    if (productIds == null || productIds.length == 0) {
+                        response.sendRedirect(
+                                httpReq.getContextPath() + "/warehouse/import-request?action=add&error=NoProducts");
+                        return;
+                    }
+                    List<RequestDetail> details = new ArrayList<>();
+                    for (int i = 0; i < productIds.length; i++) {
+                        if (productIds[i] == null || productIds[i].trim().isEmpty())
+                            continue;
+                        int qty = Integer.parseInt(quantities[i]);
+                        if (qty <= 0)
+                            continue;
+                        RequestDetail d = new RequestDetail();
+                        d.setProductId(Integer.parseInt(productIds[i]));
+                        d.setQuantity(qty);
+                        d.setUnitPrice(new java.math.BigDecimal(unitPrices[i]));
+                        details.add(d);
+                    }
+                    if (details.isEmpty()) {
+                        response.sendRedirect(
+                                httpReq.getContextPath() + "/warehouse/import-request?action=add&error=NoValidDetails");
+                        return;
+                    }
+                    Request req = new Request();
+                    req.setType(Request.TYPE_IN);
+                    req.setReason(Request.REASON_PURCHASE);
+                    req.setWarehouseId(warehouseId);
+                    req.setPartnerType(Request.PARTNER_SUPPLIER);
+                    req.setPartnerId(supplierId);
+                    req.setStaffId(loggedInUser.getId());
+                    req.setExpectedDate(expectedDate);
+                    if (!dao.add(req, details)) {
+                        response.sendRedirect(
+                                httpReq.getContextPath() + "/warehouse/import-request?action=add&error=Failed");
+                        return;
                     }
                     break;
+                }
+                case "addReturn": {
+                    String returnReason = httpReq.getParameter("return_reason");
+                    Date expectedDate = Date.valueOf(httpReq.getParameter("expected_date"));
+                    int warehouseId = parseWarehouseId(httpReq, loggedInUser);
+                    String requestedCondition = httpReq.getParameter("requested_condition");
+
+                    String exportTicketIdStr = httpReq.getParameter("export_ticket_id");
+                    if (exportTicketIdStr == null || exportTicketIdStr.trim().isEmpty()) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=NoExportTicket"); return;
+                    }
+                    int exportTicketId = Integer.parseInt(exportTicketIdStr);
+                    Ticket exportTicket = new TicketDAO().getById(exportTicketId);
+                    if (exportTicket == null) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=InvalidTicket"); return;
+                    }
+                    Request exportReq = dao.getById(exportTicket.getRequestId());
+                    if (exportReq == null) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=InvalidTicketRequest"); return;
+                    }
+
+                    String[] productIds = httpReq.getParameterValues("product_id");
+                    String[] scannedSerials = httpReq.getParameterValues("scanned_serials");
+
+                    if (returnReason == null || returnReason.trim().isEmpty()) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=NoReason"); return;
+                    }
+                    if (productIds == null || productIds.length == 0 || scannedSerials == null || scannedSerials.length == 0) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=NoProducts"); return;
+                    }
+
+                    // Group and sum product quantities
+                    java.util.Map<Integer, Integer> prodQtyMap = new java.util.HashMap<>();
+                    for (String pidStr : productIds) {
+                        if (pidStr == null || pidStr.trim().isEmpty()) continue;
+                        int pid = Integer.parseInt(pidStr);
+                        prodQtyMap.put(pid, prodQtyMap.getOrDefault(pid, 0) + 1);
+                    }
+
+                    List<RequestDetail> details = new ArrayList<>();
+                    for (java.util.Map.Entry<Integer, Integer> entry : prodQtyMap.entrySet()) {
+                        RequestDetail d = new RequestDetail();
+                        d.setProductId(entry.getKey());
+                        d.setQuantity(entry.getValue());
+                        details.add(d);
+                    }
+
+                    if (details.isEmpty()) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=NoValidDetails"); return;
+                    }
+
+                    // Build expected serials string
+                    List<String> serialList = new ArrayList<>();
+                    for (String s : scannedSerials) {
+                        if (s != null && !s.trim().isEmpty()) {
+                            serialList.add(s.trim());
+                        }
+                    }
+                    String expectedSerialsStr = String.join(",", serialList);
+
+                    Request req = new Request();
+                    req.setType(Request.TYPE_IN);
+                    req.setReason(Request.REASON_RETURN);
+                    req.setWarehouseId(warehouseId);
+                    req.setPartnerType(exportReq.getPartnerType());
+                    req.setPartnerId(exportReq.getPartnerId());
+                    req.setRefTicketId(exportTicketId);
+                    req.setReturnReason(returnReason.trim());
+                    req.setRequestedCondition(requestedCondition);
+                    req.setExpectedSerials(expectedSerialsStr);
+                    req.setStaffId(loggedInUser.getId());
+                    req.setExpectedDate(expectedDate);
+
+                    if (!dao.add(req, details)) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=Failed"); return;
+                    }
+                    break;
+                }
                 case "approve":
-                    int approveId = Integer.parseInt(request.getParameter("id"));
-                    dao.updateStatus(approveId, "APPROVED", loggedInUser.getId());
+                    dao.updateStatus(Integer.parseInt(httpReq.getParameter("id")), Request.STATUS_APPROVED,
+                            loggedInUser.getId());
                     break;
                 case "reject":
-                    int rejectId = Integer.parseInt(request.getParameter("id"));
-                    dao.updateStatus(rejectId, "REJECTED", loggedInUser.getId());
+                    dao.updateStatus(Integer.parseInt(httpReq.getParameter("id")), Request.STATUS_REJECTED,
+                            loggedInUser.getId());
                     break;
-                case "cancel":
-                    int cancelId = Integer.parseInt(request.getParameter("id"));
-                    ImportRequest po = dao.getImportRequestById(cancelId);
-                    if (po != null) {
-                        if ("PENDING".equals(po.getStatus())) {
-                            if (!loggedInUser.hasPermission("PO_CANCEL")) {
-                                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to cancel POs.");
-                                return;
-                            }
-                            dao.cancelRequest(cancelId, loggedInUser.getId());
-                            response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
-                            return;
-                        } else if ("APPROVED".equals(po.getStatus())) {
-                            if (!loggedInUser.hasPermission("PO_REQUESTCANCEL")) {
-                                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to request PO cancellation.");
-                                return;
-                            }
-                            String reason = request.getParameter("reason");
-                            dao.requestCancel(cancelId, loggedInUser.getId(), reason);
-                            response.sendRedirect(request.getContextPath() + "/warehouse/po?action=detail&id=" + cancelId);
+                case "cancel": {
+                    int cancelId = Integer.parseInt(httpReq.getParameter("id"));
+                    Request req = dao.getById(cancelId);
+                    if (req == null)
+                        break;
+                    if (Request.STATUS_PENDING.equals(req.getStatus())) {
+                        if (!loggedInUser.hasPermission("REQUEST_CANCEL_IN")) {
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy.");
                             return;
                         }
+                        dao.cancelRequest(cancelId, loggedInUser.getId());
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list");
+                        return;
+                    } else if (Request.STATUS_APPROVED.equals(req.getStatus())) {
+                        if (!loggedInUser.hasPermission("REQUEST_REQUEST_CANCEL_IN")) {
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền đề xuất hủy.");
+                            return;
+                        }
+                        dao.requestCancel(cancelId, loggedInUser.getId(), httpReq.getParameter("reason"));
+                        response.sendRedirect(
+                                httpReq.getContextPath() + "/warehouse/import-request?action=detail&id=" + cancelId);
+                        return;
                     }
                     break;
-                case "approveCancel":
-                    int appCancelId = Integer.parseInt(request.getParameter("id"));
-                    dao.approveCancel(appCancelId, loggedInUser.getId());
-                    response.sendRedirect(request.getContextPath() + "/warehouse/po?action=detail&id=" + appCancelId);
+                }
+                case "approveCancel": {
+                    int id = Integer.parseInt(httpReq.getParameter("id"));
+                    dao.approveCancel(id, loggedInUser.getId());
+                    response.sendRedirect(
+                            httpReq.getContextPath() + "/warehouse/import-request?action=detail&id=" + id);
                     return;
-                case "rejectCancel":
-                    int rejCancelId = Integer.parseInt(request.getParameter("id"));
-                    dao.rejectCancel(rejCancelId);
-                    response.sendRedirect(request.getContextPath() + "/warehouse/po?action=detail&id=" + rejCancelId);
+                }
+                case "rejectCancel": {
+                    int id = Integer.parseInt(httpReq.getParameter("id"));
+                    dao.rejectCancel(id);
+                    response.sendRedirect(
+                            httpReq.getContextPath() + "/warehouse/import-request?action=detail&id=" + id);
                     return;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        response.sendRedirect(request.getContextPath() + "/warehouse/po?action=list");
+        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list");
+    }
+
+    /**
+     * Lấy warehouse_id: form param ưu tiên, fallback về user.warehouseId, cuối cùng
+     * 1.
+     */
+    private int parseWarehouseId(HttpServletRequest httpReq, User user) {
+        String p = httpReq.getParameter("warehouse_id");
+        if (p != null && !p.trim().isEmpty()) {
+            try {
+                return Integer.parseInt(p);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return user.getWarehouseId() != null ? user.getWarehouseId() : 1;
     }
 }
