@@ -1,23 +1,24 @@
-<%@page import="model.ImportTicket"%>
+<%@page import="model.Ticket"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
+<%@page import="model.Warehouse"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || !loggedInUser.hasPermission("IMPORT_TICKET_VIEW")) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("TICKET_VIEW_IN")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
-    List<ImportTicket> ticketList = (List<ImportTicket>) request.getAttribute("ticketList");
-    boolean canAdd = loggedInUser.hasPermission("IMPORT_TICKET_ADD");
-    boolean canConfirm = loggedInUser.hasPermission("IMPORT_TICKET_CONFIRM");
-    boolean canCancel = loggedInUser.hasPermission("IMPORT_TICKET_CANCEL");
+    List<Ticket> ticketList = (List<Ticket>) request.getAttribute("ticketList");
+    boolean canAdd = loggedInUser.hasPermission("TICKET_ADD_IN");
+    boolean canConfirm = loggedInUser.hasPermission("TICKET_CONFIRM_IN");
+    boolean canCancel = loggedInUser.hasPermission("TICKET_CANCEL_IN");
 %>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Import Tickets - WMS</title>
+    <title>Phiếu nhập kho - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,20 +38,20 @@
                 
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Import Tickets</h2>
-                        <p class="text-muted small mb-0">Record and confirm physical inbound stock deliveries</p>
+                        <h2 class="fw-bold text-slate-800 mb-1">Phiếu nhập kho</h2>
+                        <p class="text-muted small mb-0">Ghi nhận và xác nhận hàng hóa thực tế nhập kho</p>
                     </div>
                     <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Back
+                        <i class="bi bi-arrow-left"></i> Quay lại
                     </a>
                 </div>
 
                 <div class="card shadow-sm border-0 bg-white mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-arrow-in-down me-2"></i>Import Tickets Registry</h5>
+                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-arrow-in-down me-2"></i>Sổ đăng ký Phiếu nhập kho</h5>
                         <% if (canAdd) { %>
-                        <a href="import?action=add" class="btn btn-primary btn-sm d-flex align-items-center gap-1">
-                            <i class="bi bi-plus-circle-fill"></i> Create Import Ticket
+                        <a href="import-ticket?action=add" class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+                            <i class="bi bi-plus-circle-fill"></i> Tạo Phiếu nhập kho
                         </a>
                         <% } %>
                     </div>
@@ -59,28 +60,35 @@
                             <div class="row g-3 align-items-end">
                                 <!-- Search Bar -->
                                 <div class="col-md-3">
-                                    <label for="importSearch" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-search me-1"></i>Search Text</label>
-                                    <input type="text" id="importSearch" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Ticket, PO code, keeper..." style="box-shadow: none; font-size: 0.85rem;">
+                                    <label for="importSearch" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-search me-1"></i>Tìm kiếm</label>
+                                    <input type="text" id="importSearch" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Phiếu nhập, mã yêu cầu, thủ kho..." style="box-shadow: none; font-size: 0.85rem;">
                                 </div>
                                 <!-- Date Filter -->
                                 <div class="col-md-3">
-                                    <label for="dateFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-calendar3 me-1"></i>Created Date</label>
+                                    <label for="dateFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-calendar3 me-1"></i>Ngày tạo</label>
                                     <input type="date" id="dateFilter" class="form-control form-control-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
                                 </div>
                                 <!-- Status Filter -->
                                 <div class="col-md-3">
-                                    <label for="statusFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-tag-fill me-1"></i>Status</label>
+                                    <label for="statusFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-tag-fill me-1"></i>Trạng thái</label>
                                     <select id="statusFilter" class="form-select form-select-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
-                                        <option value="">-- All Statuses --</option>
-                                        <option value="DRAFT">DRAFT</option>
-                                        <option value="CONFIRMED">CONFIRMED</option>
-                                        <option value="CANCELLED">CANCELLED</option>
+                                        <option value="">-- Tất cả trạng thái --</option>
+                                        <option value="BẢN NHÁP">BẢN NHÁP</option>
+                                        <option value="ĐÃ XÁC NHẬN">ĐÃ XÁC NHẬN</option>
+                                        <option value="ĐÃ HỦY">ĐÃ HỦY</option>
+                                    </select>
+                                </div>
+                                <!-- Warehouse Filter -->
+                                <div class="col-md-3">
+                                    <label for="warehouseFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-building me-1"></i>Kho nhập</label>
+                                    <select id="warehouseFilter" class="form-select form-select-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
+                                        <option value="">-- Tất cả kho --</option>
                                     </select>
                                 </div>
                                 <!-- Keeper Filter -->
                                 <div class="col-md-3">
-                                    <label for="keeperFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-person-fill me-1"></i>Keeper (Staff)</label>
-                                    <input type="text" id="keeperFilter" list="keeperDatalist" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Type or select..." style="box-shadow: none; font-size: 0.85rem;">
+                                    <label for="keeperFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-person-fill me-1"></i>Thủ kho (Nhân viên)</label>
+                                    <input type="text" id="keeperFilter" list="keeperDatalist" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Nhập hoặc chọn..." style="box-shadow: none; font-size: 0.85rem;">
                                     <datalist id="keeperDatalist"></datalist>
                                 </div>
                             </div>
@@ -89,21 +97,22 @@
                             <table id="grnTable" class="table table-hover align-middle text-center mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Ticket Code</th>
-                                        <th>Linked PO</th>
-                                        <th>Supplier</th>
-                                        <th>Status</th>
-                                        <th>Keeper (Staff)</th>
-                                        <th>Created At</th>
-                                        <th>Confirmed By</th>
-                                        <th>Confirmed At</th>
-                                        <th>Actions</th>
+                                        <th>Mã phiếu</th>
+                                        <th>Yêu cầu liên kết</th>
+                                        <th>Nhà cung cấp</th>
+                                        <th>Kho nhập</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thủ kho (Nhân viên)</th>
+                                        <th>Ngày tạo</th>
+                                        <th>Xác nhận bởi</th>
+                                        <th>Thời gian xác nhận</th>
+                                        <th>Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <%
                                         if (ticketList != null && !ticketList.isEmpty()) {
-                                            for (ImportTicket t : ticketList) {
+                                            for (Ticket t : ticketList) {
                                                 String statusBadge = "bg-secondary text-secondary";
                                                 if ("DRAFT".equals(t.getStatus())) statusBadge = "bg-warning text-warning";
                                                 else if ("CONFIRMED".equals(t.getStatus())) statusBadge = "bg-success text-success";
@@ -112,9 +121,16 @@
                                     <tr>
                                         <td class="fw-bold text-slate-800">#<%= t.getTicketCode() %></td>
                                         <td class="fw-bold text-primary">#<%= t.getRequestCode() %></td>
-                                        <td class="text-start ps-3 fw-semibold"><%= t.getSupplierName() != null ? t.getSupplierName() : "-" %></td>
+                                        <td class="text-start ps-3 fw-semibold"><%= t.getPartnerName() != null ? t.getPartnerName() : "-" %></td>
+                                        <td><span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-building me-1"></i><%= t.getWarehouseName() != null ? t.getWarehouseName() : "-" %></span></td>
                                         <td>
-                                            <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= t.getStatus() %></span>
+                                            <%
+                                                String displayTStatus = t.getStatus();
+                                                if ("CONFIRMED".equals(t.getStatus())) displayTStatus = "ĐÃ XÁC NHẬN";
+                                                else if ("DRAFT".equals(t.getStatus())) displayTStatus = "BẢN NHÁP";
+                                                else if ("CANCELLED".equals(t.getStatus())) displayTStatus = "ĐÃ HỦY";
+                                            %>
+                                            <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= displayTStatus %></span>
                                         </td>
                                         <td><%= t.getKeeperFullName() %></td>
                                         <td class="text-muted small"><%= t.getCreatedAt() %></td>
@@ -122,22 +138,22 @@
                                         <td class="text-muted small"><%= t.getConfirmedAt() != null ? t.getConfirmedAt() : "-" %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <a href="import?action=detail&id=<%= t.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                    <i class="bi bi-eye"></i> Details
+                                                <a href="import-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5">
+                                                    <i class="bi bi-eye"></i> Chi tiết
                                                 </a>
                                                 <% if (canConfirm && "DRAFT".equals(t.getStatus())) { %>
-                                                <form action="import?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Confirming this Import Ticket will update product quantities, dynamic average costs, and register inventory ledger transactions. Proceed?');">
+                                                <form action="import-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Xác nhận Phiếu nhập kho này sẽ cập nhật số lượng sản phẩm, giá vốn bình quân động và đăng ký giao dịch sổ cái kho. Tiến hành?');">
                                                     <input type="hidden" name="id" value="<%= t.getId() %>">
                                                     <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                        <i class="bi bi-check-circle"></i> Confirm
+                                                        <i class="bi bi-check-circle"></i> Xác nhận
                                                     </button>
                                                 </form>
                                                 <% } %>
                                                 <% if (canCancel && "DRAFT".equals(t.getStatus())) { %>
-                                                <form action="import?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to cancel this Import Ticket?');">
+                                                <form action="import-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy Phiếu nhập kho này?');">
                                                     <input type="hidden" name="id" value="<%= t.getId() %>">
                                                     <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                        <i class="bi bi-slash-circle"></i> Cancel
+                                                        <i class="bi bi-slash-circle"></i> Hủy
                                                     </button>
                                                 </form>
                                                 <% } %>
@@ -149,9 +165,9 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted py-5">
+                                        <td colspan="10" class="text-center text-muted py-5">
                                             <i class="bi bi-box-arrow-in-down text-muted display-4 d-block mb-3"></i>
-                                            No Import Tickets found.
+                                            Không tìm thấy Phiếu nhập kho nào.
                                         </td>
                                     </tr>
                                     <% } %>
@@ -161,16 +177,16 @@
                     </div>
                     <div class="card-footer bg-transparent border-top-0 d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 bg-light rounded-bottom-3 gap-3">
                         <div class="d-flex align-items-center gap-2">
-                            <label class="text-muted small mb-0 flex-shrink-0">Show</label>
-                            <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
-                                <option value="10" selected>10</option>
-                                <option value="25">25</option>
-                                <option value="100">100</option>
-                            </select>
-                            <span class="text-muted small">entries</span>
-                        </div>
-                        <div id="paginationContainer" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
-                        </div>
+                                    <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
+                                    <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <span class="text-muted small">bản ghi</span>
+                                </div>
+                                <div id="paginationContainer" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
+                                </div>
                     </div>
                 </div>
 
@@ -179,39 +195,57 @@
     </div>
     
     <script>
+        const userWarehouseName = '<%= loggedInUser.getWarehouseName() != null ? loggedInUser.getWarehouseName().replace("'", "\\'") : "" %>';
+
         document.addEventListener("DOMContentLoaded", function() {
-            initPaginationAndFilter("grnTable", "paginationContainer", "entriesPerPage", "importSearch", "dateFilter", "statusFilter", "keeperFilter");
+            initPaginationAndFilter("grnTable", "paginationContainer", "entriesPerPage", "importSearch", "dateFilter", "statusFilter", "warehouseFilter", "keeperFilter");
         });
 
-        function initPaginationAndFilter(tableId, containerId, selectId, searchInputId, dateFilterId, statusFilterId, keeperFilterId) {
+        // Col indices: 0=code, 1=PO, 2=supplier, 3=warehouse, 4=status, 5=keeper, 6=createdAt, 7=confirmedBy, 8=confirmedAt, 9=actions
+        function initPaginationAndFilter(tableId, containerId, selectId, searchInputId, dateFilterId, statusFilterId, warehouseFilterId, keeperFilterId) {
             const table = document.getElementById(tableId);
             if (!table) return;
             const tbody = table.querySelector("tbody");
             if (!tbody) return;
-            
+
             const allRows = Array.from(tbody.querySelectorAll("tr"));
             if (allRows.length === 1 && allRows[0].querySelector("td[colspan]")) {
                 return;
             }
-            
+
             const container = document.getElementById(containerId);
             const select = document.getElementById(selectId);
             const searchInput = document.getElementById(searchInputId);
             const dateFilter = document.getElementById(dateFilterId);
             const statusFilter = document.getElementById(statusFilterId);
+            const warehouseFilter = document.getElementById(warehouseFilterId);
             const keeperFilter = document.getElementById(keeperFilterId);
             if (!container || !select) return;
-            
+
             let currentPage = 1;
             let pageSize = parseInt(select.value) || 10;
             let filteredRows = allRows;
 
-            // Dynamically populate Keeper list filter
+            // Populate warehouse dropdown
+            if (warehouseFilter) {
+                const warehouses = new Set();
+                allRows.forEach(row => {
+                    if (row.cells.length > 3) warehouses.add(row.cells[3].textContent.trim());
+                });
+                warehouses.forEach(w => {
+                    const opt = document.createElement("option");
+                    opt.value = w;
+                    opt.textContent = w;
+                    warehouseFilter.appendChild(opt);
+                });
+            }
+
+            // Dynamically populate Keeper datalist
             if (keeperFilter) {
                 const keepers = new Set();
                 allRows.forEach(row => {
-                    if (row.cells.length > 4) {
-                        const kText = row.cells[4].textContent.trim();
+                    if (row.cells.length > 5) {
+                        const kText = row.cells[5].textContent.trim();
                         if (kText) keepers.add(kText);
                     }
                 });
@@ -229,36 +263,36 @@
                 const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : "";
                 const selectedDate = dateFilter ? dateFilter.value : "";
                 const selectedStatus = statusFilter ? statusFilter.value : "";
+                const selectedWarehouse = warehouseFilter ? warehouseFilter.value.trim() : "";
                 const selectedKeeper = keeperFilter ? keeperFilter.value.trim() : "";
-                
+
                 filteredRows = allRows.filter(row => {
-                    if (row.cells.length < 6) return false;
-                    
-                    // 1. Text Search (Matches Ticket Code, Linked PO Code, Supplier, Keeper)
+                    if (row.cells.length < 7) return false;
+
                     const ticketCode = row.cells[0].textContent.toLowerCase();
                     const poCode = row.cells[1].textContent.toLowerCase();
                     const supplier = row.cells[2].textContent.toLowerCase();
-                    const keeper = row.cells[4].textContent.toLowerCase();
-                    const matchesSearch = searchQuery === "" || 
-                                          ticketCode.includes(searchQuery) || 
-                                          poCode.includes(searchQuery) || 
-                                          supplier.includes(searchQuery) || 
+                    const warehouse = row.cells[3].textContent.trim();
+                    const keeper = row.cells[5].textContent.toLowerCase();
+                    const matchesSearch = searchQuery === "" ||
+                                          ticketCode.includes(searchQuery) ||
+                                          poCode.includes(searchQuery) ||
+                                          supplier.includes(searchQuery) ||
                                           keeper.includes(searchQuery);
 
-                    // 2. Date Filter (Matches Created At date part: YYYY-MM-DD)
-                    const createdAtText = row.cells[5].textContent.trim();
-                    const createdAtDatePart = createdAtText.split(" ")[0]; // Get 'YYYY-MM-DD'
+                    const createdAtText = row.cells[6].textContent.trim();
+                    const createdAtDatePart = createdAtText.split(" ")[0];
                     const matchesDate = selectedDate === "" || createdAtDatePart === selectedDate;
 
-                    // 3. Status Filter (Matches Status)
-                    const status = row.cells[3].textContent.trim();
+                    const status = row.cells[4].textContent.trim();
                     const matchesStatus = selectedStatus === "" || status === selectedStatus;
 
-                    // 4. Keeper Filter (Matches Keeper)
-                    const keeperText = row.cells[4].textContent.trim();
+                    const matchesWarehouse = selectedWarehouse === "" || warehouse === selectedWarehouse;
+
+                    const keeperText = row.cells[5].textContent.trim();
                     const matchesKeeper = selectedKeeper === "" || keeperText.toLowerCase().includes(selectedKeeper.toLowerCase());
 
-                    return matchesSearch && matchesDate && matchesStatus && matchesKeeper;
+                    return matchesSearch && matchesDate && matchesStatus && matchesWarehouse && matchesKeeper;
                 });
                 
                 // Hide all rows first
@@ -283,7 +317,7 @@
             function renderPaginationControls(totalPages, totalRows) {
                 container.innerHTML = "";
                 if (totalRows === 0) {
-                    container.innerHTML = "<span class='text-muted small'>No matching entries found</span>";
+                    container.innerHTML = "<span class='text-muted small'>Không tìm thấy kết quả phù hợp</span>";
                     return;
                 }
                 
@@ -291,7 +325,7 @@
                 infoSpan.className = "text-muted small";
                 const startIdx = (currentPage - 1) * pageSize + 1;
                 const endIdx = Math.min(currentPage * pageSize, totalRows);
-                infoSpan.textContent = "Showing " + startIdx + " to " + endIdx + " of " + totalRows + " entries (filtered from " + allRows.length + " total)";
+                infoSpan.textContent = "Hiển thị " + startIdx + " đến " + endIdx + " trong số " + totalRows + " bản ghi (lọc từ tổng số " + allRows.length + " bản ghi)";
                 container.appendChild(infoSpan);
                 
                 const nav = document.createElement("nav");
@@ -373,6 +407,12 @@
             }
             if (statusFilter) {
                 statusFilter.addEventListener("change", function() {
+                    currentPage = 1;
+                    filterAndPaginate();
+                });
+            }
+            if (warehouseFilter) {
+                warehouseFilter.addEventListener("change", function() {
                     currentPage = 1;
                     filterAndPaginate();
                 });

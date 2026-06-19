@@ -1,9 +1,11 @@
 package controller.warehouse;
 
-import dao.ImportRequestDAO;
-import dao.ImportTicketDAO;
+import dao.RequestDAO;
+import dao.TicketDAO;
 import dao.ProductItemDAO;
 import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -12,186 +14,230 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import model.ImportRequest;
-import model.ImportTicket;
-import model.ImportTicketDetail;
+import model.ProductItem;
+import model.Request;
+import model.Ticket;
+import model.TicketDetail;
 import model.User;
 
-@WebServlet(name = "ImportTicketServlet", urlPatterns = {"/warehouse/import"})
+@WebServlet(name = "ImportTicketServlet", urlPatterns = { "/warehouse/import-ticket", "/warehouse/import" })
 public class ImportTicketServlet extends HttpServlet {
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        HttpSession session = request.getSession();
-        User loggedInUser = (User) session.getAttribute("user");
+    private static final String TYPE = Ticket.TYPE_IN;
 
+    @Override
+    protected void doGet(HttpServletRequest httpReq, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = httpReq.getSession();
+        User loggedInUser = (User) session.getAttribute("user");
         if (loggedInUser == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
+            response.sendRedirect(httpReq.getContextPath() + "/login");
             return;
         }
 
-        String action = request.getParameter("action");
-        if (action == null) {
+        String action = httpReq.getParameter("action");
+        if (action == null)
             action = "list";
+
+        if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("TICKET_VIEW_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem phiếu nhập.");
+            return;
+        }
+        if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo phiếu nhập.");
+            return;
         }
 
-        // Permission Checks
-        if ("list".equals(action) || "detail".equals(action)) {
-            if (!loggedInUser.hasPermission("IMPORT_TICKET_VIEW")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view import tickets.");
-                return;
-            }
-        } else if ("add".equals(action)) {
-            if (!loggedInUser.hasPermission("IMPORT_TICKET_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create import tickets.");
-                return;
-            }
-        }
-
-        ImportTicketDAO dao = new ImportTicketDAO();
-        ImportRequestDAO rDao = new ImportRequestDAO();
+        TicketDAO ticketDao = new TicketDAO();
+        RequestDAO requestDao = new RequestDAO();
 
         switch (action) {
             case "list":
-                List<ImportTicket> list = dao.getAllImportTickets();
-                request.setAttribute("ticketList", list);
-                request.getRequestDispatcher("/import/import-list.jsp").forward(request, response);
+                httpReq.setAttribute("ticketList", ticketDao.getAll(TYPE));
+                httpReq.getRequestDispatcher("/import/import-list.jsp").forward(httpReq, response);
                 break;
-            case "detail":
-                int id = Integer.parseInt(request.getParameter("id"));
-                ImportTicket ticket = dao.getImportTicketById(id);
+            case "detail": {
+                int id = Integer.parseInt(httpReq.getParameter("id"));
+                Ticket ticket = ticketDao.getById(id);
                 if (ticket == null) {
-                    response.sendRedirect(request.getContextPath() + "/warehouse/import?action=list");
+                    response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=list");
                     return;
                 }
-                
-                // Fetch generated serial numbers if ticket is confirmed
-                if ("CONFIRMED".equals(ticket.getStatus())) {
-                    ProductItemDAO itemDAO = new ProductItemDAO();
-                    List<model.ProductItem> importedSerials = itemDAO.getItemsByImportTicketId(id);
-                    request.setAttribute("importedSerials", importedSerials);
+                if (Ticket.STATUS_CONFIRMED.equals(ticket.getStatus())
+                        || Ticket.STATUS_COMPLETED.equals(ticket.getStatus())) {
+                    List<ProductItem> serials = new ProductItemDAO().getItemsByTicketId(id);
+                    httpReq.setAttribute("importedSerials", serials);
+                } else if (Ticket.STATUS_DRAFT.equals(ticket.getStatus())
+                        && Request.REASON_RETURN.equals(ticket.getRequestReason()) && ticket.getDetails() != null) {
+                    java.util.Map<Integer, List<String>> availableSerials = new java.util.HashMap<>();
+                    Request req = requestDao.getById(ticket.getRequestId());
+                    String expectedSerialsStr = req != null ? req.getExpectedSerials() : null;
+                    List<String> expectedSerialsList = new ArrayList<>();
+                    if (expectedSerialsStr != null && !expectedSerialsStr.trim().isEmpty()) {
+                        for (String s : expectedSerialsStr.split(",")) {
+                            if (s != null && !s.trim().isEmpty()) expectedSerialsList.add(s.trim());
+                        }
+                    }
+                    
+                    for (TicketDetail d : ticket.getDetails()) {
+                        List<String> serials = new ArrayList<>();
+                        for (String s : expectedSerialsList) {
+                            try (java.sql.Connection conn = utils.DBUtils.getConnection();
+                                 PreparedStatement ps = conn.prepareStatement(
+                                         "SELECT COUNT(*) FROM Product_Items WHERE serial_number = ? AND product_id = ?")) {
+                                ps.setString(1, s);
+                                ps.setInt(2, d.getProductId());
+                                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                                    if (rs.next() && rs.getInt(1) > 0) {
+                                        serials.add(s);
+                                    }
+                                }
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                        availableSerials.put(d.getProductId(), serials);
+                    }
+                    httpReq.setAttribute("availableSerials", availableSerials);
                 }
-                
-                request.setAttribute("ticket", ticket);
-                request.getRequestDispatcher("/import/import-detail.jsp").forward(request, response);
+                httpReq.setAttribute("ticket", ticket);
+                httpReq.getRequestDispatcher("/import/import-detail.jsp").forward(httpReq, response);
                 break;
-            case "add":
-                // Get POs that are approved or partially received
-                List<ImportRequest> pendingRequests = rDao.getApprovedRequests();
-                request.setAttribute("poList", pendingRequests);
-
-                String reqIdParam = request.getParameter("request_id");
+            }
+            case "add": {
+                // Lọc theo kho của user: staff_hcm chỉ thấy yêu cầu nhập của TPHCM, staff_hn
+                // chỉ thấy HN
+                Integer userWh = loggedInUser.getWarehouseId();
+                List<Request> pendingRequests = requestDao.getPendingOrApproved(Request.TYPE_IN, userWh);
+                httpReq.setAttribute("requestList", pendingRequests);
+                String reqIdParam = httpReq.getParameter("request_id");
                 if (reqIdParam != null && !reqIdParam.trim().isEmpty()) {
                     int reqId = Integer.parseInt(reqIdParam);
-                    ImportRequest selectedPO = rDao.getImportRequestById(reqId);
-                    request.setAttribute("selectedPO", selectedPO);
+                    httpReq.setAttribute("selectedRequest", requestDao.getById(reqId));
                 }
-
-                request.getRequestDispatcher("/import/import-add.jsp").forward(request, response);
+                httpReq.getRequestDispatcher("/import/import-add.jsp").forward(httpReq, response);
                 break;
+            }
             default:
-                response.sendRedirect(request.getContextPath() + "/warehouse/import?action=list");
-                break;
+                response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=list");
         }
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest httpReq, HttpServletResponse response)
             throws ServletException, IOException {
-        HttpSession session = request.getSession();
+        HttpSession session = httpReq.getSession();
         User loggedInUser = (User) session.getAttribute("user");
-
         if (loggedInUser == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
+            response.sendRedirect(httpReq.getContextPath() + "/login");
             return;
         }
 
-        String action = request.getParameter("action");
+        String action = httpReq.getParameter("action");
         if (action == null) {
-            response.sendRedirect(request.getContextPath() + "/warehouse/import?action=list");
+            response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=list");
             return;
         }
 
-        if ("add".equals(action)) {
-            if (!loggedInUser.hasPermission("IMPORT_TICKET_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create import tickets.");
-                return;
-            }
-        } else if ("confirm".equals(action)) {
-            if (!loggedInUser.hasPermission("IMPORT_TICKET_CONFIRM")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to confirm import tickets.");
-                return;
-            }
-        } else if ("cancel".equals(action)) {
-            if (!loggedInUser.hasPermission("IMPORT_TICKET_CANCEL")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to cancel import tickets.");
-                return;
-            }
+        if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo.");
+            return;
         }
-        
-        ImportTicketDAO dao = new ImportTicketDAO();
+        if ("confirm".equals(action) && !loggedInUser.hasPermission("TICKET_CONFIRM_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền confirm.");
+            return;
+        }
+        if ("cancel".equals(action) && !loggedInUser.hasPermission("TICKET_CANCEL_IN")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy.");
+            return;
+        }
+
+        TicketDAO ticketDao = new TicketDAO();
+        RequestDAO requestDao = new RequestDAO();
 
         try {
             switch (action) {
-                case "add":
-                    int poId = Integer.parseInt(request.getParameter("po_id"));
-                    ImportRequestDAO poDAO = new ImportRequestDAO();
-                    model.ImportRequest po = poDAO.getImportRequestById(poId);
-                    if (po == null || po.getCancelRequestedAt() != null || "CANCELLED".equals(po.getStatus())) {
-                        response.sendRedirect(request.getContextPath() + "/warehouse/import?action=add&error=CancelRequested");
+                case "add": {
+                    int reqId = Integer.parseInt(httpReq.getParameter("request_id"));
+                    Request req = requestDao.getById(reqId);
+                    if (req == null || req.getCancelRequestedAt() != null
+                            || Request.STATUS_CANCELLED.equals(req.getStatus())) {
+                        response.sendRedirect(
+                                httpReq.getContextPath() + "/warehouse/import-ticket?action=add&error=CancelRequested");
                         return;
                     }
-                    String[] productIds = request.getParameterValues("product_id");
-                    String[] quantities = request.getParameterValues("quantity");
-                    String[] unitPrices = request.getParameterValues("unit_price");
-                    
-                    if (productIds != null && productIds.length > 0) {
-                        List<ImportTicketDetail> details = new ArrayList<>();
-                        for (int i = 0; i < productIds.length; i++) {
-                            int pId = Integer.parseInt(productIds[i]);
-                            int qty = Integer.parseInt(quantities[i]);
-                            double price = Double.parseDouble(unitPrices[i]);
-                            
-                            // Only add items where actual quantity received is greater than 0
-                            if (qty > 0) {
-                                ImportTicketDetail d = new ImportTicketDetail();
-                                d.setProductId(pId);
-                                d.setQuantity(qty);
-                                d.setUnitPrice(price);
-                                details.add(d);
-                            }
-                        }
-                        
-                        if (details.isEmpty()) {
-                            response.sendRedirect(request.getContextPath() + "/warehouse/import?action=add&request_id=" + poId + "&error=NoItemsReceived");
-                            return;
-                        }
-                        
-                        ImportTicket ticket = new ImportTicket();
-                        ticket.setRequestId(poId);
-                        ticket.setKeeperId(loggedInUser.getId());
-                        
-                        boolean success = dao.addImportTicket(ticket, details);
-                        if (!success) {
-                            response.sendRedirect(request.getContextPath() + "/warehouse/import?action=add&request_id=" + poId + "&error=FailedToCreate");
-                            return;
-                        }
+                    if (loggedInUser.getWarehouseId() == null) {
+                        response.sendRedirect(
+                                httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId
+                                        + "&error=RequiresWarehouseAssignment");
+                        return;
+                    }
+                    // Check: user phải cùng kho với Request (Request.warehouseId = kho đích nhập
+                    // hàng)
+                    if (loggedInUser.getWarehouseId() != req.getWarehouseId()) {
+                        response.sendRedirect(httpReq.getContextPath()
+                                + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=WrongWarehouse");
+                        return;
+                    }
+                    String[] productIds = httpReq.getParameterValues("product_id");
+                    String[] quantities = httpReq.getParameterValues("quantity");
+                    String[] unitPrices = httpReq.getParameterValues("unit_price");
+                    String[] conditions = httpReq.getParameterValues("item_condition");
+                    if (productIds == null || productIds.length == 0) {
+                        response.sendRedirect(httpReq.getContextPath()
+                                + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=NoItems");
+                        return;
+                    }
+                    List<TicketDetail> details = new ArrayList<>();
+                    for (int i = 0; i < productIds.length; i++) {
+                        int qty = Integer.parseInt(quantities[i]);
+                        if (qty <= 0)
+                            continue;
+                        TicketDetail d = new TicketDetail();
+                        d.setProductId(Integer.parseInt(productIds[i]));
+                        d.setQuantity(qty);
+                        d.setUnitCost(new java.math.BigDecimal(unitPrices[i]));
+                        details.add(d);
+                    }
+                    if (details.isEmpty()) {
+                        response.sendRedirect(httpReq.getContextPath()
+                                + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=NoItemsReceived");
+                        return;
+                    }
+                    Ticket ticket = new Ticket();
+                    ticket.setType(Ticket.TYPE_IN);
+                    ticket.setRequestId(reqId);
+                    ticket.setWarehouseId(loggedInUser.getWarehouseId());
+                    ticket.setKeeperId(loggedInUser.getId());
+                    if (!ticketDao.add(ticket, details)) {
+                        response.sendRedirect(httpReq.getContextPath()
+                                + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=Failed");
+                        return;
                     }
                     break;
-                case "confirm":
-                    int confirmId = Integer.parseInt(request.getParameter("id"));
-                    dao.confirmTicket(confirmId, loggedInUser.getId());
+                }
+                case "confirm": {
+                    int confirmId = Integer.parseInt(httpReq.getParameter("id"));
+                    String[] scannedSerials = httpReq.getParameterValues("scanned_serials");
+                    List<String> serials = null;
+                    if (scannedSerials != null && scannedSerials.length > 0) {
+                        serials = new ArrayList<>();
+                        for (String s : scannedSerials) {
+                            if (s != null && !s.trim().isEmpty())
+                                serials.add(s.trim());
+                        }
+                    }
+                    ticketDao.confirm(confirmId, loggedInUser.getId(), serials);
                     break;
+                }
                 case "cancel":
-                    int cancelId = Integer.parseInt(request.getParameter("id"));
-                    dao.cancelTicket(cancelId);
+                    ticketDao.cancel(Integer.parseInt(httpReq.getParameter("id")));
                     break;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
-        response.sendRedirect(request.getContextPath() + "/warehouse/import?action=list");
+
+        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=list");
     }
 }
