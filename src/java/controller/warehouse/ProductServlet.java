@@ -15,8 +15,11 @@ import model.Brand;
 import model.Category;
 import model.Product;
 import model.ProductItem;
+import model.ProductSpecification;
 import model.User;
 import dao.ProductItemDAO;
+import dao.WarehouseDAO;
+import model.WarehouseStockBreakdown;
 
 @WebServlet(name = "ProductServlet", urlPatterns = {"/warehouse/product"})
 public class ProductServlet extends HttpServlet {
@@ -57,9 +60,26 @@ public class ProductServlet extends HttpServlet {
                 Integer catId = (catIdStr != null && !catIdStr.isEmpty()) ? Integer.parseInt(catIdStr) : null;
                 Integer brandId = (brandIdStr != null && !brandIdStr.isEmpty()) ? Integer.parseInt(brandIdStr) : null;
 
-                List<Product> products = dao.searchAndFilterProducts(search, catId, brandId, lowStockOnly);
+                Integer userWarehouseId = loggedInUser.getWarehouseId();
+                if (userWarehouseId == null) {
+                    String filterWhIdStr = request.getParameter("warehouseId");
+                    if (filterWhIdStr != null && !filterWhIdStr.isEmpty()) {
+                        try {
+                            userWarehouseId = Integer.parseInt(filterWhIdStr);
+                        } catch (NumberFormatException e) {
+                            // ignore
+                        }
+                    }
+                }
+
+                List<Product> products = dao.searchAndFilterProducts(search, catId, brandId, lowStockOnly, userWarehouseId);
                 List<Category> categories = catDao.getAllCategories();
                 List<Brand> brands = brandDao.getAllBrands();
+
+                if (loggedInUser.getWarehouseId() == null) {
+                    WarehouseDAO whDao = new WarehouseDAO();
+                    request.setAttribute("warehouseList", whDao.getAllActiveWarehouses());
+                }
 
                 request.setAttribute("productList", products);
                 request.setAttribute("categoryList", categories);
@@ -69,13 +89,20 @@ public class ProductServlet extends HttpServlet {
 
             case "details":
                 int id = Integer.parseInt(request.getParameter("id"));
-                Product product = dao.getProductById(id);
+                Integer detailWarehouseId = loggedInUser.getWarehouseId();
+                Product product = dao.getProductById(id, detailWarehouseId);
                 if (product == null) {
                     response.sendRedirect(request.getContextPath() + "/warehouse/product?action=list");
                     return;
                 }
                 ProductItemDAO itemDao = new ProductItemDAO();
-                List<ProductItem> inStockSerials = itemDao.getInStockItemsByProductId(id);
+                List<ProductItem> inStockSerials = itemDao.getInStockItemsByProductId(id, detailWarehouseId);
+                
+                if (loggedInUser.getWarehouseId() == null) {
+                    List<WarehouseStockBreakdown> breakdown = dao.getWarehouseStockBreakdown(id);
+                    request.setAttribute("warehouseBreakdown", breakdown);
+                }
+
                 request.setAttribute("product", product);
                 request.setAttribute("inStockSerials", inStockSerials);
                 request.getRequestDispatcher("/products/product-detail.jsp").forward(request, response);
@@ -164,13 +191,13 @@ public class ProductServlet extends HttpServlet {
                     String sku = request.getParameter("sku");
                     String unit = request.getParameter("unit");
                     int minStock = Integer.parseInt(request.getParameter("min_stock"));
-                    double defaultCost = Double.parseDouble(request.getParameter("default_cost"));
                     
                     String catIdStr = request.getParameter("category_id");
                     String brandIdStr = request.getParameter("brand_id");
                     Integer categoryId = (catIdStr != null && !catIdStr.isEmpty()) ? Integer.parseInt(catIdStr) : null;
                     Integer brandId = (brandIdStr != null && !brandIdStr.isEmpty()) ? Integer.parseInt(brandIdStr) : null;
-                    String specs = request.getParameter("technical_specifications");
+                    String[] specKeys = request.getParameterValues("spec_key");
+                    String[] specValues = request.getParameterValues("spec_value");
 
                     // Validation checks
                     if (dao.isSkuExists(sku, 0)) {
@@ -184,12 +211,25 @@ public class ProductServlet extends HttpServlet {
                     newP.setSku(sku);
                     newP.setUnit(unit);
                     newP.setMinStock(minStock);
-                    newP.setDefaultCost(defaultCost);
-                    newP.setAverageCost(defaultCost); // average cost initially is equal to default cost
+                    newP.setAverageCost(0.0); // initially, new product average cost is 0.0
                     newP.setStatus(true);
                     newP.setCategoryId(categoryId);
                     newP.setBrandId(brandId);
-                    newP.setTechnicalSpecifications(specs);
+                    
+                    List<ProductSpecification> specsList = new java.util.ArrayList<>();
+                    if (specKeys != null && specValues != null) {
+                        for (int i = 0; i < specKeys.length; i++) {
+                            String key = specKeys[i].trim();
+                            String val = specValues[i].trim();
+                            if (!key.isEmpty()) {
+                                ProductSpecification spec = new ProductSpecification();
+                                spec.setSpecKey(key);
+                                spec.setSpecValue(val);
+                                specsList.add(spec);
+                            }
+                        }
+                    }
+                    newP.setSpecifications(specsList);
 
                     dao.addProduct(newP);
                     break;
@@ -200,13 +240,13 @@ public class ProductServlet extends HttpServlet {
                     String updateSku = request.getParameter("sku");
                     String updateUnit = request.getParameter("unit");
                     int updateMinStock = Integer.parseInt(request.getParameter("min_stock"));
-                    double updateDefaultCost = Double.parseDouble(request.getParameter("default_cost"));
                     
                     String updateCatIdStr = request.getParameter("category_id");
                     String updateBrandIdStr = request.getParameter("brand_id");
                     Integer updateCategoryId = (updateCatIdStr != null && !updateCatIdStr.isEmpty()) ? Integer.parseInt(updateCatIdStr) : null;
                     Integer updateBrandId = (updateBrandIdStr != null && !updateBrandIdStr.isEmpty()) ? Integer.parseInt(updateBrandIdStr) : null;
-                    String updateSpecs = request.getParameter("technical_specifications");
+                    String[] updateSpecKeys = request.getParameterValues("spec_key");
+                    String[] updateSpecValues = request.getParameterValues("spec_value");
 
                     // Validation checks
                     if (dao.isSkuExists(updateSku, id)) {
@@ -221,10 +261,23 @@ public class ProductServlet extends HttpServlet {
                     updateP.setSku(updateSku);
                     updateP.setUnit(updateUnit);
                     updateP.setMinStock(updateMinStock);
-                    updateP.setDefaultCost(updateDefaultCost);
                     updateP.setCategoryId(updateCategoryId);
                     updateP.setBrandId(updateBrandId);
-                    updateP.setTechnicalSpecifications(updateSpecs);
+                    
+                    List<ProductSpecification> updateSpecsList = new java.util.ArrayList<>();
+                    if (updateSpecKeys != null && updateSpecValues != null) {
+                        for (int i = 0; i < updateSpecKeys.length; i++) {
+                            String key = updateSpecKeys[i].trim();
+                            String val = updateSpecValues[i].trim();
+                            if (!key.isEmpty()) {
+                                ProductSpecification spec = new ProductSpecification();
+                                spec.setSpecKey(key);
+                                spec.setSpecValue(val);
+                                updateSpecsList.add(spec);
+                            }
+                        }
+                    }
+                    updateP.setSpecifications(updateSpecsList);
 
                     dao.updateProduct(updateP);
                     break;

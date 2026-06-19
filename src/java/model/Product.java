@@ -7,33 +7,38 @@ public class Product {
     private String sku;
     private String unit;
     private int minStock;
-    private double defaultCost;
     private double averageCost;
     private boolean status;
     private Integer categoryId;
     private Integer brandId;
-    private String technicalSpecifications;
+    private java.util.List<ProductSpecification> specifications;
 
     // Join fields
     private String categoryName;
     private String brandName;
     private int quantity; // physical inventory level
+    private int physicalQty;
+    private int availableQty;
+    private int availableNewQty;
+    private int availableUsedQty;
+    private int reservedQty;
+    private int reservedNewQty;
+    private int reservedUsedQty;
+    private int damagedQty;
 
     public Product() {
     }
 
-    public Product(int id, String productName, String sku, String unit, int minStock, double defaultCost, double averageCost, boolean status, Integer categoryId, Integer brandId, String technicalSpecifications) {
+    public Product(int id, String productName, String sku, String unit, int minStock, double averageCost, boolean status, Integer categoryId, Integer brandId) {
         this.id = id;
         this.productName = productName;
         this.sku = sku;
         this.unit = unit;
         this.minStock = minStock;
-        this.defaultCost = defaultCost;
         this.averageCost = averageCost;
         this.status = status;
         this.categoryId = categoryId;
         this.brandId = brandId;
-        this.technicalSpecifications = technicalSpecifications;
     }
 
     public int getId() {
@@ -76,13 +81,7 @@ public class Product {
         this.minStock = minStock;
     }
 
-    public double getDefaultCost() {
-        return defaultCost;
-    }
 
-    public void setDefaultCost(double defaultCost) {
-        this.defaultCost = defaultCost;
-    }
 
     public double getAverageCost() {
         return averageCost;
@@ -116,12 +115,12 @@ public class Product {
         this.brandId = brandId;
     }
 
-    public String getTechnicalSpecifications() {
-        return technicalSpecifications;
+    public java.util.List<ProductSpecification> getSpecifications() {
+        return specifications;
     }
 
-    public void setTechnicalSpecifications(String technicalSpecifications) {
-        this.technicalSpecifications = technicalSpecifications;
+    public void setSpecifications(java.util.List<ProductSpecification> specifications) {
+        this.specifications = specifications;
     }
 
     public String getCategoryName() {
@@ -146,5 +145,69 @@ public class Product {
 
     public void setQuantity(int quantity) {
         this.quantity = quantity;
+    }
+
+    public int getPhysicalQty() {
+        return physicalQty;
+    }
+
+    public void setPhysicalQty(int physicalQty) {
+        this.physicalQty = physicalQty;
+    }
+
+    public int getAvailableQty() {
+        return availableQty;
+    }
+
+    public void setAvailableQty(int availableQty) {
+        this.availableQty = availableQty;
+    }
+
+    public int getReservedQty() {
+        return reservedQty;
+    }
+
+    public void setReservedQty(int reservedQty) {
+        this.reservedQty = reservedQty;
+    }
+
+    public int getDamagedQty() {
+        return damagedQty;
+    }
+
+    public void setDamagedQty(int damagedQty) {
+        this.damagedQty = damagedQty;
+    }
+
+    public int getAvailableNewQty() {
+        return availableNewQty;
+    }
+
+    public void setAvailableNewQty(int availableNewQty) {
+        this.availableNewQty = availableNewQty;
+    }
+
+    public int getAvailableUsedQty() {
+        return availableUsedQty;
+    }
+
+    public void setAvailableUsedQty(int availableUsedQty) {
+        this.availableUsedQty = availableUsedQty;
+    }
+
+    public int getReservedNewQty() {
+        return reservedNewQty;
+    }
+
+    public void setReservedNewQty(int reservedNewQty) {
+        this.reservedNewQty = reservedNewQty;
+    }
+
+    public int getReservedUsedQty() {
+        return reservedUsedQty;
+    }
+
+    public void setReservedUsedQty(int reservedUsedQty) {
+        this.reservedUsedQty = reservedUsedQty;
     }
 }

@@ -7,9 +7,9 @@ public class ProductItem {
     private int productId;
     private String serialNumber;
     private String status;
-    private int importTicketId;
-    private Integer exportTicketId;
     private Timestamp createdAt;
+    private String itemCondition; // NEW, USED, DAMAGED
+    private int warehouseId;
 
     // Helper properties for joins (e.g. displaying product names in views)
     private String productName;
@@ -19,14 +19,13 @@ public class ProductItem {
     public ProductItem() {
     }
 
-    public ProductItem(int id, int productId, String serialNumber, String status, int importTicketId, Integer exportTicketId, Timestamp createdAt) {
+    public ProductItem(int id, int productId, String serialNumber, String status, Timestamp createdAt, String itemCondition) {
         this.id = id;
         this.productId = productId;
         this.serialNumber = serialNumber;
         this.status = status;
-        this.importTicketId = importTicketId;
-        this.exportTicketId = exportTicketId;
         this.createdAt = createdAt;
+        this.itemCondition = itemCondition;
     }
 
     public int getId() {
@@ -61,22 +60,6 @@ public class ProductItem {
         this.status = status;
     }
 
-    public int getImportTicketId() {
-        return importTicketId;
-    }
-
-    public void setImportTicketId(int importTicketId) {
-        this.importTicketId = importTicketId;
-    }
-
-    public Integer getExportTicketId() {
-        return exportTicketId;
-    }
-
-    public void setExportTicketId(Integer exportTicketId) {
-        this.exportTicketId = exportTicketId;
-    }
-
     public Timestamp getCreatedAt() {
         return createdAt;
     }
@@ -107,5 +90,31 @@ public class ProductItem {
 
     public void setUnit(String unit) {
         this.unit = unit;
+    }
+
+    public String getItemCondition() {
+        return itemCondition;
+    }
+
+    public void setItemCondition(String itemCondition) {
+        this.itemCondition = itemCondition;
+    }
+
+    public int getWarehouseId() {
+        return warehouseId;
+    }
+
+    public void setWarehouseId(int warehouseId) {
+        this.warehouseId = warehouseId;
+    }
+
+    private String warehouseName;
+
+    public String getWarehouseName() {
+        return warehouseName;
+    }
+
+    public void setWarehouseName(String warehouseName) {
+        this.warehouseName = warehouseName;
     }
 }

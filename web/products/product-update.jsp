@@ -23,7 +23,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Edit Product - WMS</title>
+    <title>Cập nhật sản phẩm - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,18 +43,18 @@
                 
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Edit Product Profile</h2>
-                        <p class="text-muted small mb-0">Modify details or specifications for <%= product.getProductName() %></p>
+                        <h2 class="fw-bold text-slate-800 mb-1">Cập nhật thông tin sản phẩm</h2>
+                        <p class="text-muted small mb-0">Chỉnh sửa thông tin chi tiết hoặc thông số kỹ thuật cho <%= product.getProductName() %></p>
                     </div>
                     <a href="product?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Back to Catalog
+                        <i class="bi bi-arrow-left"></i> Quay lại danh mục
                     </a>
                 </div>
 
                 <% if (error != null) { %>
                 <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4" role="alert">
                     <i class="bi bi-exclamation-octagon-fill me-2 fs-5"></i>
-                    <strong>Error:</strong> <%= error %>
+                    <strong>Lỗi:</strong> <%= error %>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 <% } %>
@@ -64,41 +64,33 @@
                         <input type="hidden" name="id" value="<%= product.getId() %>">
                         
                         <div class="col-md-6">
-                            <label for="productName" class="form-label">Product Name <span class="text-danger">*</span></label>
+                            <label for="productName" class="form-label">Tên sản phẩm <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="productName" name="product_name" value="<%= product.getProductName() %>" required>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="sku" class="form-label">SKU (Stock Keeping Unit) <span class="text-danger">*</span></label>
+                            <label for="sku" class="form-label">Mã SKU <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="sku" name="sku" value="<%= product.getSku() %>" required>
                         </div>
 
-                        <div class="col-md-4">
-                            <label for="unit" class="form-label">Unit of Measure <span class="text-danger">*</span></label>
+                        <div class="col-md-6">
+                            <label interpreter="text" for="unit" class="form-label">Đơn vị tính <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="unit" name="unit" value="<%= product.getUnit() %>" required>
                         </div>
 
-                        <div class="col-md-4">
-                            <label for="minStock" class="form-label">Minimum Stock Level (Safety threshold) <span class="text-danger">*</span></label>
+                        <div class="col-md-6">
+                            <label for="minStock" class="form-label">Mức tồn kho tối thiểu (Ngưỡng an toàn) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="minStock" name="min_stock" min="1" value="<%= product.getMinStock() %>" required>
                         </div>
 
-                        <div class="col-md-4">
-                            <label for="defaultCost" class="form-label">Initial Default Cost <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="defaultCost" name="default_cost" min="0" step="1000" value="<%= String.format("%.0f", product.getDefaultCost()) %>" required>
-                                <span class="input-group-text bg-light text-muted">đ</span>
-                            </div>
-                        </div>
-
                         <div class="col-md-6">
-                            <label for="categoryId" class="form-label">Category</label>
+                            <label for="categoryId" class="form-label">Danh mục</label>
                             <select class="form-select" id="categoryId" name="category_id">
-                                <option value="">Select Category...</option>
+                                <option value="">Chọn Danh mục...</option>
                                 <%
                                     if (categoryList != null) {
                                         for (Category c : categoryList) {
-                                            String selected = c.getId() == product.getCategoryId() ? "selected" : "";
+                                            String selected = (product.getCategoryId() != null && c.getId() == product.getCategoryId()) ? "selected" : "";
                                 %>
                                 <option value="<%= c.getId() %>" <%= selected %>><%= c.getCategoryName() %></option>
                                 <%
@@ -109,13 +101,13 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="brandId" class="form-label">Brand</label>
+                            <label for="brandId" class="form-label">Thương hiệu</label>
                             <select class="form-select" id="brandId" name="brand_id">
-                                <option value="">Select Brand...</option>
+                                <option value="">Chọn Thương hiệu...</option>
                                 <%
                                     if (brandList != null) {
                                         for (Brand b : brandList) {
-                                            String selected = b.getId() == product.getBrandId() ? "selected" : "";
+                                            String selected = (product.getBrandId() != null && b.getId() == product.getBrandId()) ? "selected" : "";
                                 %>
                                 <option value="<%= b.getId() %>" <%= selected %>><%= b.getBrandName() %></option>
                                 <%
@@ -126,13 +118,34 @@
                         </div>
 
                         <div class="col-12">
-                            <label for="techSpecs" class="form-label">Technical Specifications</label>
-                            <textarea class="form-control" id="techSpecs" name="technical_specifications" rows="4"><%= product.getTechnicalSpecifications() != null ? product.getTechnicalSpecifications() : "" %></textarea>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-bold mb-0">Thông số kỹ thuật</label>
+                                <button type="button" id="btnAddSpec" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                                    <i class="bi bi-plus-lg"></i> Thêm dòng thông số
+                                </button>
+                            </div>
+                            <div class="table-responsive border rounded bg-white p-3 shadow-sm">
+                                <table class="table table-hover align-middle mb-0" id="specsTable" style="font-size: 0.9rem;">
+                                    <thead>
+                                        <tr class="table-light">
+                                            <th style="width: 45%;">Tên thông số (Ví dụ: Công suất, Dung tích)</th>
+                                            <th style="width: 45%;">Giá trị thông số (Ví dụ: 9000 BTU, 236 Lít)</th>
+                                            <th style="width: 10%;" class="text-center">Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="specsContainer">
+                                        <!-- Dòng thông số động sẽ được thêm ở đây -->
+                                    </tbody>
+                                </table>
+                                <div id="noSpecsMsg" class="text-center text-muted py-4">
+                                    <i class="bi bi-info-circle me-1"></i> Chưa có thông số kỹ thuật nào được thiết lập. Hãy nhấn "Thêm dòng thông số".
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-12 d-flex justify-content-end gap-2 mt-4">
-                            <a href="product?action=list" class="btn btn-secondary px-4"><i class="bi bi-x-circle me-1"></i> Cancel</a>
-                            <button type="submit" class="btn btn-warning text-dark px-4"><i class="bi bi-check-circle-fill me-1"></i> Save Changes</button>
+                            <a href="product?action=list" class="btn btn-secondary px-4"><i class="bi bi-x-circle me-1"></i> Hủy</a>
+                            <button type="submit" class="btn btn-warning text-dark px-4"><i class="bi bi-check-circle-fill me-1"></i> Lưu thay đổi</button>
                         </div>
                     </form>
                 </div>
@@ -143,5 +156,73 @@
 
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const btnAddSpec = document.getElementById("btnAddSpec");
+            const specsContainer = document.getElementById("specsContainer");
+            const noSpecsMsg = document.getElementById("noSpecsMsg");
+
+            function checkEmptyState() {
+                if (specsContainer.children.length === 0) {
+                    noSpecsMsg.style.display = "block";
+                } else {
+                    noSpecsMsg.style.display = "none";
+                }
+            }
+
+            function createSpecRow(name = "", value = "") {
+                const tr = document.createElement("tr");
+                tr.className = "spec-row";
+                tr.innerHTML = 
+                    '<td>' +
+                    '    <input type="text" class="form-control form-control-sm spec-name" name="spec_key" value="' + escapeHtml(name) + '" placeholder="VD: Công suất, Thương hiệu..." required>' +
+                    '</td>' +
+                    '<td>' +
+                    '    <input type="text" class="form-control form-control-sm spec-value" name="spec_value" value="' + escapeHtml(value) + '" placeholder="VD: 9000 BTU, Nhật Bản..." required>' +
+                    '</td>' +
+                    '<td class="text-center">' +
+                    '    <button type="button" class="btn btn-outline-danger btn-sm btn-delete-spec">' +
+                    '        <i class="bi bi-trash"></i>' +
+                    '    </button>' +
+                    '</td>';
+
+                // Add delete event
+                tr.querySelector(".btn-delete-spec").addEventListener("click", function() {
+                    tr.remove();
+                    checkEmptyState();
+                });
+
+                specsContainer.appendChild(tr);
+                checkEmptyState();
+            }
+
+            function escapeHtml(text) {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            btnAddSpec.addEventListener("click", function() {
+                createSpecRow();
+            });
+
+            // Populate existing specifications from database
+            <% 
+                List<model.ProductSpecification> productSpecs = product.getSpecifications();
+                if (productSpecs != null) {
+                    for (model.ProductSpecification spec : productSpecs) {
+            %>
+                createSpecRow("<%= spec.getSpecKey().replace("\"", "\\\"").replace("\n", "\\n") %>", "<%= spec.getSpecValue().replace("\"", "\\\"").replace("\n", "\\n") %>");
+            <% 
+                    }
+                }
+            %>
+
+            checkEmptyState();
+        });
+    </script>
 </body>
 </html>
