@@ -72,6 +72,7 @@ public class UserServlet extends HttpServlet {
             case "add":
                 List<Role> addRoleList = roleDao.getAllRoles();
                 request.setAttribute("roleList", addRoleList);
+                request.setAttribute("warehouseList", new dao.WarehouseDAO().getAllActiveWarehouses());
                 request.getRequestDispatcher("/admin/user-add.jsp").forward(request, response);
                 break;
             case "info":
@@ -85,6 +86,7 @@ public class UserServlet extends HttpServlet {
                 User userUpdate = dao.getUserById(idUpdate);
                 List<Role> updateRoleList = roleDao.getAllRoles();
                 request.setAttribute("roleList", updateRoleList);
+                request.setAttribute("warehouseList", new dao.WarehouseDAO().getAllActiveWarehouses());
                 request.setAttribute("userInfo", userUpdate);
                 request.getRequestDispatcher("/admin/user-update.jsp").forward(request, response);
                 break;
@@ -138,12 +140,15 @@ public class UserServlet extends HttpServlet {
                     String email = request.getParameter("email");
                     String fullName = request.getParameter("full_name");
                     int roleId = Integer.parseInt(request.getParameter("role_id"));
+                    String warehouseIdStr = request.getParameter("warehouse_id");
+                    Integer warehouseId = (warehouseIdStr != null && !warehouseIdStr.trim().isEmpty()) ? Integer.parseInt(warehouseIdStr) : null;
                     
                     User newUser = new User();
                     newUser.setUsername(username);
                     newUser.setEmail(email);
                     newUser.setFullName(fullName);
                     newUser.setRoleId(roleId);
+                    newUser.setWarehouseId(warehouseId);
                     newUser.setStatus(true); // default active
                     newUser.setPassword(SecurityUtils.hashSHA256("123456")); // Hashed immediately
                     
@@ -154,12 +159,15 @@ public class UserServlet extends HttpServlet {
                     String updateEmail = request.getParameter("email");
                     String updateFullName = request.getParameter("full_name");
                     int updateRoleId = Integer.parseInt(request.getParameter("role_id"));
+                    String updateWarehouseIdStr = request.getParameter("warehouse_id");
+                    Integer updateWarehouseId = (updateWarehouseIdStr != null && !updateWarehouseIdStr.trim().isEmpty()) ? Integer.parseInt(updateWarehouseIdStr) : null;
                     
                     User updateUser = new User();
                     updateUser.setId(updateId);
                     updateUser.setEmail(updateEmail);
                     updateUser.setFullName(updateFullName);
                     updateUser.setRoleId(updateRoleId);
+                    updateUser.setWarehouseId(updateWarehouseId);
                     
                     dao.updateUser(updateUser);
                     break;

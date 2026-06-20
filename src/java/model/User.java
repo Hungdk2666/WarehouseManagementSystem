@@ -14,6 +14,8 @@ public class User {
     private String resetCode;
     private String roleName;
     private List<String> permissions;
+    private Integer warehouseId;
+    private String warehouseName;
 
     public User() {
     }
@@ -111,5 +113,21 @@ public class User {
 
     public boolean hasPermission(String permissionName) {
         return permissions != null && permissions.contains(permissionName);
+    }
+
+    public Integer getWarehouseId() {
+        return warehouseId;
+    }
+
+    public void setWarehouseId(Integer warehouseId) {
+        this.warehouseId = warehouseId;
+    }
+
+    public String getWarehouseName() {
+        return warehouseName;
+    }
+
+    public void setWarehouseName(String warehouseName) {
+        this.warehouseName = warehouseName;
     }
 }

@@ -13,7 +13,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Add New User</title>
+    <title>Thêm người dùng mới</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,27 +34,27 @@
                     <div class="col-md-6">
                         <div class="card shadow-sm border-0 bg-white">
                             <div class="card-header bg-success bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-success"><i class="bi bi-person-plus-fill me-2"></i>Add New User</h4>
+                                <h4 class="mb-0 fw-bold text-success"><i class="bi bi-person-plus-fill me-2"></i>Thêm người dùng mới</h4>
                             </div>
                             <div class="card-body p-4">
                                 <div class="alert alert-info border-0 bg-info bg-opacity-10 text-dark py-2.5 px-3 rounded-3 small mb-4">
-                                    <i class="bi bi-info-circle-fill me-1"></i> Default password for new users is <strong>123456</strong> (will be automatically hashed).
+                                    <i class="bi bi-info-circle-fill me-1"></i> Mật khẩu mặc định cho người dùng mới là <strong>123456</strong> (sẽ được tự động băm).
                                 </div>
                                 <form action="user?action=add" method="POST">
                                     <div class="mb-3">
-                                        <label class="form-label"><i class="bi bi-person me-1 text-muted"></i> Username</label>
-                                        <input type="text" name="username" class="form-control" placeholder="Enter username" required>
+                                        <label class="form-label"><i class="bi bi-person me-1 text-muted"></i> Tên đăng nhập</label>
+                                        <input type="text" name="username" class="form-control" placeholder="Nhập tên đăng nhập" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label"><i class="bi bi-envelope me-1 text-muted"></i> Email</label>
-                                        <input type="email" name="email" class="form-control" placeholder="Enter email address" required>
+                                        <input type="email" name="email" class="form-control" placeholder="Nhập địa chỉ email" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label"><i class="bi bi-card-text me-1 text-muted"></i> Full Name</label>
-                                        <input type="text" name="full_name" class="form-control" placeholder="Enter full name" required>
+                                        <label class="form-label"><i class="bi bi-card-text me-1 text-muted"></i> Họ và tên</label>
+                                        <input type="text" name="full_name" class="form-control" placeholder="Nhập họ và tên" required>
                                     </div>
                                     <div class="mb-4">
-                                        <label class="form-label"><i class="bi bi-shield-check me-1 text-muted"></i> Role</label>
+                                        <label class="form-label"><i class="bi bi-shield-check me-1 text-muted"></i> Vai trò</label>
                                         <select name="role_id" class="form-select" required>
                                         <%
                                             List<Role> roleList = (List<Role>) request.getAttribute("roleList");
@@ -68,11 +68,27 @@
                                         %>
                                         </select>
                                     </div>
+                                    <div class="mb-4">
+                                        <label class="form-label"><i class="bi bi-geo-alt me-1 text-muted"></i> Kho làm việc</label>
+                                        <select name="warehouse_id" class="form-select">
+                                            <option value="">Toàn cầu / Tất cả các kho</option>
+                                            <%
+                                                List<model.Warehouse> warehouseList = (List<model.Warehouse>) request.getAttribute("warehouseList");
+                                                if(warehouseList != null) {
+                                                    for(model.Warehouse w : warehouseList) {
+                                            %>
+                                                <option value="<%= w.getId() %>"><%= w.getWarehouseName() %></option>
+                                            <%
+                                                    }
+                                                }
+                                            %>
+                                        </select>
+                                    </div>
                                     <div class="d-grid mb-3 mt-4">
-                                        <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-save me-1"></i> Save User</button>
+                                        <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-save me-1"></i> Lưu người dùng</button>
                                     </div>
                                     <div class="text-center">
-                                        <a href="user?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Cancel</a>
+                                        <a href="user?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Hủy</a>
                                     </div>
                                 </form>
                             </div>

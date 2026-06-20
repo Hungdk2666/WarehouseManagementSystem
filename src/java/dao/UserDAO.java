@@ -11,7 +11,7 @@ import utils.DBUtils;
 public class UserDAO {
 
     public User login(String username, String hashedPassword) {
-        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.username = ? AND u.password = ? AND u.status = true";
+        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE u.username = ? AND u.password = ? AND u.status = true";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, username);
@@ -28,7 +28,7 @@ public class UserDAO {
     }
 
     public User getUserByEmail(String email) {
-        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.email = ?";
+        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE u.email = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, email);
@@ -44,7 +44,7 @@ public class UserDAO {
     }
 
     public User getUserById(int id) {
-        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.id = ?";
+        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE u.id = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setInt(1, id);
@@ -75,7 +75,7 @@ public class UserDAO {
 
     public List<User> getAllUsers() {
         List<User> list = new ArrayList<>();
-        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id";
+        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
@@ -90,7 +90,7 @@ public class UserDAO {
 
     public List<User> searchAndFilterUsers(String search, String roleFilter) {
         List<User> list = new ArrayList<>();
-        StringBuilder query = new StringBuilder("SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE 1=1");
+        StringBuilder query = new StringBuilder("SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         if (search != null && !search.trim().isEmpty()) {
@@ -123,7 +123,7 @@ public class UserDAO {
     }
 
     public boolean addUser(User user) {
-        String query = "INSERT INTO Users (username, password, email, full_name, status, role_id) VALUES (?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO Users (username, password, email, full_name, status, role_id, warehouse_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, user.getUsername());
@@ -132,6 +132,11 @@ public class UserDAO {
             ps.setString(4, user.getFullName());
             ps.setBoolean(5, user.isStatus());
             ps.setInt(6, user.getRoleId());
+            if (user.getWarehouseId() != null) {
+                ps.setInt(7, user.getWarehouseId());
+            } else {
+                ps.setNull(7, java.sql.Types.INTEGER);
+            }
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -140,13 +145,18 @@ public class UserDAO {
     }
 
     public boolean updateUser(User user) {
-        String query = "UPDATE Users SET email = ?, full_name = ?, role_id = ? WHERE id = ?";
+        String query = "UPDATE Users SET email = ?, full_name = ?, role_id = ?, warehouse_id = ? WHERE id = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, user.getEmail());
             ps.setString(2, user.getFullName());
             ps.setInt(3, user.getRoleId());
-            ps.setInt(4, user.getId());
+            if (user.getWarehouseId() != null) {
+                ps.setInt(4, user.getWarehouseId());
+            } else {
+                ps.setNull(4, java.sql.Types.INTEGER);
+            }
+            ps.setInt(5, user.getId());
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -180,7 +190,7 @@ public class UserDAO {
     }
 
     public User verifyResetCode(String email, String code) {
-        String query = "SELECT u.*, r.role_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.email = ? AND u.reset_code = ?";
+        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE u.email = ? AND u.reset_code = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, email);
@@ -222,10 +232,21 @@ public class UserDAO {
             rs.getInt("role_id"),
             rs.getString("reset_code")
         );
+        int wId = rs.getInt("warehouse_id");
+        if (rs.wasNull()) {
+            u.setWarehouseId(null);
+        } else {
+            u.setWarehouseId(wId);
+        }
         try {
             u.setRoleName(rs.getString("role_name"));
         } catch (Exception e) {
             // Ignore if role_name is not present
+        }
+        try {
+            u.setWarehouseName(rs.getString("warehouse_name"));
+        } catch (Exception e) {
+            // Ignore if warehouse_name is not present
         }
         u.setPermissions(getPermissionNamesByRoleId(u.getRoleId(), conn));
         return u;
