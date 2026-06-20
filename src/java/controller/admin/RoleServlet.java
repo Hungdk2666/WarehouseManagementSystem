@@ -50,9 +50,7 @@ public class RoleServlet extends HttpServlet {
         switch (action) {
             case "list":
                 List<Role> list = dao.getAllRoles();
-                List<Permission> permList = dao.getAllPermissions();
                 request.setAttribute("roleList", list);
-                request.setAttribute("permissionList", permList);
                 request.getRequestDispatcher("/admin/role-list.jsp").forward(request, response);
                 break;
             case "update":
@@ -147,18 +145,6 @@ public class RoleServlet extends HttpServlet {
                         for (String pIdStr : selectedPerms) {
                             int pId = Integer.parseInt(pIdStr);
                             if (pId >= 1 && pId <= 10) {
-                                filtered.add(pIdStr);
-                            }
-                        }
-                        selectedPerms = filtered.toArray(new String[0]);
-                    }
-                    
-                    // Backend protection: do not allow assigning Business Admin permissions (4 and 5) to System Admin (1)
-                    if (roleId == 1 && selectedPerms != null) {
-                        java.util.List<String> filtered = new java.util.ArrayList<>();
-                        for (String pIdStr : selectedPerms) {
-                            int pId = Integer.parseInt(pIdStr);
-                            if (pId != 4 && pId != 5) {
                                 filtered.add(pIdStr);
                             }
                         }
