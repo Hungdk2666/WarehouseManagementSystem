@@ -9,7 +9,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Set New Password - WMS</title>
+    <title>Đặt mật khẩu mới - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,11 +24,11 @@
     <div class="auth-container animated-fade-in">
         <!-- Brand Logo -->
         <div class="auth-logo">
-            <i class="bi bi-box-seam-fill"></i> WMS SYSTEM
+            <i class="bi bi-box-seam-fill"></i> HỆ THỐNG WMS
         </div>
 
         <div class="auth-card">
-            <h4 class="text-center mb-4 card-title">Set New Password</h4>
+            <h4 class="text-center mb-4 card-title">Đặt mật khẩu mới</h4>
             <% 
                 String error = (String) request.getAttribute("error");
                 if (error != null) {
@@ -39,15 +39,15 @@
             <% } %>
             <form action="reset-password" method="POST">
                 <div class="mb-3">
-                    <label class="form-label"><i class="bi bi-lock-fill me-1"></i> New Password</label>
-                    <input type="password" name="newPassword" class="form-control" placeholder="Enter new password" required autocomplete="new-password">
+                    <label class="form-label"><i class="bi bi-lock-fill me-1"></i> Mật khẩu mới</label>
+                    <input type="password" name="newPassword" class="form-control" placeholder="Nhập mật khẩu mới" required autocomplete="new-password">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label"><i class="bi bi-lock-check-fill me-1"></i> Confirm New Password</label>
-                    <input type="password" name="confirmPassword" class="form-control" placeholder="Confirm new password" required autocomplete="new-password">
+                    <label class="form-label"><i class="bi bi-lock-check-fill me-1"></i> Xác nhận mật khẩu mới</label>
+                    <input type="password" name="confirmPassword" class="form-control" placeholder="Xác nhận mật khẩu mới" required autocomplete="new-password">
                 </div>
                 <div class="d-grid mb-3 mt-4">
-                    <button type="submit" class="btn btn-success btn-lg fs-6"><i class="bi bi-shield-check me-1"></i> Save Password</button>
+                    <button type="submit" class="btn btn-success btn-lg fs-6"><i class="bi bi-shield-check me-1"></i> Lưu mật khẩu</button>
                 </div>
             </form>
         </div>

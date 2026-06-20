@@ -17,7 +17,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Edit Destination - WMS</title>
+    <title>Chỉnh sửa điểm đến - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,33 +37,33 @@
                 <div class="row justify-content-center">
                     <div class="col-md-6">
                         <div class="card shadow-sm border-0 bg-white">
-                            <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-warning-emphasis"><i class="bi bi-pencil-square me-2"></i>Edit Destination</h4>
+                             <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
+                                <h4 class="mb-0 fw-bold text-warning-emphasis"><i class="bi bi-pencil-square me-2"></i>Chỉnh sửa điểm đến</h4>
                             </div>
                             <div class="card-body p-4">
                                 <form action="destination?action=update" method="POST">
                                     <input type="hidden" name="id" value="<%= destination.getId() %>">
                                     <div class="mb-3">
-                                        <label for="destinationName" class="form-label fw-semibold text-muted">Destination Name <span class="text-danger">*</span></label>
+                                        <label for="destinationName" class="form-label fw-semibold text-muted">Tên điểm đến <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="destinationName" name="destination_name" value="<%= destination.getDestinationName() %>" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="destinationType" class="form-label fw-semibold text-muted">Destination Type <span class="text-danger">*</span></label>
+                                        <label for="destinationType" class="form-label fw-semibold text-muted">Loại điểm đến <span class="text-danger">*</span></label>
                                         <select class="form-select" id="destinationType" name="destination_type" required>
-                                            <option value="STORE" <%= "STORE".equals(destination.getDestinationType()) ? "selected" : "" %>>Store (Cửa hàng)</option>
-                                            <option value="WARRANTY_CENTER" <%= "WARRANTY_CENTER".equals(destination.getDestinationType()) ? "selected" : "" %>>Warranty Center (Trung tâm Bảo hành)</option>
-                                            <option value="OTHER" <%= "OTHER".equals(destination.getDestinationType()) ? "selected" : "" %>>Other (Khác)</option>
+                                            <option value="STORE" <%= "STORE".equals(destination.getDestinationType()) ? "selected" : "" %>>Cửa hàng</option>
+                                            <option value="WARRANTY_CENTER" <%= "WARRANTY_CENTER".equals(destination.getDestinationType()) ? "selected" : "" %>>Trung tâm Bảo hành</option>
+                                            <option value="OTHER" <%= "OTHER".equals(destination.getDestinationType()) ? "selected" : "" %>>Khác</option>
                                         </select>
                                     </div>
                                     <div class="mb-4">
-                                        <label for="address" class="form-label fw-semibold text-muted">Address</label>
+                                        <label for="address" class="form-label fw-semibold text-muted">Địa chỉ</label>
                                         <textarea class="form-control" id="address" name="address" rows="2"><%= destination.getAddress() != null ? destination.getAddress() : "" %></textarea>
                                     </div>
                                     <div class="d-grid mb-3 mt-4">
-                                        <button type="submit" class="btn btn-warning text-dark fw-semibold"><i class="bi bi-check-circle-fill me-1"></i> Save Changes</button>
+                                        <button type="submit" class="btn btn-warning text-dark fw-semibold"><i class="bi bi-check-circle-fill me-1"></i> Lưu thay đổi</button>
                                     </div>
                                     <div class="text-center">
-                                        <a href="destination?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Cancel</a>
+                                        <a href="destination?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Hủy</a>
                                     </div>
                                 </form>
                             </div>

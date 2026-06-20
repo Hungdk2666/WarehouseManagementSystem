@@ -10,7 +10,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Change Password - WMS</title>
+    <title>Đổi mật khẩu - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +31,7 @@
                     <div class="col-md-5">
                         <div class="card shadow-sm border-0 bg-white">
                             <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-warning-emphasis"><i class="bi bi-shield-lock-fill me-2"></i>Change Password</h4>
+                                <h4 class="mb-0 fw-bold text-warning-emphasis"><i class="bi bi-shield-lock-fill me-2"></i>Đổi mật khẩu</h4>
                             </div>
                             <div class="card-body p-4">
                                 <% 
@@ -52,22 +52,22 @@
                                 <% } %>
                                 <form action="change-password" method="POST">
                                     <div class="mb-3">
-                                        <label class="form-label"><i class="bi bi-key me-1 text-muted"></i> Old Password</label>
-                                        <input type="password" name="oldPassword" class="form-control" placeholder="Enter old password" required autocomplete="current-password">
+                                        <label class="form-label"><i class="bi bi-key me-1 text-muted"></i> Mật khẩu cũ</label>
+                                        <input type="password" name="oldPassword" class="form-control" placeholder="Nhập mật khẩu cũ" required autocomplete="current-password">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label"><i class="bi bi-lock me-1 text-muted"></i> New Password</label>
-                                        <input type="password" name="newPassword" class="form-control" placeholder="Enter new password" required autocomplete="new-password">
+                                        <label class="form-label"><i class="bi bi-lock me-1 text-muted"></i> Mật khẩu mới</label>
+                                        <input type="password" name="newPassword" class="form-control" placeholder="Nhập mật khẩu mới" required autocomplete="new-password">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label"><i class="bi bi-lock-check me-1 text-muted"></i> Confirm New Password</label>
-                                        <input type="password" name="confirmPassword" class="form-control" placeholder="Confirm new password" required autocomplete="new-password">
+                                        <label class="form-label"><i class="bi bi-lock-check me-1 text-muted"></i> Xác nhận mật khẩu mới</label>
+                                        <input type="password" name="confirmPassword" class="form-control" placeholder="Xác nhận mật khẩu mới" required autocomplete="new-password">
                                     </div>
                                     <div class="d-grid mb-3 mt-4">
-                                        <button type="submit" class="btn btn-warning fw-semibold"><i class="bi bi-shield-check me-1"></i> Update Password</button>
+                                        <button type="submit" class="btn btn-warning fw-semibold"><i class="bi bi-shield-check me-1"></i> Cập nhật mật khẩu</button>
                                     </div>
                                     <div class="text-center">
-                                        <a href="profile.jsp" class="text-decoration-none small"><i class="bi bi-arrow-left me-1"></i> Cancel & Go Back</a>
+                                        <a href="profile.jsp" class="text-decoration-none small"><i class="bi bi-arrow-left me-1"></i> Hủy & Quay lại</a>
                                     </div>
                                 </form>
                             </div>

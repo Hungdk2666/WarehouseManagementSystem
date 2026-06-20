@@ -22,7 +22,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Manage Role Permissions - WMS</title>
+    <title>Quản lý phân quyền vai trò - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,7 +43,7 @@
                     <div class="col-xl-10 col-12">
                         <div class="card shadow-sm border-0 bg-white">
                             <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                                <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-shield-lock-fill me-2"></i>Edit Role Permissions for <%= roleInfo.getRoleName() %></h5>
+                                <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-shield-lock-fill me-2"></i>Chỉnh sửa phân quyền vai trò cho <%= roleInfo.getRoleName() %></h5>
                             </div>
                             <div class="card-body p-4">
                                 <form action="role?action=permissions" method="POST" class="m-0">
@@ -52,7 +52,7 @@
                                          <div class="mb-3">
                                              <div class="input-group shadow-sm rounded-3">
                                                  <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search text-muted"></i></span>
-                                                 <input type="text" id="permissionSearch" class="form-control border-start-0 ps-0" placeholder="Search resources or actions (e.g. USER, EDIT)..." style="box-shadow: none;">
+                                                 <input type="text" id="permissionSearch" class="form-control border-start-0 ps-0" placeholder="Tìm kiếm tài nguyên hoặc hành động (ví dụ: USER, EDIT)..." style="box-shadow: none;">
                                              </div>
                                          </div>
                                          
@@ -78,8 +78,8 @@
                                              <table id="permissionsTable" class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.9rem;">
                                                  <thead class="table-light">
                                                      <tr>
-                                                         <th class="text-start ps-4" style="width: 25%;">Resource</th>
-                                                         <th class="text-start ps-4">Actions</th>
+                                                         <th class="text-start ps-4" style="width: 25%;">Tài nguyên</th>
+                                                         <th class="text-start ps-4">Hành động</th>
                                                      </tr>
                                                  </thead>
                                                 <tbody>
@@ -88,7 +88,7 @@
                                                         if (groupedPerms.isEmpty()) {
                                                     %>
                                                         <tr>
-                                                            <td colspan="2" class="text-muted py-4 text-center">No module permissions configured in database.</td>
+                                                            <td colspan="2" class="text-muted py-4 text-center">Không có quyền mô-đun nào được cấu hình trong cơ sở dữ liệu.</td>
                                                         </tr>
                                                     <%
                                                         } else {
@@ -114,6 +114,18 @@
                                                                              String name = p.getPermissionName();
                                                                              String action = name.substring(name.lastIndexOf("_") + 1);
                                                                              
+                                                                             String actionText = action;
+                                                                             if ("VIEW".equals(action)) actionText = "XEM";
+                                                                             else if ("ADD".equals(action)) actionText = "THÊM";
+                                                                             else if ("EDIT".equals(action)) actionText = "SỬA";
+                                                                             else if ("DELETE".equals(action)) actionText = "XÓA";
+                                                                             else if ("TOGGLE".equals(action)) actionText = "KÍCH HOẠT";
+                                                                             else if ("ASSIGN".equals(action)) actionText = "PHÂN QUYỀN";
+                                                                             else if ("APPROVE".equals(action)) actionText = "DUYỆT";
+                                                                             else if ("REJECT".equals(action)) actionText = "TỪ CHỐI";
+                                                                             else if ("SUBMIT".equals(action)) actionText = "GỬI BÁO CÁO";
+                                                                             else if ("CANCEL".equals(action)) actionText = "HỦY";
+                                                                             
                                                                              boolean isEditable = isSystemAdmin ? isAdminResource : !isAdminResource;
                                                                              
                                                                              // Safety check: protect System Admin from unchecking ROLE_ASSIGN (lockout prevention)
@@ -133,7 +145,7 @@
                                                                              <% if (!isEditable && hasPerm) { %>
                                                                                  <input type="hidden" name="permissions" value="<%= p.getId() %>">
                                                                              <% } %>
-                                                                             <span class="text-muted fw-semibold text-uppercase mt-1" style="font-size: 0.7rem; letter-spacing: 0.02em;"><%= action %></span>
+                                                                             <span class="text-muted fw-semibold text-uppercase mt-1" style="font-size: 0.7rem; letter-spacing: 0.02em;"><%= actionText %></span>
                                                                          </div>
                                                                      <%
                                                                          }
@@ -150,8 +162,8 @@
                                         </div>
                                     </div>
                                     <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top border-light">
-                                        <a href="role?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-x-circle me-1"></i> Cancel</a>
-                                        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle-fill me-1"></i> Save Permissions</button>
+                                        <a href="role?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-x-circle me-1"></i> Hủy</a>
+                                        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle-fill me-1"></i> Lưu phân quyền</button>
                                     </div>
                                 </form>
                             </div>

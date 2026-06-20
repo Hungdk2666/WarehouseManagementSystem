@@ -65,6 +65,9 @@ body {
     transition: var(--transition-smooth);
     overflow: hidden;
 }
+.card-overflow-visible {
+    overflow: visible !important;
+}
 .card:hover {
     box-shadow: var(--card-hover-shadow);
 }
@@ -99,39 +102,71 @@ body {
     font-weight: 500;
     transition: var(--transition-smooth);
 }
+.btn-sm {
+    padding: 0.35rem 0.7rem !important;
+    font-size: 0.825rem !important;
+    border-radius: 6px !important;
+}
 .btn-primary {
     background-color: var(--primary);
     border-color: var(--primary);
+    color: #ffffff !important;
 }
-.btn-primary:hover, .btn-primary:focus {
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
     background-color: var(--primary-hover);
     border-color: var(--primary-hover);
+    color: #ffffff !important;
     box-shadow: 0 0 0 4px var(--primary-glow);
 }
 .btn-success {
     background-color: var(--success);
     border-color: var(--success);
+    color: #ffffff !important;
 }
-.btn-success:hover {
+.btn-success:hover, .btn-success:focus, .btn-success:active {
     background-color: var(--success-hover);
     border-color: var(--success-hover);
+    color: #ffffff !important;
+}
+.btn-warning {
+    background-color: var(--warning);
+    border-color: var(--warning);
+    color: #ffffff !important;
+}
+.btn-warning:hover, .btn-warning:focus, .btn-warning:active {
+    background-color: var(--warning-hover);
+    border-color: var(--warning-hover);
+    color: #ffffff !important;
+}
+.btn-danger {
+    background-color: var(--danger);
+    border-color: var(--danger);
+    color: #ffffff !important;
+}
+.btn-danger:hover, .btn-danger:focus, .btn-danger:active {
+    background-color: var(--danger-hover);
+    border-color: var(--danger-hover);
+    color: #ffffff !important;
 }
 
 /* Custom Table Styles */
 .table-responsive {
     border-radius: 12px;
     overflow-x: auto;
+    width: 100%;
 }
 .table {
     border-collapse: separate;
     border-spacing: 0;
+    width: 100%;
 }
 .table thead th {
     font-weight: 600;
     background-color: var(--slate-800);
     color: #ffffff;
     border-bottom: none;
-    padding: 12px 16px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
 }
 .table tbody th {
     background-color: transparent !important;
@@ -142,9 +177,10 @@ body {
     border-bottom: 1px solid var(--slate-200);
 }
 .table td {
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-bottom: 1px solid var(--slate-200);
     background-color: #ffffff;
+    font-size: 0.9rem;
 }
 
 /* Style overrides for borderless info tables */
@@ -293,3 +329,105 @@ body {
 .animated-fade-in {
     animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Fix Tom Select Bootstrap 5 Theme styling issues (double border, overlapping inputs) */
+.ts-wrapper.form-select {
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    height: auto !important;
+}
+.ts-wrapper.form-select .ts-control {
+    border-radius: 8px !important;
+    border: 1px solid var(--slate-300) !important;
+    padding: 0.6rem 0.9rem !important;
+    font-size: 0.95rem !important;
+    background-color: #ffffff !important;
+    transition: var(--transition-smooth);
+    min-height: calc(1.5em + 1.2rem + 2px) !important;
+    display: flex;
+    align-items: center;
+}
+.ts-wrapper.form-select.focus .ts-control {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px var(--primary-glow) !important;
+}
+.ts-wrapper.form-select .ts-control input {
+    font-size: 0.95rem !important;
+}
+.ts-wrapper.form-select .ts-dropdown {
+    border-radius: 8px !important;
+    border: 1px solid var(--slate-200) !important;
+    box-shadow: var(--card-hover-shadow) !important;
+    margin-top: 4px !important;
+}
+
+/* Layout columns fix to prevent wide elements from stretching the grid and wrapping */
+.col-md-9, .col-lg-10 {
+    min-width: 0;
+}
+
+/* Color utility classes to ensure correct rendering */
+.text-slate-50 { color: var(--slate-50) !important; }
+.text-slate-100 { color: var(--slate-100) !important; }
+.text-slate-200 { color: var(--slate-200) !important; }
+.text-slate-300 { color: var(--slate-300) !important; }
+.text-slate-700 { color: var(--slate-700) !important; }
+.text-slate-800 { color: var(--slate-800) !important; }
+.text-slate-900 { color: var(--slate-900) !important; }
+
+/* Ensure Tom Select text is visible */
+.ts-wrapper.form-select .ts-control,
+.ts-wrapper.form-select .ts-control input,
+.ts-wrapper.form-select .ts-dropdown,
+.ts-wrapper.form-select .ts-dropdown .option {
+    color: var(--slate-800) !important;
+}
+.ts-wrapper.form-select .ts-control .item {
+    color: var(--slate-800) !important;
+    background-color: var(--slate-100) !important;
+    border: 1px solid var(--slate-200) !important;
+}
+.ts-wrapper.form-select .ts-dropdown .option.active {
+    background-color: var(--primary) !important;
+    color: #ffffff !important;
+}
+
+/* Explicit color utilities for text classes */
+.text-primary { color: var(--primary) !important; }
+.text-success { color: var(--success) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-danger { color: var(--danger) !important; }
+.text-secondary { color: #64748b !important; }
+.text-info { color: #0ea5e9 !important; }
+
+/* Emphasis colors for badges and text */
+.text-primary-emphasis { color: #1e3a8a !important; }
+.text-success-emphasis { color: #064e3b !important; }
+.text-warning-emphasis { color: #78350f !important; }
+.text-danger-emphasis { color: #7f1d1d !important; }
+
+/* Enforce opacity styles for backgrounds */
+.bg-primary.bg-opacity-10 { background-color: rgba(37, 99, 235, 0.1) !important; }
+.bg-success.bg-opacity-10 { background-color: rgba(16, 185, 129, 0.1) !important; }
+.bg-warning.bg-opacity-10 { background-color: rgba(245, 158, 11, 0.1) !important; }
+.bg-danger.bg-opacity-10 { background-color: rgba(239, 68, 68, 0.1) !important; }
+.bg-secondary.bg-opacity-10 { background-color: rgba(148, 163, 184, 0.1) !important; }
+.bg-info.bg-opacity-10 { background-color: rgba(14, 165, 233, 0.1) !important; }
+
+.bg-primary.bg-opacity-15 { background-color: rgba(37, 99, 235, 0.15) !important; }
+.bg-success.bg-opacity-15 { background-color: rgba(16, 185, 129, 0.15) !important; }
+.bg-warning.bg-opacity-15 { background-color: rgba(245, 158, 11, 0.15) !important; }
+.bg-danger.bg-opacity-15 { background-color: rgba(239, 68, 68, 0.15) !important; }
+.bg-secondary.bg-opacity-15 { background-color: rgba(148, 163, 184, 0.15) !important; }
+.bg-info.bg-opacity-15 { background-color: rgba(14, 165, 233, 0.15) !important; }
+
+.bg-primary.bg-opacity-5 { background-color: rgba(37, 99, 235, 0.05) !important; }
+.bg-success.bg-opacity-5 { background-color: rgba(16, 185, 129, 0.05) !important; }
+.bg-warning.bg-opacity-5 { background-color: rgba(245, 158, 11, 0.05) !important; }
+.bg-danger.bg-opacity-5 { background-color: rgba(239, 68, 68, 0.05) !important; }
+.bg-secondary.bg-opacity-5 { background-color: rgba(148, 163, 184, 0.05) !important; }
+.bg-info.bg-opacity-5 { background-color: rgba(14, 165, 233, 0.05) !important; }
+
+

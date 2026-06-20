@@ -11,7 +11,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Create New Supplier - WMS</title>
+    <title>Tạo nhà cung cấp mới - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,43 +31,43 @@
                 <div class="row justify-content-center">
                     <div class="col-md-6">
                         <div class="card shadow-sm border-0 bg-white">
-                            <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-plus-circle-fill me-2"></i>Create New Supplier</h4>
+                             <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
+                                <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-plus-circle-fill me-2"></i>Tạo nhà cung cấp mới</h4>
                             </div>
                             <div class="card-body p-4">
                                 <form action="supplier?action=add" method="POST">
                                     <div class="mb-3">
-                                        <label for="supplierName" class="form-label fw-semibold text-muted">Supplier Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="supplierName" name="supplier_name" placeholder="Enter supplier name (e.g. Panasonic VN)" required>
+                                        <label for="supplierName" class="form-label fw-semibold text-muted">Tên nhà cung cấp <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="supplierName" name="supplier_name" placeholder="Nhập tên nhà cung cấp (ví dụ: Panasonic VN)" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="contactName" class="form-label fw-semibold text-muted">Contact Person</label>
-                                        <input type="text" class="form-control" id="contactName" name="contact_name" placeholder="Enter contact name...">
+                                        <label for="contactName" class="form-label fw-semibold text-muted">Người liên hệ</label>
+                                        <input type="text" class="form-control" id="contactName" name="contact_name" placeholder="Nhập tên người liên hệ...">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="phone" class="form-label fw-semibold text-muted">Phone Number</label>
-                                        <input type="text" class="form-control" id="phone" name="phone" placeholder="Enter phone number...">
+                                        <label for="phone" class="form-label fw-semibold text-muted">Số điện thoại</label>
+                                        <input type="text" class="form-control" id="phone" name="phone" placeholder="Nhập số điện thoại...">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="email" class="form-label fw-semibold text-muted">Email Address</label>
-                                        <input type="email" class="form-control" id="email" name="email" placeholder="Enter email...">
+                                        <label for="email" class="form-label fw-semibold text-muted">Địa chỉ Email</label>
+                                        <input type="email" class="form-control" id="email" name="email" placeholder="Nhập email...">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="address" class="form-label fw-semibold text-muted">Address</label>
-                                        <textarea class="form-control" id="address" name="address" placeholder="Enter full address..." rows="2"></textarea>
+                                        <label for="address" class="form-label fw-semibold text-muted">Địa chỉ</label>
+                                        <textarea class="form-control" id="address" name="address" placeholder="Nhập địa chỉ đầy đủ..." rows="2"></textarea>
                                     </div>
                                     <div class="mb-4">
-                                        <label for="status" class="form-label fw-semibold text-muted">Initial Status</label>
+                                        <label for="status" class="form-label fw-semibold text-muted">Trạng thái ban đầu</label>
                                         <select class="form-select" id="status" name="status">
-                                            <option value="true" selected>Active</option>
-                                            <option value="false">Inactive</option>
+                                            <option value="true" selected>Hoạt động</option>
+                                            <option value="false">Không hoạt động</option>
                                         </select>
                                     </div>
                                     <div class="d-grid mb-3 mt-4">
-                                        <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-check-circle me-1"></i> Create Supplier</button>
+                                        <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-check-circle me-1"></i> Tạo nhà cung cấp</button>
                                     </div>
                                     <div class="text-center">
-                                        <a href="supplier?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Cancel</a>
+                                        <a href="supplier?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Hủy</a>
                                     </div>
                                 </form>
                             </div>

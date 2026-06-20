@@ -17,7 +17,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Edit Role Info</title>
+    <title>Sửa thông tin vai trò</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,24 +38,24 @@
                     <div class="col-md-5">
                         <div class="card shadow-sm border-0 bg-white">
                             <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-warning-emphasis"><i class="bi bi-pencil-square me-2"></i>Edit Role Info</h4>
+                                <h4 class="mb-0 fw-bold text-warning-emphasis"><i class="bi bi-pencil-square me-2"></i>Sửa thông tin vai trò</h4>
                             </div>
                             <div class="card-body p-4">
                                 <form action="role?action=update" method="POST">
                                     <input type="hidden" name="id" value="<%= roleInfo.getId() %>">
                                     <div class="mb-3">
-                                        <label class="form-label"><i class="bi bi-hash me-1 text-muted"></i> Role ID (Read-only)</label>
+                                        <label class="form-label"><i class="bi bi-hash me-1 text-muted"></i> ID vai trò (Chỉ đọc)</label>
                                         <input type="text" class="form-control text-muted bg-light" value="<%= roleInfo.getId() %>" disabled>
                                     </div>
                                     <div class="mb-4">
-                                        <label class="form-label"><i class="bi bi-shield-check me-1 text-muted"></i> Role Name</label>
-                                        <input type="text" name="role_name" class="form-control" value="<%= roleInfo.getRoleName() %>" placeholder="Enter role name" required>
+                                        <label class="form-label"><i class="bi bi-shield-check me-1 text-muted"></i> Tên vai trò</label>
+                                        <input type="text" name="role_name" class="form-control" value="<%= roleInfo.getRoleName() %>" placeholder="Nhập tên vai trò" required>
                                     </div>
                                     <div class="d-grid mb-3 mt-4">
-                                        <button type="submit" class="btn btn-warning fw-semibold"><i class="bi bi-check-circle me-1"></i> Save Changes</button>
+                                        <button type="submit" class="btn btn-warning fw-semibold"><i class="bi bi-check-circle me-1"></i> Lưu thay đổi</button>
                                     </div>
                                     <div class="text-center">
-                                        <a href="role?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Cancel</a>
+                                        <a href="role?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Hủy</a>
                                     </div>
                                 </form>
                             </div>

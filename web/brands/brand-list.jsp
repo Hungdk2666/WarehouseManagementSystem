@@ -18,7 +18,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Brand Directory - WMS</title>
+    <title>Danh sách thương hiệu - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,20 +38,39 @@
                 
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Product Brands</h2>
-                        <p class="text-muted small mb-0">Manage manufacturer brands and companies</p>
+                        <h2 class="fw-bold text-slate-800 mb-1">Danh sách thương hiệu</h2>
+                        <p class="text-muted small mb-0">Quản lý các thương hiệu và nhà sản xuất sản phẩm</p>
                     </div>
                     <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Back
+                        <i class="bi bi-arrow-left"></i> Quay lại
                     </a>
+                </div>
+
+                <!-- Search Panel -->
+                <div class="card shadow-sm border-0 bg-white mb-4">
+                    <div class="card-body p-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-9 col-lg-10">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="brandSearchInput" class="form-control border-start-0 ps-0 shadow-none" placeholder="Tìm kiếm theo tên, mô tả...">
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-lg-2">
+                                <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-x-circle"></i> Xóa lọc
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card shadow-sm border-0 bg-white mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-award-fill me-2"></i>Brands Directory</h5>
+                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-award-fill me-2"></i>Quản lý thương hiệu</h5>
                         <% if (canAdd) { %>
                         <a class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" href="brand?action=add">
-                            <i class="bi bi-plus-circle-fill"></i> Add Brand
+                            <i class="bi bi-plus-circle-fill"></i> Thêm thương hiệu
                         </a>
                         <% } %>
                     </div>
@@ -60,12 +79,12 @@
                             <table id="brandTable" class="table table-hover align-middle text-center mb-0">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Brand Name</th>
-                                        <th>Description</th>
-                                        <th>Status</th>
+                                        <th>Mã ID</th>
+                                        <th>Tên thương hiệu</th>
+                                        <th>Mô tả</th>
+                                        <th>Trạng thái</th>
                                         <% if (canManage) { %>
-                                        <th>Actions</th>
+                                        <th>Hành động</th>
                                         <% } %>
                                     </tr>
                                 </thead>
@@ -80,24 +99,24 @@
                                         <td class="text-muted text-start text-truncate" style="max-width: 250px;"><%= b.getDescription() != null ? b.getDescription() : "" %></td>
                                         <td>
                                             <% if (b.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Active</span>
+                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Inactive</span>
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Không hoạt động</span>
                                             <% } %>
                                         </td>
                                         <% if (canManage) { %>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
                                                  <% if (canEdit) { %>
-                                                 <a href="brand?action=update&id=<%= b.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
-                                                     <i class="bi bi-pencil-square"></i> Edit
+                                                 <a href="brand?action=update&id=<%= b.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Chỉnh sửa">
+                                                     <i class="bi bi-pencil-square"></i> Sửa
                                                  </a>
                                                  <% } %>
                                                 <% if (canToggle) { %>
                                                 <form action="brand?action=toggle" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= b.getId() %>">
-                                                    <button type="submit" class="btn btn-sm <%= b.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= b.isStatus() ? "Disable Brand" : "Enable Brand" %>">
-                                                        <i class="bi bi-power"></i> <%= b.isStatus() ? "Disable" : "Enable" %>
+                                                    <button type="submit" class="btn btn-sm <%= b.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= b.isStatus() ? "Vô hiệu hóa thương hiệu" : "Kích hoạt thương hiệu" %>">
+                                                        <i class="bi bi-power"></i> <%= b.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
                                                     </button>
                                                 </form>
                                                 <% } %>
@@ -112,7 +131,7 @@
                                     <tr>
                                         <td colspan="<%= canManage ? 5 : 4 %>" class="text-center text-muted py-5">
                                             <i class="bi bi-award text-muted display-4 d-block mb-3"></i>
-                                            No brands registered in the database.
+                                            Không có thương hiệu nào được đăng ký trong cơ sở dữ liệu.
                                         </td>
                                     </tr>
                                     <% } %>
@@ -122,13 +141,13 @@
                     </div>
                     <div class="card-footer bg-transparent border-top-0 d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 bg-light rounded-bottom-3 gap-3">
                         <div class="d-flex align-items-center gap-2">
-                            <label class="text-muted small mb-0 flex-shrink-0">Show</label>
+                            <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
                             <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
                                 <option value="10" selected>10</option>
                                 <option value="25">25</option>
                                 <option value="100">100</option>
                             </select>
-                            <span class="text-muted small">entries</span>
+                            <span class="text-muted small">dòng</span>
                         </div>
                         <div id="paginationContainer" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
                             <!-- Dynamically populated entries info & pagination list -->
@@ -142,41 +161,64 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            initPagination("brandTable", "paginationContainer", "entriesPerPage");
+            initPagination("brandTable", "paginationContainer", "entriesPerPage", "brandSearchInput");
+            
+            const clearBtn = document.getElementById("clearSearchBtn");
+            const searchInput = document.getElementById("brandSearchInput");
+            if (clearBtn && searchInput) {
+                clearBtn.addEventListener("click", function() {
+                    searchInput.value = "";
+                    searchInput.dispatchEvent(new Event('input'));
+                });
+            }
         });
 
-        function initPagination(tableId, containerId, selectId) {
+        function initPagination(tableId, containerId, selectId, searchInputId) {
             const table = document.getElementById(tableId);
             if (!table) return;
             const tbody = table.querySelector("tbody");
             if (!tbody) return;
             
-            const rows = Array.from(tbody.querySelectorAll("tr"));
-            if (rows.length === 1 && rows[0].querySelector("td[colspan]")) {
+            const allRows = Array.from(tbody.querySelectorAll("tr"));
+            if (allRows.length === 1 && allRows[0].querySelector("td[colspan]")) {
                 return; // No pagination for empty data
             }
             
             const container = document.getElementById(containerId);
             const select = document.getElementById(selectId);
+            const searchInput = searchInputId ? document.getElementById(searchInputId) : null;
             if (!container || !select) return;
             
             let currentPage = 1;
             let pageSize = parseInt(select.value) || 10;
+            let filteredRows = allRows;
             
             function updateTable() {
-                const totalRows = rows.length;
-                const totalPages = Math.ceil(totalRows / pageSize);
+                if (searchInput) {
+                    const query = searchInput.value.toLowerCase().trim();
+                    filteredRows = allRows.filter(row => {
+                        const rowText = row.textContent.toLowerCase();
+                        return rowText.includes(query);
+                    });
+                } else {
+                    filteredRows = allRows;
+                }
+
+                const totalRows = filteredRows.length;
+                const totalPages = Math.ceil(totalRows / pageSize) || 1;
                 
                 if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
                 
                 const start = (currentPage - 1) * pageSize;
                 const end = Math.min(start + pageSize, totalRows);
                 
-                rows.forEach((row, index) => {
+                allRows.forEach(row => {
+                    row.style.display = "none";
+                });
+                
+                filteredRows.forEach((row, index) => {
                     if (index >= start && index < end) {
                         row.style.display = "";
-                    } else {
-                        row.style.display = "none";
                     }
                 });
                 
@@ -186,12 +228,20 @@
             function renderControls(totalRows, totalPages) {
                 container.innerHTML = "";
                 
-                const start = totalRows === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+                if (totalRows === 0) {
+                    const infoDiv = document.createElement("div");
+                    infoDiv.className = "text-muted small my-2 my-sm-0";
+                    infoDiv.textContent = "Hiển thị 0 đến 0 của 0 dòng";
+                    container.appendChild(infoDiv);
+                    return;
+                }
+                
+                const start = (currentPage - 1) * pageSize + 1;
                 const end = Math.min(start + pageSize - 1, totalRows);
                 
                 const infoDiv = document.createElement("div");
                 infoDiv.className = "text-muted small my-2 my-sm-0";
-                infoDiv.textContent = "Showing " + start + " to " + end + " of " + totalRows + " entries";
+                infoDiv.textContent = "Hiển thị " + start + " đến " + end + " của " + totalRows + " dòng";
                 container.appendChild(infoDiv);
                 
                 const nav = document.createElement("nav");
@@ -220,6 +270,7 @@
                 }
                 
                 for (let i = startPage; i <= endPage; i++) {
+                    if (i < 1) continue;
                     const li = document.createElement("li");
                     li.className = "page-item " + (currentPage === i ? "active" : "");
                     const btn = document.createElement("a");
@@ -258,6 +309,13 @@
                 currentPage = 1;
                 updateTable();
             });
+
+            if (searchInput) {
+                searchInput.addEventListener("input", () => {
+                    currentPage = 1;
+                    updateTable();
+                });
+            }
             
             updateTable();
         }

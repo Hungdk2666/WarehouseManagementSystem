@@ -3,7 +3,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Forgot Password - WMS</title>
+    <title>Quên mật khẩu - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,11 +18,11 @@
     <div class="auth-container animated-fade-in">
         <!-- Brand Logo -->
         <div class="auth-logo">
-            <i class="bi bi-box-seam-fill"></i> WMS SYSTEM
+            <i class="bi bi-box-seam-fill"></i> HỆ THỐNG WMS
         </div>
 
         <div class="auth-card">
-            <h4 class="text-center mb-4 card-title">Find Account</h4>
+            <h4 class="text-center mb-4 card-title">Tìm tài khoản</h4>
             <% 
                 String error = (String) request.getAttribute("error");
                 if (error != null) {
@@ -33,14 +33,14 @@
             <% } %>
             <form action="forgot-password" method="POST">
                 <div class="mb-3">
-                    <label class="form-label"><i class="bi bi-envelope-fill me-1"></i> Email Address</label>
-                    <input type="email" name="email" class="form-control" placeholder="Enter registered email" required autocomplete="email">
+                    <label class="form-label"><i class="bi bi-envelope-fill me-1"></i> Địa chỉ Email</label>
+                    <input type="email" name="email" class="form-control" placeholder="Nhập email đã đăng ký" required autocomplete="email">
                 </div>
                 <div class="d-grid mb-3 mt-4">
-                    <button type="submit" class="btn btn-primary btn-lg fs-6"><i class="bi bi-search me-1"></i> Check Email</button>
+                    <button type="submit" class="btn btn-primary btn-lg fs-6"><i class="bi bi-search me-1"></i> Kiểm tra Email</button>
                 </div>
                 <div class="text-center mt-3">
-                    <a href="login" class="text-decoration-none small"><i class="bi bi-arrow-left me-1"></i> Back to Login</a>
+                    <a href="login" class="text-decoration-none small"><i class="bi bi-arrow-left me-1"></i> Quay lại đăng nhập</a>
                 </div>
             </form>
         </div>

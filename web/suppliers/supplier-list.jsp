@@ -18,7 +18,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Supplier Registry - WMS</title>
+    <title>Danh sách nhà cung cấp - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,20 +38,39 @@
                 
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Supplier Directory</h2>
-                        <p class="text-muted small mb-0">Manage manufacturer suppliers and partners</p>
+                        <h2 class="fw-bold text-slate-800 mb-1">Danh sách nhà cung cấp</h2>
+                        <p class="text-muted small mb-0">Quản lý các đối tác và nhà cung cấp sản phẩm</p>
                     </div>
                     <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Back
+                        <i class="bi bi-arrow-left"></i> Quay lại
                     </a>
+                </div>
+
+                <!-- Search Panel -->
+                <div class="card shadow-sm border-0 bg-white mb-4">
+                    <div class="card-body p-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-9 col-lg-10">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="supplierSearchInput" class="form-control border-start-0 ps-0 shadow-none" placeholder="Tìm kiếm theo tên, liên hệ, điện thoại, email, địa chỉ...">
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-lg-2">
+                                <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-x-circle"></i> Xóa lọc
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card shadow-sm border-0 bg-white mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-truck me-2"></i>Suppliers Directory</h5>
+                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-truck me-2"></i>Quản lý nhà cung cấp</h5>
                         <% if (canAdd) { %>
                         <a class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" href="supplier?action=add">
-                            <i class="bi bi-plus-circle-fill"></i> Add Supplier
+                            <i class="bi bi-plus-circle-fill"></i> Thêm nhà cung cấp
                         </a>
                         <% } %>
                     </div>
@@ -60,15 +79,15 @@
                             <table id="supplierTable" class="table table-hover align-middle text-center mb-0">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Supplier Name</th>
-                                        <th>Contact Person</th>
-                                        <th>Phone</th>
+                                        <th>Mã ID</th>
+                                        <th>Tên nhà cung cấp</th>
+                                        <th>Người liên hệ</th>
+                                        <th>Số điện thoại</th>
                                         <th>Email</th>
-                                        <th>Address</th>
-                                        <th>Status</th>
+                                        <th>Địa chỉ</th>
+                                        <th>Trạng thái</th>
                                         <% if (canManage) { %>
-                                        <th>Actions</th>
+                                        <th>Hành động</th>
                                         <% } %>
                                     </tr>
                                 </thead>
@@ -86,24 +105,24 @@
                                         <td class="text-muted text-start text-truncate" style="max-width: 250px;"><%= s.getAddress() != null ? s.getAddress() : "" %></td>
                                         <td>
                                             <% if (s.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Active</span>
+                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Inactive</span>
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Không hoạt động</span>
                                             <% } %>
                                         </td>
                                         <% if (canManage) { %>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
                                                  <% if (canEdit) { %>
-                                                 <a href="supplier?action=update&id=<%= s.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
-                                                     <i class="bi bi-pencil-square"></i> Edit
+                                                 <a href="supplier?action=update&id=<%= s.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Chỉnh sửa">
+                                                     <i class="bi bi-pencil-square"></i> Sửa
                                                  </a>
                                                  <% } %>
                                                 <% if (canToggle) { %>
                                                 <form action="supplier?action=toggle" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= s.getId() %>">
-                                                    <button type="submit" class="btn btn-sm <%= s.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= s.isStatus() ? "Disable Supplier" : "Enable Supplier" %>">
-                                                        <i class="bi bi-power"></i> <%= s.isStatus() ? "Disable" : "Enable" %>
+                                                    <button type="submit" class="btn btn-sm <%= s.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= s.isStatus() ? "Vô hiệu hóa nhà cung cấp" : "Kích hoạt nhà cung cấp" %>">
+                                                        <i class="bi bi-power"></i> <%= s.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
                                                     </button>
                                                 </form>
                                                 <% } %>
@@ -118,7 +137,7 @@
                                     <tr>
                                         <td colspan="<%= canManage ? 8 : 7 %>" class="text-center text-muted py-5">
                                             <i class="bi bi-truck text-muted display-4 d-block mb-3"></i>
-                                            No suppliers registered in the database.
+                                            Không có nhà cung cấp nào được đăng ký trong cơ sở dữ liệu.
                                         </td>
                                     </tr>
                                     <% } %>
@@ -128,13 +147,13 @@
                     </div>
                     <div class="card-footer bg-transparent border-top-0 d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 bg-light rounded-bottom-3 gap-3">
                         <div class="d-flex align-items-center gap-2">
-                            <label class="text-muted small mb-0 flex-shrink-0">Show</label>
+                            <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
                             <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
                                 <option value="10" selected>10</option>
                                 <option value="25">25</option>
                                 <option value="100">100</option>
                             </select>
-                            <span class="text-muted small">entries</span>
+                            <span class="text-muted small">dòng</span>
                         </div>
                         <div id="paginationContainer" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
                             <!-- Dynamically populated entries info & pagination list -->
@@ -148,67 +167,98 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            initPagination("supplierTable", "paginationContainer", "entriesPerPage");
+            initPagination("supplierTable", "paginationContainer", "entriesPerPage", "supplierSearchInput");
+            
+            const clearBtn = document.getElementById("clearSearchBtn");
+            const searchInput = document.getElementById("supplierSearchInput");
+            if (clearBtn && searchInput) {
+                clearBtn.addEventListener("click", function() {
+                    searchInput.value = "";
+                    searchInput.dispatchEvent(new Event('input'));
+                });
+            }
         });
 
-        function initPagination(tableId, containerId, selectId) {
+        function initPagination(tableId, containerId, selectId, searchInputId) {
             const table = document.getElementById(tableId);
             if (!table) return;
             const tbody = table.querySelector("tbody");
             if (!tbody) return;
             
-            const rows = Array.from(tbody.querySelectorAll("tr"));
-            if (rows.length === 1 && rows[0].querySelector("td[colspan]")) {
+            const allRows = Array.from(tbody.querySelectorAll("tr"));
+            if (allRows.length === 1 && allRows[0].querySelector("td[colspan]")) {
                 return;
             }
             
             const container = document.getElementById(containerId);
             const select = document.getElementById(selectId);
+            const searchInput = searchInputId ? document.getElementById(searchInputId) : null;
             if (!container || !select) return;
             
             let currentPage = 1;
             let pageSize = parseInt(select.value) || 10;
+            let filteredRows = allRows;
             
             function updateTable() {
-                const totalRows = rows.length;
-                const totalPages = Math.ceil(totalRows / pageSize);
+                if (searchInput) {
+                    const query = searchInput.value.toLowerCase().trim();
+                    filteredRows = allRows.filter(row => {
+                        const rowText = row.textContent.toLowerCase();
+                        return rowText.includes(query);
+                    });
+                } else {
+                    filteredRows = allRows;
+                }
+
+                const totalRows = filteredRows.length;
+                const totalPages = Math.ceil(totalRows / pageSize) || 1;
                 
                 if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
                 
                 const start = (currentPage - 1) * pageSize;
                 const end = Math.min(start + pageSize, totalRows);
                 
-                rows.forEach((row, index) => {
+                allRows.forEach(row => {
+                    row.style.display = "none";
+                });
+                
+                filteredRows.forEach((row, index) => {
                     if (index >= start && index < end) {
                         row.style.display = "";
-                    } else {
-                        row.style.display = "none";
                     }
                 });
                 
-                renderPaginationControls(totalPages);
+                renderPaginationControls(totalPages, totalRows);
             }
             
-            function renderPaginationControls(totalPages) {
+            function renderPaginationControls(totalPages, totalRows) {
                 container.innerHTML = "";
+                
+                if (totalRows === 0) {
+                    const infoSpan = document.createElement("span");
+                    infoSpan.className = "text-muted small";
+                    infoSpan.textContent = "Hiển thị 0 đến 0 của 0 dòng";
+                    container.appendChild(infoSpan);
+                    return;
+                }
                 
                 const infoSpan = document.createElement("span");
                 infoSpan.className = "text-muted small";
                 const startIdx = (currentPage - 1) * pageSize + 1;
-                const endIdx = Math.min(currentPage * pageSize, rows.length);
-                infoSpan.textContent = "Showing " + startIdx + " to " + endIdx + " of " + rows.length + " entries";
+                const endIdx = Math.min(currentPage * pageSize, totalRows);
+                infoSpan.textContent = "Hiển thị " + startIdx + " đến " + endIdx + " của " + totalRows + " dòng";
                 container.appendChild(infoSpan);
                 
                 const nav = document.createElement("nav");
                 const ul = document.createElement("ul");
-                ul.className = "pagination pagination-sm m-0 border-0";
+                ul.className = "pagination pagination-sm m-0 border-0 gap-1";
                 
                 // Prev
                 const prevLi = document.createElement("li");
                 prevLi.className = "page-item " + (currentPage === 1 ? "disabled" : "");
                 const prevA = document.createElement("a");
-                prevA.className = "page-link";
-                prevA.href = "#";
+                prevA.className = "page-link border-0 rounded-2 shadow-none px-2.5 py-1.5";
+                prevA.href = "javascript:void(0)";
                 prevA.innerHTML = '<i class="bi bi-chevron-left"></i>';
                 prevA.addEventListener("click", function(e) {
                     e.preventDefault();
@@ -221,12 +271,18 @@
                 ul.appendChild(prevLi);
                 
                 // Pages
-                for (let i = 1; i <= totalPages; i++) {
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, startPage + 4);
+                if (endPage - startPage < 4) {
+                    startPage = Math.max(1, endPage - 4);
+                }
+                for (let i = startPage; i <= endPage; i++) {
+                    if (i < 1) continue;
                     const li = document.createElement("li");
                     li.className = "page-item " + (currentPage === i ? "active" : "");
                     const a = document.createElement("a");
-                    a.className = "page-link";
-                    a.href = "#";
+                    a.className = "page-link border-0 rounded-2 shadow-none px-3 py-1.5";
+                    a.href = "javascript:void(0)";
                     a.textContent = i;
                     a.addEventListener("click", function(e) {
                         e.preventDefault();
@@ -239,10 +295,10 @@
                 
                 // Next
                 const nextLi = document.createElement("li");
-                nextLi.className = "page-item " + (currentPage === totalPages ? "disabled" : "");
+                nextLi.className = "page-item " + (currentPage === totalPages || totalPages === 0 ? "disabled" : "");
                 const nextA = document.createElement("a");
-                nextA.className = "page-link";
-                nextA.href = "#";
+                nextA.className = "page-link border-0 rounded-2 shadow-none px-2.5 py-1.5";
+                nextA.href = "javascript:void(0)";
                 nextA.innerHTML = '<i class="bi bi-chevron-right"></i>';
                 nextA.addEventListener("click", function(e) {
                     e.preventDefault();
@@ -263,6 +319,13 @@
                 currentPage = 1;
                 updateTable();
             });
+
+            if (searchInput) {
+                searchInput.addEventListener("input", function() {
+                    currentPage = 1;
+                    updateTable();
+                });
+            }
             
             updateTable();
         }

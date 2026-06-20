@@ -16,7 +16,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>User Information</title>
+    <title>Thông tin người dùng</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,7 +37,7 @@
                     <div class="col-md-6">
                         <div class="card shadow-sm border-0 bg-white">
                             <div class="card-header bg-info bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-info"><i class="bi bi-person-lines-fill me-2"></i>User Information</h4>
+                                <h4 class="mb-0 fw-bold text-info"><i class="bi bi-person-lines-fill me-2"></i>Thông tin người dùng</h4>
                             </div>
                             <div class="card-body p-4 text-center">
                                 <div class="mb-4">
@@ -52,24 +52,24 @@
                                     <table class="table table-borderless text-start align-middle mb-0">
                                         <tbody>
                                             <tr class="border-bottom border-light">
-                                                <th class="text-muted fw-semibold py-3 ps-0" style="width: 35%;"><i class="bi bi-hash me-2 text-info"></i>User ID:</th>
+                                                <th class="text-muted fw-semibold py-3 ps-0" style="width: 35%;"><i class="bi bi-hash me-2 text-info"></i>ID người dùng:</th>
                                                 <td class="fw-bold text-slate-800 py-3 pe-0">#<%= userInfo.getId() %></td>
                                             </tr>
                                             <tr class="border-bottom border-light">
-                                                <th class="text-muted fw-semibold py-3 ps-0"><i class="bi bi-person-fill me-2 text-info"></i>Username:</th>
+                                                <th class="text-muted fw-semibold py-3 ps-0"><i class="bi bi-person-fill me-2 text-info"></i>Tên đăng nhập:</th>
                                                 <td class="fw-bold text-slate-800 py-3 pe-0"><%= userInfo.getUsername() %></td>
                                             </tr>
                                             <tr class="border-bottom border-light">
-                                                <th class="text-muted fw-semibold py-3 ps-0"><i class="bi bi-shield-check me-2 text-info"></i>Role Name:</th>
-                                                <td class="text-slate-800 py-3 pe-0"><%= userInfo.getRoleName() != null ? userInfo.getRoleName() : "Role ID: " + userInfo.getRoleId() %></td>
+                                                <th class="text-muted fw-semibold py-3 ps-0"><i class="bi bi-shield-check me-2 text-info"></i>Tên vai trò:</th>
+                                                <td class="text-slate-800 py-3 pe-0"><%= userInfo.getRoleName() != null ? userInfo.getRoleName() : "ID vai trò: " + userInfo.getRoleId() %></td>
                                             </tr>
                                             <tr>
-                                                <th class="text-muted fw-semibold py-3 ps-0"><i class="bi bi-toggle-on me-2 text-info"></i>Status:</th>
+                                                <th class="text-muted fw-semibold py-3 ps-0"><i class="bi bi-toggle-on me-2 text-info"></i>Trạng thái:</th>
                                                 <td class="py-3 pe-0">
                                                     <% if (userInfo.isStatus()) { %>
-                                                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; vertical-align: middle;"></i> Active</span>
+                                                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; vertical-align: middle;"></i> Hoạt động</span>
                                                     <% } else { %>
-                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; vertical-align: middle;"></i> Inactive</span>
+                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
                                                     <% } %>
                                                 </td>
                                             </tr>
@@ -78,9 +78,9 @@
                                 </div>
                                 <div class="d-flex justify-content-center gap-3 mt-4">
                                     <% if (loggedInUser.hasPermission("USER_EDIT")) { %>
-                                    <a href="user?action=update&id=<%= userInfo.getId() %>" class="btn btn-warning px-4"><i class="bi bi-pencil-square me-1"></i> Edit User</a>
+                                    <a href="user?action=update&id=<%= userInfo.getId() %>" class="btn btn-warning px-4"><i class="bi bi-pencil-square me-1"></i> Sửa người dùng</a>
                                     <% } %>
-                                    <a href="user?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-1"></i> Back to List</a>
+                                    <a href="user?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-1"></i> Quay lại danh sách</a>
                                 </div>
                             </div>
                         </div>

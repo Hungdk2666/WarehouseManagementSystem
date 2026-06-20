@@ -14,7 +14,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Manage Users - WMS</title>
+    <title>Quản lý người dùng - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,12 +33,12 @@
             <div class="col-md-9 col-lg-10">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">User Management</h2>
-                        <p class="text-muted small mb-0">Manage system users, roles, and account statuses</p>
+                        <h2 class="fw-bold text-slate-800 mb-1">Quản lý người dùng</h2>
+                        <p class="text-muted small mb-0">Quản lý người dùng, vai trò và trạng thái tài khoản của hệ thống</p>
                     </div>
                     <% if (loggedInUser.hasPermission("USER_ADD")) { %>
                     <a href="user?action=add" class="btn btn-success d-flex align-items-center gap-2">
-                        <i class="bi bi-person-plus-fill fs-5"></i> Add New User
+                        <i class="bi bi-person-plus-fill fs-5"></i> Thêm người dùng mới
                     </a>
                     <% } %>
                 </div>
@@ -51,14 +51,14 @@
                             <div class="col-md-6 col-lg-7">
                                 <div class="input-group">
                                     <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                    <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Search by username, email, full name..." value="<%= request.getParameter("search") != null ? request.getParameter("search") : "" %>">
+                                    <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Tìm theo tên đăng nhập, email, họ tên..." value="<%= request.getParameter("search") != null ? request.getParameter("search") : "" %>">
                                 </div>
                             </div>
                             <div class="col-md-4 col-lg-3">
                                 <div class="input-group">
                                     <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-funnel"></i></span>
                                     <select name="roleFilter" class="form-select border-start-0 ps-0">
-                                        <option value="">All Roles</option>
+                                        <option value="">Tất cả vai trò</option>
                                         <%
                                             List<Role> roleList = (List<Role>) request.getAttribute("roleList");
                                             String selectedRole = request.getParameter("roleFilter");
@@ -76,7 +76,7 @@
                             </div>
                             <div class="col-md-2 col-lg-2">
                                 <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2">
-                                    <i class="bi bi-sliders"></i> Filter
+                                    <i class="bi bi-sliders"></i> Lọc
                                 </button>
                             </div>
                         </form>
@@ -90,13 +90,13 @@
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>Username</th>
+                                        <th>Tên đăng nhập</th>
                                         <th>Email</th>
-                                        <th>Full Name</th>
-                                        <th>Role Name</th>
-                                        <th>Status</th>
-                                        <th>Reset Code</th>
-                                        <th>Actions</th>
+                                        <th>Họ và tên</th>
+                                        <th>Tên vai trò</th>
+                                        <th>Trạng thái</th>
+                                        <th>Mã đặt lại</th>
+                                        <th>Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -110,13 +110,13 @@
                                         <td><%= u.getEmail() %></td>
                                         <td><%= u.getFullName() %></td>
                                         <td>
-                                            <span class="badge bg-primary bg-opacity-10 text-primary px-2.5 py-1.5"><%= u.getRoleName() != null ? u.getRoleName() : "No Role" %></span>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary px-2.5 py-1.5"><%= u.getRoleName() != null ? u.getRoleName() : "Chưa có vai trò" %></span>
                                         </td>
                                         <td>
                                             <% if (u.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Active</span>
+                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Inactive</span>
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
                                             <% } %>
                                         </td>
                                         <td>
@@ -128,19 +128,19 @@
                                         </td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <a href="user?action=info&id=<%= u.getId() %>" class="btn btn-sm btn-info text-white d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Details">
-                                                    <i class="bi bi-info-circle"></i> Info
+                                                <a href="user?action=info&id=<%= u.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Chi tiết">
+                                                    <i class="bi bi-info-circle"></i> Chi tiết
                                                 </a>
                                                 <% if (loggedInUser.hasPermission("USER_EDIT")) { %>
-                                                <a href="user?action=update&id=<%= u.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Edit">
-                                                    <i class="bi bi-pencil-square"></i> Edit
+                                                <a href="user?action=update&id=<%= u.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Sửa">
+                                                    <i class="bi bi-pencil-square"></i> Sửa
                                                 </a>
                                                 <% } %>
                                                 <% if (loggedInUser.hasPermission("USER_TOGGLE")) { %>
                                                 <form action="user?action=toggle" method="POST" style="display:inline;" class="m-0">
                                                     <input type="hidden" name="id" value="<%= u.getId() %>">
-                                                    <button type="submit" class="btn btn-sm <%= u.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= u.isStatus() ? "Deactivate Account" : "Activate Account" %>">
-                                                        <i class="bi bi-power"></i> <%= u.isStatus() ? "Disable" : "Enable" %>
+                                                    <button type="submit" class="btn btn-sm <%= u.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= u.isStatus() ? "Vô hiệu hóa tài khoản" : "Kích hoạt tài khoản" %>">
+                                                        <i class="bi bi-power"></i> <%= u.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
                                                     </button>
                                                 </form>
                                                 <% } %>
@@ -154,7 +154,7 @@
                                     <tr>
                                         <td colspan="8" class="text-center text-muted py-5">
                                             <i class="bi bi-people text-muted display-4 d-block mb-3"></i>
-                                            No users found matching the search criteria.
+                                            Không tìm thấy người dùng nào phù hợp với tiêu chí tìm kiếm.
                                         </td>
                                     </tr>
                                     <% } %>
@@ -165,7 +165,7 @@
                 </div>
                 <div class="mt-4">
                     <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại Trang chủ
                     </a>
                 </div>
             </div>

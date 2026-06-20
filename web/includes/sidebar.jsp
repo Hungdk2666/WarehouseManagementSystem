@@ -43,112 +43,133 @@
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
              data-custom-toggle="collapse" data-custom-target="#collapseNavigation" aria-expanded="false">
-            <span><i class="bi bi-grid-fill me-2"></i>Navigation</span>
+            <span><i class="bi bi-grid-fill me-2"></i>Điều hướng</span>
             <i class="bi bi-chevron-right chevron-icon"></i>
         </div>
         <div class="collapse" id="collapseNavigation">
             <a href="<%= request.getContextPath() %>/index.jsp" class="list-group-item list-group-item-action <%= requestURI.endsWith("index.jsp") || requestURI.endsWith("/") || requestURI.endsWith("WareHouseManagementSystem") || requestURI.endsWith("WareHouseManagementSystem/") ? "active" : "" %>">
-                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                <i class="bi bi-speedometer2 me-2"></i> Bảng điều khiển
             </a>
         </div>
         
         <!-- Administration Section -->
-        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("USER_VIEW") || loggedInUserSidebar.hasPermission("ROLE_VIEW"))) { %>
+        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("USER_VIEW") || loggedInUserSidebar.hasPermission("ROLE_VIEW") || loggedInUserSidebar.hasPermission("AUDIT_LOG_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
              data-custom-toggle="collapse" data-custom-target="#collapseAdmin" aria-expanded="false">
-            <span><i class="bi bi-gear-fill me-2"></i> Administration</span>
+            <span><i class="bi bi-gear-fill me-2"></i> Quản trị hệ thống</span>
             <i class="bi bi-chevron-right chevron-icon"></i>
         </div>
         <div class="collapse" id="collapseAdmin">
             <% if (loggedInUserSidebar.hasPermission("USER_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/admin/user?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("user") ? "active" : "" %>">
-                <i class="bi bi-people-fill me-2"></i> User Management
+                <i class="bi bi-people-fill me-2"></i> Quản lý người dùng
             </a>
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("ROLE_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/admin/role?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("role") ? "active" : "" %>">
-                <i class="bi bi-shield-lock-fill me-2"></i> Role Management
+                <i class="bi bi-shield-lock-fill me-2"></i> Quản lý vai trò
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("AUDIT_LOG_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/admin/audit-log" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("audit-log") ? "active" : "" %>">
+                <i class="bi bi-journal-text me-2"></i> Nhật ký hoạt động
             </a>
             <% } %>
         </div>
         <% } %>
-        
+
         <!-- Inbound Operations Section -->
-        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PO_VIEW") || loggedInUserSidebar.hasPermission("IMPORT_TICKET_VIEW"))) { %>
+        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("REQUEST_VIEW_IN") || loggedInUserSidebar.hasPermission("TICKET_VIEW_IN"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
              data-custom-toggle="collapse" data-custom-target="#collapseInbound" aria-expanded="false">
-            <span><i class="bi bi-arrow-down-left-square-fill me-2"></i> Inbound Operations</span>
+            <span><i class="bi bi-arrow-down-left-square-fill me-2"></i> Hoạt động nhập kho</span>
             <i class="bi bi-chevron-right chevron-icon"></i>
         </div>
         <div class="collapse" id="collapseInbound">
-            <% if (loggedInUserSidebar.hasPermission("PO_VIEW")) { %>
-            <a href="<%= request.getContextPath() %>/warehouse/po?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/po") ? "active" : "" %>">
-                <i class="bi bi-receipt me-2"></i> Purchase Orders
+            <% if (loggedInUserSidebar.hasPermission("REQUEST_VIEW_IN")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= (requestURI.contains("import-request") || requestURI.contains("import_request")) && !requestURI.contains("return-add") && !"addReturn".equals(request.getParameter("action")) ? "active" : "" %>">
+                <i class="bi bi-receipt me-2"></i> Yêu cầu nhập kho
             </a>
             <% } %>
-            <% if (loggedInUserSidebar.hasPermission("IMPORT_TICKET_VIEW")) { %>
-            <a href="<%= request.getContextPath() %>/warehouse/import?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/import") ? "active" : "" %>">
-                <i class="bi bi-box-arrow-in-down-left me-2"></i> Import Tickets
+            <% if (loggedInUserSidebar.hasPermission("REQUEST_ADD_IN")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/import-request?action=addReturn" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("return-add") || "addReturn".equals(request.getParameter("action")) ? "active" : "" %>">
+                <i class="bi bi-arrow-counterclockwise me-2"></i> Tạo Return Request
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("TICKET_VIEW_IN")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/import-ticket?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("import-ticket") || requestURI.contains("/import/") || requestURI.endsWith("/import") ? "active" : "" %>">
+                <i class="bi bi-box-arrow-in-down-left me-2"></i> Phiếu nhập kho
             </a>
             <% } %>
         </div>
         <% } %>
-        
-        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("EXPORT_REQ_VIEW") || loggedInUserSidebar.hasPermission("EXPORT_TICKET_VIEW"))) { %>
+
+        <!-- Outbound Operations Section -->
+        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("REQUEST_VIEW_OUT") || loggedInUserSidebar.hasPermission("TICKET_VIEW_OUT"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
              data-custom-toggle="collapse" data-custom-target="#collapseOutbound" aria-expanded="false">
-            <span><i class="bi bi-arrow-up-right-square-fill me-2"></i> Outbound Operations</span>
+            <span><i class="bi bi-arrow-up-right-square-fill me-2"></i> Hoạt động xuất kho</span>
             <i class="bi bi-chevron-right chevron-icon"></i>
         </div>
         <div class="collapse" id="collapseOutbound">
-            <% if (loggedInUserSidebar.hasPermission("EXPORT_REQ_VIEW")) { %>
+            <% if (loggedInUserSidebar.hasPermission("REQUEST_VIEW_OUT")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/export-request?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("export-request") || requestURI.contains("export_request") ? "active" : "" %>">
-                <i class="bi bi-receipt me-2"></i> Export Requests
+                <i class="bi bi-receipt me-2"></i> Yêu cầu xuất kho
             </a>
             <% } %>
-            <% if (loggedInUserSidebar.hasPermission("EXPORT_TICKET_VIEW")) { %>
+            <% if (loggedInUserSidebar.hasPermission("TICKET_VIEW_OUT")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("export-ticket") || requestURI.contains("export_ticket") ? "active" : "" %>">
-                <i class="bi bi-box-arrow-up-right me-2"></i> Export Tickets
+                <i class="bi bi-box-arrow-up-right me-2"></i> Phiếu xuất kho
             </a>
             <% } %>
         </div>
         <% } %>
-        
+
         <!-- Master Data Section -->
-        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PRODUCT_VIEW") || loggedInUserSidebar.hasPermission("CATEGORY_VIEW") || loggedInUserSidebar.hasPermission("BRAND_VIEW") || loggedInUserSidebar.hasPermission("DESTINATION_VIEW") || loggedInUserSidebar.hasPermission("SUPPLIER_VIEW"))) { %>
+        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PRODUCT_VIEW") || loggedInUserSidebar.hasPermission("CATEGORY_VIEW") || loggedInUserSidebar.hasPermission("BRAND_VIEW") || loggedInUserSidebar.hasPermission("DESTINATION_VIEW") || loggedInUserSidebar.hasPermission("SUPPLIER_VIEW") || loggedInUserSidebar.hasPermission("WAREHOUSE_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
              data-custom-toggle="collapse" data-custom-target="#collapseMasterData" aria-expanded="false">
-            <span><i class="bi bi-database-fill me-2"></i> Master Data</span>
+            <span><i class="bi bi-database-fill me-2"></i> Dữ liệu gốc</span>
             <i class="bi bi-chevron-right chevron-icon"></i>
         </div>
         <div class="collapse" id="collapseMasterData">
             <% if (loggedInUserSidebar.hasPermission("PRODUCT_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/product?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("product") ? "active" : "" %>">
-                <i class="bi bi-box-seam-fill me-2"></i> Products Catalog
+                <i class="bi bi-box-seam-fill me-2"></i> Danh mục sản phẩm
             </a>
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("CATEGORY_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/category?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("category") ? "active" : "" %>">
-                <i class="bi bi-tags-fill me-2"></i> Category List
+                <i class="bi bi-tags-fill me-2"></i> Danh mục phân loại
             </a>
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("BRAND_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/brand?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("brand") ? "active" : "" %>">
-                <i class="bi bi-award-fill me-2"></i> Brand List
+                <i class="bi bi-award-fill me-2"></i> Danh sách thương hiệu
             </a>
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("SUPPLIER_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/supplier?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("supplier") ? "active" : "" %>">
-                <i class="bi bi-truck me-2"></i> Suppliers List
+                <i class="bi bi-truck me-2"></i> Danh sách nhà cung cấp
             </a>
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("DESTINATION_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/destination?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("destination") ? "active" : "" %>">
-                <i class="bi bi-geo-alt-fill me-2"></i> Destinations
+                <i class="bi bi-geo-alt-fill me-2"></i> Danh sách điểm nhận
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("CUSTOMER_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/customer?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/customer") ? "active" : "" %>">
+                <i class="bi bi-people-fill me-2"></i> Khách hàng
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("WAREHOUSE_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/warehouse" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/warehouse/warehouse") ? "active" : "" %>">
+                <i class="bi bi-building-fill me-2"></i> Danh sách kho
             </a>
             <% } %>
         </div>
@@ -184,7 +205,7 @@
             const parentCollapse = activeLink.closest('.collapse');
             if (parentCollapse) {
                 parentCollapse.classList.add('show');
-                const header = document.querySelector(`[data-custom-target="#${parentCollapse.id}"]`);
+                const header = document.querySelector('[data-custom-target="#' + parentCollapse.id + '"]');
                 if (header) {
                     header.setAttribute('aria-expanded', 'true');
                 }
@@ -202,4 +223,3 @@
         }
     });
 </script>
-
