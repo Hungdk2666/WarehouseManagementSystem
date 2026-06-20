@@ -1,262 +1,229 @@
 package controller.warehouse;
 
-import dao.ExportRequestDAO;
-import dao.ExportTicketDAO;
+import dao.RequestDAO;
+import dao.TicketDAO;
 import dao.ProductDAO;
+import dao.ProductItemDAO;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import model.ExportRequest;
-import model.ExportRequestDetail;
-import model.ExportTicket;
-import model.ExportTicketDetail;
 import model.Product;
+import model.ProductItem;
+import model.Request;
+import model.RequestDetail;
+import model.Ticket;
+import model.TicketDetail;
 import model.User;
 
 @WebServlet(name = "ExportTicketServlet", urlPatterns = {"/warehouse/export-ticket"})
 public class ExportTicketServlet extends HttpServlet {
 
+    private static final String TYPE = Ticket.TYPE_OUT;
+
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest httpReq, HttpServletResponse response)
             throws ServletException, IOException {
-        HttpSession session = request.getSession();
+        HttpSession session = httpReq.getSession();
         User loggedInUser = (User) session.getAttribute("user");
+        if (loggedInUser == null) { response.sendRedirect(httpReq.getContextPath() + "/login"); return; }
 
-        if (loggedInUser == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
-            return;
+        String action = httpReq.getParameter("action");
+        if (action == null) action = "list";
+
+        if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("TICKET_VIEW_OUT")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem phiếu xuất."); return;
+        }
+        if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_OUT")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo phiếu xuất."); return;
         }
 
-        String action = request.getParameter("action");
-        if (action == null) {
-            action = "list";
-        }
-
-        // Permission Checks
-        if ("list".equals(action) || "detail".equals(action)) {
-            if (!loggedInUser.hasPermission("EXPORT_TICKET_VIEW")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view export tickets.");
-                return;
-            }
-        } else if ("add".equals(action)) {
-            if (!loggedInUser.hasPermission("EXPORT_TICKET_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create export tickets.");
-                return;
-            }
-        }
-
-        ExportTicketDAO dao = new ExportTicketDAO();
-        ExportRequestDAO rDao = new ExportRequestDAO();
+        TicketDAO ticketDao = new TicketDAO();
+        RequestDAO requestDao = new RequestDAO();
+        ProductItemDAO itemDao = new ProductItemDAO();
 
         switch (action) {
             case "list":
-                List<ExportTicket> list = dao.getAllExportTickets();
-                request.setAttribute("ticketList", list);
-                request.getRequestDispatcher("/export_ticket/ticket-list.jsp").forward(request, response);
-                break;
-            case "detail":
-                int id = Integer.parseInt(request.getParameter("id"));
-                ExportTicket ticket = dao.getExportTicketById(id);
-                if (ticket == null) {
-                    response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=list");
-                    return;
+                httpReq.setAttribute("ticketList", ticketDao.getAll(TYPE));
+                // Phiếu OUT-TRANSFER đang đến kho hiện tại (FYI only — luồng mới: tạo Ticket IN)
+                if (loggedInUser.getWarehouseId() != null) {
+                    httpReq.setAttribute("incomingTransfers",
+                            ticketDao.getIncomingTransfersForWarehouse(loggedInUser.getWarehouseId()));
                 }
-                
-                // Serial Numbers Integration
-                dao.ProductItemDAO itemDAO = new dao.ProductItemDAO();
-                if ("CONFIRMED".equals(ticket.getStatus())) {
-                    List<model.ProductItem> exportedSerials = itemDAO.getItemsByExportTicketId(id);
-                    request.setAttribute("exportedSerials", exportedSerials);
-                } else if ("DRAFT".equals(ticket.getStatus())) {
-                    java.util.Map<Integer, List<String>> availableSerials = new java.util.HashMap<>();
-                    for (ExportTicketDetail d : ticket.getDetails()) {
-                        List<model.ProductItem> items = itemDAO.getInStockItemsByProductId(d.getProductId());
+                httpReq.getRequestDispatcher("/export_ticket/ticket-list.jsp").forward(httpReq, response);
+                break;
+            case "detail": {
+                int id = Integer.parseInt(httpReq.getParameter("id"));
+                Ticket ticket = ticketDao.getById(id);
+                if (ticket == null) {
+                    response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"); return;
+                }
+                String s = ticket.getStatus();
+                if (Ticket.STATUS_CONFIRMED.equals(s) || Ticket.STATUS_IN_TRANSIT.equals(s) || Ticket.STATUS_COMPLETED.equals(s)) {
+                    httpReq.setAttribute("exportedSerials", itemDao.getItemsByTicketId(id));
+                } else if (Ticket.STATUS_DRAFT.equals(s) && ticket.getDetails() != null) {
+                    Map<Integer, List<String>> availableSerials = new HashMap<>();
+                    for (TicketDetail d : ticket.getDetails()) {
+                        String cond = ticket.getRequestedCondition();
+                        List<ProductItem> items = itemDao.getInStockItemsByProductId(d.getProductId(), ticket.getWarehouseId(), cond);
                         List<String> serials = new ArrayList<>();
-                        for (model.ProductItem item : items) {
-                            serials.add(item.getSerialNumber());
-                        }
+                        for (ProductItem it : items) serials.add(it.getSerialNumber());
                         availableSerials.put(d.getProductId(), serials);
                     }
-                    request.setAttribute("availableSerials", availableSerials);
+                    httpReq.setAttribute("availableSerials", availableSerials);
                 }
-
-                request.setAttribute("ticket", ticket);
-                request.getRequestDispatcher("/export_ticket/ticket-detail.jsp").forward(request, response);
+                httpReq.setAttribute("ticket", ticket);
+                httpReq.getRequestDispatcher("/export_ticket/ticket-detail.jsp").forward(httpReq, response);
                 break;
-            case "add":
-                // Get approved export requests
-                List<ExportRequest> approvedRequests = rDao.getApprovedRequests();
-                request.setAttribute("reqList", approvedRequests);
-
-                String reqIdParam = request.getParameter("request_id");
+            }
+            case "add": {
+                Integer userWh = loggedInUser.getWarehouseId();
+                List<Request> approved = requestDao.getPendingOrApproved(Request.TYPE_OUT, userWh);
+                httpReq.setAttribute("reqList", approved);
+                String reqIdParam = httpReq.getParameter("request_id");
                 if (reqIdParam != null && !reqIdParam.trim().isEmpty()) {
                     int reqId = Integer.parseInt(reqIdParam);
-                    ExportRequest selectedReq = rDao.getExportRequestById(reqId);
-                    
-                    // Attach current inventory stock to details for frontend check helper
+                    Request selectedReq = requestDao.getById(reqId);
                     ProductDAO pDao = new ProductDAO();
+                    Map<Integer, Integer> stockMap = new HashMap<>();
+                    Map<Integer, Integer> newStockMap = new HashMap<>();
+                    Map<Integer, Integer> usedStockMap = new HashMap<>();
+                    Map<Integer, Integer> totalStockMap = new HashMap<>();
                     if (selectedReq != null && selectedReq.getDetails() != null) {
-                        for (ExportRequestDetail d : selectedReq.getDetails()) {
-                            Product p = pDao.getProductById(d.getProductId());
+                        for (RequestDetail d : selectedReq.getDetails()) {
+                            Product p = pDao.getProductById(d.getProductId(), selectedReq.getWarehouseId());
                             if (p != null) {
-                                // We repurpose the model's helper fields for GIN creation view
                                 d.setUnit(p.getUnit());
                                 d.setSku(p.getSku());
-                                d.setCurrentStock(p.getQuantity());
+                                boolean isUsed = "USED".equals(selectedReq.getRequestedCondition());
+                                stockMap.put(d.getProductId(), isUsed ? p.getAvailableUsedQty() : p.getAvailableNewQty());
+                                newStockMap.put(d.getProductId(), p.getAvailableNewQty());
+                                usedStockMap.put(d.getProductId(), p.getAvailableUsedQty());
+                                totalStockMap.put(d.getProductId(), p.getAvailableQty());
+                            } else {
+                                stockMap.put(d.getProductId(), 0);
+                                newStockMap.put(d.getProductId(), 0);
+                                usedStockMap.put(d.getProductId(), 0);
+                                totalStockMap.put(d.getProductId(), 0);
                             }
                         }
                     }
-                    request.setAttribute("selectedReq", selectedReq);
+                    httpReq.setAttribute("selectedReq", selectedReq);
+                    httpReq.setAttribute("stockMap", stockMap);
+                    httpReq.setAttribute("newStockMap", newStockMap);
+                    httpReq.setAttribute("usedStockMap", usedStockMap);
+                    httpReq.setAttribute("totalStockMap", totalStockMap);
                 }
-
-                request.getRequestDispatcher("/export_ticket/ticket-add.jsp").forward(request, response);
+                httpReq.getRequestDispatcher("/export_ticket/ticket-add.jsp").forward(httpReq, response);
                 break;
+            }
             default:
-                response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=list");
-                break;
+                response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list");
         }
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest httpReq, HttpServletResponse response)
             throws ServletException, IOException {
-        HttpSession session = request.getSession();
+        HttpSession session = httpReq.getSession();
         User loggedInUser = (User) session.getAttribute("user");
+        if (loggedInUser == null) { response.sendRedirect(httpReq.getContextPath() + "/login"); return; }
 
-        if (loggedInUser == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
-            return;
+        String action = httpReq.getParameter("action");
+        if (action == null) { response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"); return; }
+
+        if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_OUT")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo."); return;
+        }
+        if ("confirm".equals(action) && !loggedInUser.hasPermission("TICKET_CONFIRM_OUT")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền confirm."); return;
+        }
+        if ("cancel".equals(action) && !loggedInUser.hasPermission("TICKET_CANCEL_OUT")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy."); return;
         }
 
-        String action = request.getParameter("action");
-        if (action == null) {
-            response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=list");
-            return;
-        }
-
-        // Permission Checks
-        if ("add".equals(action)) {
-            if (!loggedInUser.hasPermission("EXPORT_TICKET_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to create export tickets.");
-                return;
-            }
-        } else if ("confirm".equals(action)) {
-            if (!loggedInUser.hasPermission("EXPORT_TICKET_CONFIRM")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to confirm export tickets.");
-                return;
-            }
-        } else if ("cancel".equals(action)) {
-            if (!loggedInUser.hasPermission("EXPORT_TICKET_CANCEL")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to cancel export tickets.");
-                return;
-            }
-        }
-
-        ExportTicketDAO dao = new ExportTicketDAO();
-        ExportRequestDAO rDao = new ExportRequestDAO();
+        TicketDAO ticketDao = new TicketDAO();
+        RequestDAO requestDao = new RequestDAO();
 
         try {
             switch (action) {
-                case "add":
-                    int reqId = Integer.parseInt(request.getParameter("request_id"));
-                    String[] productIds = request.getParameterValues("product_id");
-                    String[] quantities = request.getParameterValues("quantity");
-                    
-                    ExportRequest selectedReq = rDao.getExportRequestById(reqId);
-                    if (selectedReq == null || selectedReq.getCancelRequestedAt() != null || "CANCELLED".equals(selectedReq.getStatus())) {
-                        response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&error=CancelRequested");
-                        return;
+                case "add": {
+                    int reqId = Integer.parseInt(httpReq.getParameter("request_id"));
+                    Request selectedReq = requestDao.getById(reqId);
+                    if (selectedReq == null
+                            || (!(Request.STATUS_APPROVED.equals(selectedReq.getStatus())
+                                || Request.STATUS_PARTIALLY_COMPLETED.equals(selectedReq.getStatus())))
+                            || selectedReq.getCancelRequestedAt() != null) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&error=RequestNotApproved"); return;
+                    }
+                    Integer userWh = loggedInUser.getWarehouseId();
+                    int sourceWh = selectedReq.getWarehouseId();
+                    if (userWh != null && userWh != sourceWh) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=WrongWarehouse"); return;
+                    }
+
+                    String[] productIds = httpReq.getParameterValues("product_id");
+                    String[] quantities = httpReq.getParameterValues("quantity");
+                    if (productIds == null || productIds.length == 0) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=NoItems"); return;
                     }
 
                     ProductDAO pDao = new ProductDAO();
-                    if (productIds != null && productIds.length > 0) {
-                        List<ExportTicketDetail> details = new ArrayList<>();
-                        for (int i = 0; i < productIds.length; i++) {
-                            int pId = Integer.parseInt(productIds[i]);
-                            int qty = Integer.parseInt(quantities[i]);
-                            
-                            if (qty > 0) {
-                                // Find matching request detail to validate quantity
-                                ExportRequestDetail reqD = null;
-                                for (ExportRequestDetail d : selectedReq.getDetails()) {
-                                    if (d.getProductId() == pId) {
-                                        reqD = d;
-                                        break;
-                                    }
-                                }
-
-                                if (reqD == null) {
-                                    response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=InvalidProduct");
-                                    return;
-                                }
-
-                                int remainingRequested = reqD.getQuantity() - reqD.getIssuedQuantity();
-                                if (qty > remainingRequested) {
-                                    response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=ExceededRemainingQuantity");
-                                    return;
-                                }
-
-                                Product p = pDao.getProductById(pId);
-                                if (p == null || p.getQuantity() < qty) {
-                                    response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=InsufficientStock");
-                                    return;
-                                }
-
-                                ExportTicketDetail d = new ExportTicketDetail();
-                                d.setProductId(pId);
-                                d.setQuantity(qty);
-                                details.add(d);
-                            }
+                    List<TicketDetail> details = new ArrayList<>();
+                    for (int i = 0; i < productIds.length; i++) {
+                        int pId = Integer.parseInt(productIds[i]);
+                        int qty = Integer.parseInt(quantities[i]);
+                        if (qty <= 0) continue;
+                        Product p = pDao.getProductById(pId, sourceWh);
+                        boolean isUsed = "USED".equals(selectedReq.getRequestedCondition());
+                        int avail = (p != null) ? (isUsed ? p.getAvailableUsedQty() : p.getAvailableNewQty()) : 0;
+                        if (p == null || avail < qty) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=InsufficientStock"); return;
                         }
-                        
-                        if (details.isEmpty()) {
-                            response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=NoItemsDispatched");
-                            return;
-                        }
-                        
-                        ExportTicket ticket = new ExportTicket();
-                        ticket.setRequestId(reqId);
-                        ticket.setKeeperId(loggedInUser.getId());
-                        
-                        boolean success = dao.addExportTicket(ticket, details);
-                        if (!success) {
-                            response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=FailedToCreate");
-                            return;
-                        }
+                        TicketDetail d = new TicketDetail();
+                        d.setProductId(pId);
+                        d.setQuantity(qty);
+                        details.add(d);
+                    }
+                    if (details.isEmpty()) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=NoValidItems"); return;
+                    }
+                    Ticket ticket = new Ticket();
+                    ticket.setType(Ticket.TYPE_OUT);
+                    ticket.setRequestId(reqId);
+                    ticket.setWarehouseId(sourceWh);
+                    ticket.setKeeperId(loggedInUser.getId());
+                    if (!ticketDao.add(ticket, details)) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=Failed"); return;
                     }
                     break;
-                case "confirm":
-                    int confirmId = Integer.parseInt(request.getParameter("id"));
-                    String[] scannedSerialsArr = request.getParameterValues("scanned_serials");
-                    List<String> scannedSerials = new ArrayList<>();
-                    if (scannedSerialsArr != null) {
-                        for (String s : scannedSerialsArr) {
-                            if (s != null && !s.trim().isEmpty()) {
-                                scannedSerials.add(s.trim());
-                            }
-                        }
+                }
+                case "confirm": {
+                    int confirmId = Integer.parseInt(httpReq.getParameter("id"));
+                    String[] scanned = httpReq.getParameterValues("scanned_serials");
+                    List<String> serials = new ArrayList<>();
+                    if (scanned != null) {
+                        for (String s : scanned) if (s != null && !s.trim().isEmpty()) serials.add(s.trim());
                     }
-                    boolean successConfirm = dao.confirmTicket(confirmId, loggedInUser.getId(), scannedSerials);
-                    if (!successConfirm) {
-                        response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + confirmId + "&error=ConfirmFailed");
-                        return;
+                    boolean ok = ticketDao.confirm(confirmId, loggedInUser.getId(), serials);
+                    if (!ok) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + confirmId + "&error=ConfirmFailed"); return;
                     }
                     break;
+                }
                 case "cancel":
-                    int cancelId = Integer.parseInt(request.getParameter("id"));
-                    dao.cancelTicket(cancelId);
+                    ticketDao.cancel(Integer.parseInt(httpReq.getParameter("id")));
                     break;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
 
-        response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=list");
+        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list");
     }
 }

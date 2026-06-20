@@ -1,5 +1,5 @@
-<%@page import="model.ExportTicket"%>
-<%@page import="model.ExportTicketDetail"%>
+<%@page import="model.Ticket"%>
+<%@page import="model.TicketDetail"%>
 <%@page import="model.User"%>
 <%@page import="model.ProductItem"%>
 <%@page import="java.util.List"%>
@@ -7,23 +7,23 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || !loggedInUser.hasPermission("EXPORT_TICKET_VIEW")) {
+    if (loggedInUser == null || !loggedInUser.hasPermission("TICKET_VIEW_OUT")) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
-    ExportTicket ticket = (ExportTicket) request.getAttribute("ticket");
+    Ticket ticket = (Ticket) request.getAttribute("ticket");
     if (ticket == null) {
         response.sendRedirect(request.getContextPath() + "/warehouse/export-ticket?action=list");
         return;
     }
-    boolean canConfirm = loggedInUser.hasPermission("EXPORT_TICKET_CONFIRM");
-    boolean canCancel = loggedInUser.hasPermission("EXPORT_TICKET_CANCEL");
+    boolean canConfirm = loggedInUser.hasPermission("TICKET_CONFIRM_OUT");
+    boolean canCancel = loggedInUser.hasPermission("TICKET_CANCEL_OUT");
 %>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Export Ticket Detail - #<%= ticket.getTicketCode() %></title>
+    <title>Chi tiết phiếu xuất kho - #<%= ticket.getTicketCode() %></title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,66 +43,92 @@
                 
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Export Ticket Detail</h2>
-                        <p class="text-muted small mb-0">View items and confirm stock dispatch for Export Ticket #<%= ticket.getTicketCode() %></p>
+                        <h2 class="fw-bold text-slate-800 mb-1">Chi tiết phiếu xuất kho</h2>
+                        <p class="text-muted small mb-0">Xem chi tiết sản phẩm và xác nhận xuất kho thực tế cho Phiếu xuất kho #<%= ticket.getTicketCode() %></p>
                     </div>
                     <a href="export-ticket?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Back to List
+                        <i class="bi bi-arrow-left"></i> Quay lại danh sách
                     </a>
                 </div>
 
                 <div class="card shadow-sm border-0 bg-white mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-info-circle-fill me-2"></i>Export Ticket Metadata</h5>
+                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-info-circle-fill me-2"></i>Thông tin phiếu xuất kho</h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="text-muted small d-block">Export Ticket Code</label>
+                                <label class="text-muted small d-block">Mã phiếu xuất</label>
                                 <span class="fw-bold text-slate-800">#<%= ticket.getTicketCode() %></span>
                             </div>
                             <div class="col-md-4">
-                                <label class="text-muted small d-block">Linked Request Code</label>
+                                <label class="text-muted small d-block">Mã yêu cầu liên kết</label>
                                 <a href="export-request?action=detail&id=<%= ticket.getRequestId() %>" class="fw-bold text-primary text-decoration-none">
                                     #<%= ticket.getRequestCode() %>
                                 </a>
                             </div>
                             <div class="col-md-4">
-                                <label class="text-muted small d-block">Status</label>
+                                <label class="text-muted small d-block">Trạng thái</label>
                                 <%
                                     String statusBadge = "bg-secondary text-secondary";
-                                    if ("DRAFT".equals(ticket.getStatus())) statusBadge = "bg-warning text-warning";
-                                    else if ("CONFIRMED".equals(ticket.getStatus())) statusBadge = "bg-success text-success";
-                                    else if ("CANCELLED".equals(ticket.getStatus())) statusBadge = "bg-danger text-danger";
+                                    String displayStatus = ticket.getStatus();
+                                    if ("DRAFT".equals(ticket.getStatus())) {
+                                        statusBadge = "bg-warning text-warning";
+                                        displayStatus = "Bản nháp";
+                                    } else if ("IN_TRANSIT".equals(ticket.getStatus())) {
+                                        statusBadge = "bg-info text-info";
+                                        displayStatus = "Đang vận chuyển";
+                                    } else if ("CONFIRMED".equals(ticket.getStatus())) {
+                                        statusBadge = "bg-success text-success";
+                                        displayStatus = "Đã xác nhận";
+                                    } else if ("CANCELLED".equals(ticket.getStatus())) {
+                                        statusBadge = "bg-danger text-danger";
+                                        displayStatus = "Đã hủy";
+                                    }
                                 %>
-                                <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= ticket.getStatus() %></span>
+                                <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= displayStatus %></span>
                             </div>
                             
                             <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Destination</label>
-                                <span class="fw-semibold text-slate-700"><%= ticket.getDestinationName() %></span>
+                                <label class="text-muted small d-block">Điểm nhận / Đối tác</label>
+                                <span class="fw-semibold text-slate-700"><%= ticket.getPartnerName() %></span>
                             </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Export Reason</label>
-                                <span class="badge bg-light text-dark border"><%= ticket.getExportReason() %></span>
+                            <div class="col-md-3 border-top pt-2">
+                                <label class="text-muted small d-block">Lý do xuất</label>
+                                <span class="badge bg-light text-dark border">
+                                    <%
+                                        if ("TRANSFER".equals(ticket.getRequestReason())) out.print("CHUYỂN KHO");
+                                        else if ("CUSTOMER_SALE".equals(ticket.getRequestReason())) out.print("BÁN HÀNG");
+                                        else if ("DISPLAY".equals(ticket.getRequestReason())) out.print("TRƯNG BÀY");
+                                        else if ("WARRANTY".equals(ticket.getRequestReason())) out.print("BẢO HÀNH");
+                                        else if ("DISPOSAL".equals(ticket.getRequestReason())) out.print("TIÊU HỦY");
+                                        else out.print(ticket.getRequestReason() != null ? ticket.getRequestReason() : "-");
+                                    %>
+                                </span>
                             </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Created By (Keeper)</label>
+                            <div class="col-md-3 border-top pt-2">
+                                <label class="text-muted small d-block">Tình trạng xuất</label>
+                                <span class="badge bg-light text-dark border">
+                                    <%= "USED".equals(ticket.getRequestedCondition()) ? "Hàng Cũ (USED)" : "Hàng Mới (NEW)" %>
+                                </span>
+                            </div>
+                            <div class="col-md-3 border-top pt-2">
+                                <label class="text-muted small d-block">Người tạo (Thủ kho)</label>
                                 <span class="text-slate-700"><%= ticket.getKeeperFullName() %></span>
                             </div>
                             
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Created At</label>
+                            <div class="col-md-3 border-top pt-2">
+                                <label class="text-muted small d-block">Thời gian tạo</label>
                                 <span class="text-slate-700"><%= ticket.getCreatedAt() %></span>
                             </div>
                             
                             <% if (ticket.getConfirmedBy() != null) { %>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Confirmed By (Manager)</label>
+                            <div class="col-md-6 border-top pt-2">
+                                <label class="text-muted small d-block">Người xác nhận (Quản lý)</label>
                                 <span class="text-slate-700"><%= ticket.getConfirmedByFullName() %></span>
                             </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Confirmed At</label>
+                            <div class="col-md-6 border-top pt-2">
+                                <label class="text-muted small d-block">Thời gian xác nhận</label>
                                 <span class="text-slate-700"><%= ticket.getConfirmedAt() %></span>
                             </div>
                             <% } %>
@@ -112,19 +138,19 @@
 
                 <div class="card shadow-sm border-0 bg-white mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-list-check me-2"></i>Issued Items</h5>
+                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-list-check me-2"></i>Danh sách sản phẩm xuất kho</h5>
                     </div>
                     <div class="card-body p-0">
                         <table class="table align-middle text-center mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th class="text-start ps-4">Product Name</th>
+                                    <th class="text-start ps-4">Tên sản phẩm</th>
                                     <th>SKU</th>
-                                    <th>Unit</th>
-                                    <th>Actual Issued Qty</th>
-                                    <th>Snapshot Unit Cost</th>
-                                    <th>Subtotal Value</th>
+                                    <th>Đơn vị</th>
+                                    <th>Số lượng xuất thực tế</th>
+                                    <th>Đơn giá (Tạm tính)</th>
+                                    <th>Thành tiền</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -132,8 +158,8 @@
                                     double totalCost = 0;
                                     if (ticket.getDetails() != null && !ticket.getDetails().isEmpty()) {
                                         int index = 1;
-                                        for (ExportTicketDetail d : ticket.getDetails()) {
-                                            double itemCost = d.getQuantity() * d.getUnitCost();
+                                        for (TicketDetail d : ticket.getDetails()) {
+                                            double itemCost = d.getQuantity() * (d.getUnitCost() != null ? d.getUnitCost().doubleValue() : 0.0);
                                             totalCost += itemCost;
                                 %>
                                 <tr>
@@ -143,17 +169,17 @@
                                     <td><%= d.getUnit() %></td>
                                     <td class="fw-bold"><%= d.getQuantity() %></td>
                                     <td>
-                                        <% if ("CONFIRMED".equals(ticket.getStatus())) { %>
-                                            <%= String.format("%,.0f", d.getUnitCost()) %> VND
+                                        <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus())) { %>
+                                            <%= String.format("%,.0f", d.getUnitCost() != null ? d.getUnitCost().doubleValue() : 0.0) %> VND
                                         <% } else { %>
-                                            <span class="text-muted small">Pending confirmation</span>
+                                            <span class="text-muted small">Chờ xác nhận</span>
                                         <% } %>
                                     </td>
                                     <td class="fw-bold">
-                                        <% if ("CONFIRMED".equals(ticket.getStatus())) { %>
+                                        <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus())) { %>
                                             <%= String.format("%,.0f", itemCost) %> VND
                                         <% } else { %>
-                                            <span class="text-muted small">Pending confirmation</span>
+                                            <span class="text-muted small">Chờ xác nhận</span>
                                         <% } %>
                                     </td>
                                 </tr>
@@ -161,9 +187,9 @@
                                         }
                                     }
                                 %>
-                                <% if ("CONFIRMED".equals(ticket.getStatus())) { %>
+                                <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus())) { %>
                                 <tr class="table-light fw-bold">
-                                    <td colspan="6" class="text-end pe-4">Total Outbound Value:</td>
+                                    <td colspan="6" class="text-end pe-4">Tổng giá trị xuất kho:</td>
                                     <td><%= String.format("%,.0f", totalCost) %> VND</td>
                                 </tr>
                                 <% } %>
@@ -174,18 +200,27 @@
                     <% if ("DRAFT".equals(ticket.getStatus()) && (canConfirm || canCancel)) { %>
                     <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0">
                         <% if (canCancel) { %>
-                        <form action="export-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to cancel this Export Ticket?');">
+                        <form action="export-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy Phiếu xuất kho này không?');">
                             <input type="hidden" name="id" value="<%= ticket.getId() %>">
-                            <button type="submit" class="btn btn-outline-danger px-4"><i class="bi bi-x-circle me-1"></i> Cancel Export Ticket</button>
+                            <button type="submit" class="btn btn-outline-danger px-4"><i class="bi bi-x-circle me-1"></i> Hủy phiếu xuất kho</button>
                         </form>
                         <% } %>
                         <% if (canConfirm) { %>
-                        <form action="export-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Confirming this Export Ticket will subtract stock from inventory and write transaction audit ledger logs. Proceed?');">
+                        <form action="export-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Xác nhận Phiếu xuất kho này sẽ trừ số lượng sản phẩm trong tồn kho thực tế và ghi lại nhật ký hoạt động. Xác nhận?');">
                             <input type="hidden" name="id" value="<%= ticket.getId() %>">
                             <div id="hidden-serials-container"></div>
-                            <button type="submit" id="confirm-submit-btn" class="btn btn-secondary px-4" disabled><i class="bi bi-check-circle-fill me-1"></i> Confirm & Issue Stock</button>
+                            <button type="submit" id="confirm-submit-btn" class="btn btn-secondary px-4" disabled><i class="bi bi-check-circle-fill me-1"></i> Xác nhận & Xuất kho</button>
                         </form>
                         <% } %>
+                    </div>
+                    <% } %>
+                    
+                    <%-- IN_TRANSIT TRANSFER ticket — luồng v3: kho đích sẽ thấy Request IN-TRANSFER auto-sinh ở module Import Request --%>
+                    <% if ("IN_TRANSIT".equals(ticket.getStatus())) { %>
+                    <div class="card-footer bg-info bg-opacity-10 p-3 small text-info border-top-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Phiếu đang IN_TRANSIT. Kho đích cần vào <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list">Yêu cầu nhập kho</a>
+                        để xử lý phiếu nhập tương ứng (đã được hệ thống tự sinh khi confirm xuất kho).
                     </div>
                     <% } %>
                 </div>
@@ -196,7 +231,7 @@
                 %>
                 <div class="card shadow-sm border-0 bg-white mb-4">
                     <div class="card-header bg-success bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-success"><i class="bi bi-check2-all me-2"></i>Exported Serial Numbers (Traceability)</h5>
+                        <h5 class="mb-0 fw-bold text-success"><i class="bi bi-check2-all me-2"></i>Danh sách mã Serial xuất kho (Truy xuất nguồn gốc)</h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-3">
@@ -220,26 +255,26 @@
                 <!-- Scanning Interface Panel -->
                 <div class="card shadow-sm border-0 bg-white mb-4">
                     <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-barcode me-2"></i>Execute Barcode Scanning</h5>
+                        <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-barcode me-2"></i>Thực hiện quét mã vạch (Barcode/Serial)</h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="mb-3">
-                            <label for="barcode-scanner-input" class="form-label fw-semibold text-slate-700">Scan Product Serial Number (Use Handheld Scanner or Type Manual):</label>
+                            <label for="barcode-scanner-input" class="form-label fw-semibold text-slate-700">Quét mã Serial sản phẩm (Sử dụng máy quét hoặc nhập tay):</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light text-muted"><i class="bi bi-upc-scan"></i></span>
-                                <input type="text" id="barcode-scanner-input" class="form-control form-control-lg border-warning" placeholder="Focus here and scan barcode label..." autofocus autocomplete="off">
+                                <input type="text" id="barcode-scanner-input" class="form-control form-control-lg border-warning" placeholder="Để con trỏ tại đây và quét mã vạch..." autofocus autocomplete="off">
                             </div>
                             <div id="scan-status-alert" class="alert d-none mt-2 px-3 py-2" role="alert"></div>
                         </div>
                         
                         <hr class="my-4">
                         
-                        <h6 class="fw-bold text-slate-800 mb-3"><i class="bi bi-list-task me-1"></i>Scanning Progress Verification:</h6>
+                        <h6 class="fw-bold text-slate-800 mb-3"><i class="bi bi-list-task me-1"></i>Tiến độ quét mã xác thực:</h6>
                         <div class="row g-3">
                             <% 
                                 if (ticket.getDetails() != null) {
-                                    for (ExportTicketDetail d : ticket.getDetails()) {
-                            %>
+                                    for (TicketDetail d : ticket.getDetails()) {
+                             %>
                             <div class="col-md-6">
                                 <div class="border rounded p-3 bg-light" id="prod-panel-<%= d.getProductId() %>">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -247,12 +282,12 @@
                                         <span class="badge bg-secondary bg-opacity-10 text-secondary sku-badge"><%= d.getSku() %></span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center border-top pt-2">
-                                        <span class="text-muted small">Required: <strong><%= d.getQuantity() %></strong></span>
-                                        <span class="small font-monospace fw-bold scan-progress-text" id="progress-<%= d.getProductId() %>" data-required="<%= d.getQuantity() %>">Scanned: <span class="scanned-count text-danger">0</span>/<%= d.getQuantity() %></span>
+                                        <span class="text-muted small">Yêu cầu: <strong><%= d.getQuantity() %></strong></span>
+                                        <span class="small font-monospace fw-bold scan-progress-text" id="progress-<%= d.getProductId() %>" data-required="<%= d.getQuantity() %>">Đã quét: <span class="scanned-count text-danger">0</span>/<%= d.getQuantity() %></span>
                                     </div>
                                     <div class="scanned-serials-list mt-2 border-top pt-2" style="max-height: 120px; overflow-y: auto;">
                                         <ul class="list-group list-group-flush small" id="list-<%= d.getProductId() %>">
-                                            <li class="list-group-item bg-transparent text-muted text-center py-1 no-serials-msg">No serials scanned yet</li>
+                                            <li class="list-group-item bg-transparent text-muted text-center py-1 no-serials-msg">Chưa có mã serial nào được quét</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -354,7 +389,7 @@
                         // 1. Check if already scanned in this session
                         if (allScannedSerialsGlobal.has(serial)) {
                             playBeep(false);
-                            showScanAlert("Serial number <strong>" + serial + "</strong> has already been scanned in this session!", "danger");
+                            showScanAlert("Mã Serial <strong>" + serial + "</strong> đã được quét trong phiên làm việc này!", "danger");
                             return;
                         }
 
@@ -369,7 +404,7 @@
 
                         if (!foundProductId) {
                             playBeep(false);
-                            showScanAlert("Serial number <strong>" + serial + "</strong> does not match any in-stock items for this export ticket!", "danger");
+                            showScanAlert("Mã Serial <strong>" + serial + "</strong> không khớp với bất kỳ sản phẩm nào có trong kho của phiếu xuất này!", "danger");
                             return;
                         }
 
@@ -386,7 +421,7 @@
                         // 3. Check if required quantity is already satisfied
                         if (currentCount >= requiredCount) {
                             playBeep(false);
-                            showScanAlert("Required quantity for this product is already fully satisfied!", "danger");
+                            showScanAlert("Số lượng yêu cầu của sản phẩm này đã được quét đầy đủ!", "danger");
                             return;
                         }
 
@@ -394,7 +429,7 @@
                         scannedSerials[foundProductId].push(serial);
                         allScannedSerialsGlobal.add(serial);
                         playBeep(true);
-                        showScanAlert("Successfully scanned serial: <strong>" + serial + "</strong>", "success");
+                        showScanAlert("Đã quét thành công mã Serial: <strong>" + serial + "</strong>", "success");
 
                         // 5. Update UI list
                         const listEl = document.getElementById("list-" + foundProductId);
@@ -441,12 +476,12 @@
                             // Re-add empty message if list empty
                             const listEl = document.getElementById("list-" + productId);
                             if (scannedSerials[productId].length === 0) {
-                                listEl.innerHTML = '<li class="list-group-item bg-transparent text-muted text-center py-1 no-serials-msg">No serials scanned yet</li>';
+                                listEl.innerHTML = '<li class="list-group-item bg-transparent text-muted text-center py-1 no-serials-msg">Chưa có mã serial nào được quét</li>';
                             }
                             
                             updateProgress(productId);
                             checkOverallCompletion();
-                            showScanAlert("Removed serial: " + serial, "success");
+                            showScanAlert("Đã xóa mã Serial: " + serial, "success");
                         }
                     };
 
