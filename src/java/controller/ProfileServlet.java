@@ -8,7 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.User;
-import dao.UserDAO;
+import service.UserService;
 
 @WebServlet(name = "ProfileServlet", urlPatterns = {"/profile"})
 public class ProfileServlet extends HttpServlet {
@@ -25,8 +25,8 @@ public class ProfileServlet extends HttpServlet {
         }
         
         // Refresh user data from DB to ensure it's up to date
-        UserDAO dao = new UserDAO();
-        User freshUser = dao.getUserById(loggedInUser.getId());
+        UserService userService = new UserService();
+        User freshUser = userService.getUserById(loggedInUser.getId());
         session.setAttribute("user", freshUser);
         
         request.getRequestDispatcher("profile.jsp").forward(request, response);

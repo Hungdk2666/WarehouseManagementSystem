@@ -7,8 +7,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import dao.UserDAO;
-import utils.SecurityUtils;
+import service.UserService;
 
 @WebServlet(name = "ResetPasswordServlet", urlPatterns = {"/reset-password"})
 public class ResetPasswordServlet extends HttpServlet {
@@ -33,9 +32,8 @@ public class ResetPasswordServlet extends HttpServlet {
             return;
         }
         
-        String hashedPass = SecurityUtils.hashSHA256(newPassword);
-        UserDAO dao = new UserDAO();
-        boolean success = dao.updatePassword(userId, hashedPass);
+        UserService userService = new UserService();
+        boolean success = userService.updatePassword(userId, newPassword);
         
         if (success) {
             session.removeAttribute("resetUserId");

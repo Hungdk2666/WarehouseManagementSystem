@@ -7,9 +7,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import dao.UserDAO;
+import service.UserService;
 import model.User;
-import utils.SecurityUtils;
 
 @WebServlet(name = "LoginServlet", urlPatterns = {"/login"})
 public class LoginServlet extends HttpServlet {
@@ -27,9 +26,8 @@ public class LoginServlet extends HttpServlet {
         String user = request.getParameter("username");
         String pass = request.getParameter("password");
         
-        String hashedPass = SecurityUtils.hashSHA256(pass);
-        UserDAO dao = new UserDAO();
-        User loggedInUser = dao.login(user, hashedPass);
+        UserService userService = new UserService();
+        User loggedInUser = userService.login(user, pass);
         
         if (loggedInUser != null) {
             HttpSession session = request.getSession();

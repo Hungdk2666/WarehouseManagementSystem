@@ -1,9 +1,9 @@
 package controller.warehouse;
 
-import dao.RequestDAO;
-import dao.TicketDAO;
-import dao.ProductDAO;
-import dao.ProductItemDAO;
+import service.RequestService;
+import service.TicketService;
+import service.ProductService;
+import service.ProductItemService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,40 +39,40 @@ public class ExportTicketServlet extends HttpServlet {
         if (action == null) action = "list";
 
         if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("TICKET_VIEW_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem phiếu xuất."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n xem phiáº¿u xuáº¥t."); return;
         }
         if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo phiếu xuất."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o phiáº¿u xuáº¥t."); return;
         }
 
-        TicketDAO ticketDao = new TicketDAO();
-        RequestDAO requestDao = new RequestDAO();
-        ProductItemDAO itemDao = new ProductItemDAO();
+        TicketService ticketService = new TicketService();
+        RequestService requestService = new RequestService();
+        ProductItemService itemService = new ProductItemService();
 
         switch (action) {
             case "list":
-                httpReq.setAttribute("ticketList", ticketDao.getAll(TYPE));
-                // Phiếu OUT-TRANSFER đang đến kho hiện tại (FYI only — luồng mới: tạo Ticket IN)
+                httpReq.setAttribute("ticketList", ticketService.getAll(TYPE));
+                // Phiáº¿u OUT-TRANSFER Ä‘ang Ä‘áº¿n kho hiá»‡n táº¡i (FYI only â€” luá»“ng má»›i: táº¡o Ticket IN)
                 if (loggedInUser.getWarehouseId() != null) {
                     httpReq.setAttribute("incomingTransfers",
-                            ticketDao.getIncomingTransfersForWarehouse(loggedInUser.getWarehouseId()));
+                            ticketService.getIncomingTransfersForWarehouse(loggedInUser.getWarehouseId()));
                 }
                 httpReq.getRequestDispatcher("/export_ticket/ticket-list.jsp").forward(httpReq, response);
                 break;
             case "detail": {
                 int id = Integer.parseInt(httpReq.getParameter("id"));
-                Ticket ticket = ticketDao.getById(id);
+                Ticket ticket = ticketService.getById(id);
                 if (ticket == null) {
                     response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"); return;
                 }
                 String s = ticket.getStatus();
                 if (Ticket.STATUS_CONFIRMED.equals(s) || Ticket.STATUS_IN_TRANSIT.equals(s) || Ticket.STATUS_COMPLETED.equals(s)) {
-                    httpReq.setAttribute("exportedSerials", itemDao.getItemsByTicketId(id));
+                    httpReq.setAttribute("exportedSerials", itemService.getItemsByTicketId(id));
                 } else if (Ticket.STATUS_DRAFT.equals(s) && ticket.getDetails() != null) {
                     Map<Integer, List<String>> availableSerials = new HashMap<>();
                     for (TicketDetail d : ticket.getDetails()) {
                         String cond = ticket.getRequestedCondition();
-                        List<ProductItem> items = itemDao.getInStockItemsByProductId(d.getProductId(), ticket.getWarehouseId(), cond);
+                        List<ProductItem> items = itemService.getInStockItemsByProductId(d.getProductId(), ticket.getWarehouseId(), cond);
                         List<String> serials = new ArrayList<>();
                         for (ProductItem it : items) serials.add(it.getSerialNumber());
                         availableSerials.put(d.getProductId(), serials);
@@ -85,20 +85,20 @@ public class ExportTicketServlet extends HttpServlet {
             }
             case "add": {
                 Integer userWh = loggedInUser.getWarehouseId();
-                List<Request> approved = requestDao.getPendingOrApproved(Request.TYPE_OUT, userWh);
+                List<Request> approved = requestService.getPendingOrApproved(Request.TYPE_OUT, userWh);
                 httpReq.setAttribute("reqList", approved);
                 String reqIdParam = httpReq.getParameter("request_id");
                 if (reqIdParam != null && !reqIdParam.trim().isEmpty()) {
                     int reqId = Integer.parseInt(reqIdParam);
-                    Request selectedReq = requestDao.getById(reqId);
-                    ProductDAO pDao = new ProductDAO();
+                    Request selectedReq = requestService.getById(reqId);
+                    ProductService pService = new ProductService();
                     Map<Integer, Integer> stockMap = new HashMap<>();
                     Map<Integer, Integer> newStockMap = new HashMap<>();
                     Map<Integer, Integer> usedStockMap = new HashMap<>();
                     Map<Integer, Integer> totalStockMap = new HashMap<>();
                     if (selectedReq != null && selectedReq.getDetails() != null) {
                         for (RequestDetail d : selectedReq.getDetails()) {
-                            Product p = pDao.getProductById(d.getProductId(), selectedReq.getWarehouseId());
+                            Product p = pService.getProductById(d.getProductId(), selectedReq.getWarehouseId());
                             if (p != null) {
                                 d.setUnit(p.getUnit());
                                 d.setSku(p.getSku());
@@ -140,23 +140,23 @@ public class ExportTicketServlet extends HttpServlet {
         if (action == null) { response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"); return; }
 
         if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o."); return;
         }
         if ("confirm".equals(action) && !loggedInUser.hasPermission("TICKET_CONFIRM_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền confirm."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n confirm."); return;
         }
         if ("cancel".equals(action) && !loggedInUser.hasPermission("TICKET_CANCEL_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n há»§y."); return;
         }
 
-        TicketDAO ticketDao = new TicketDAO();
-        RequestDAO requestDao = new RequestDAO();
+        TicketService ticketService = new TicketService();
+        RequestService requestService = new RequestService();
 
         try {
             switch (action) {
                 case "add": {
                     int reqId = Integer.parseInt(httpReq.getParameter("request_id"));
-                    Request selectedReq = requestDao.getById(reqId);
+                    Request selectedReq = requestService.getById(reqId);
                     if (selectedReq == null
                             || (!(Request.STATUS_APPROVED.equals(selectedReq.getStatus())
                                 || Request.STATUS_PARTIALLY_COMPLETED.equals(selectedReq.getStatus())))
@@ -175,13 +175,13 @@ public class ExportTicketServlet extends HttpServlet {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=NoItems"); return;
                     }
 
-                    ProductDAO pDao = new ProductDAO();
+                    ProductService pService = new ProductService();
                     List<TicketDetail> details = new ArrayList<>();
                     for (int i = 0; i < productIds.length; i++) {
                         int pId = Integer.parseInt(productIds[i]);
                         int qty = Integer.parseInt(quantities[i]);
                         if (qty <= 0) continue;
-                        Product p = pDao.getProductById(pId, sourceWh);
+                        Product p = pService.getProductById(pId, sourceWh);
                         boolean isUsed = "USED".equals(selectedReq.getRequestedCondition());
                         int avail = (p != null) ? (isUsed ? p.getAvailableUsedQty() : p.getAvailableNewQty()) : 0;
                         if (p == null || avail < qty) {
@@ -200,7 +200,7 @@ public class ExportTicketServlet extends HttpServlet {
                     ticket.setRequestId(reqId);
                     ticket.setWarehouseId(sourceWh);
                     ticket.setKeeperId(loggedInUser.getId());
-                    if (!ticketDao.add(ticket, details)) {
+                    if (!ticketService.add(ticket, details)) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=Failed"); return;
                     }
                     break;
@@ -212,14 +212,14 @@ public class ExportTicketServlet extends HttpServlet {
                     if (scanned != null) {
                         for (String s : scanned) if (s != null && !s.trim().isEmpty()) serials.add(s.trim());
                     }
-                    boolean ok = ticketDao.confirm(confirmId, loggedInUser.getId(), serials);
+                    boolean ok = ticketService.confirm(confirmId, loggedInUser.getId(), serials);
                     if (!ok) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + confirmId + "&error=ConfirmFailed"); return;
                     }
                     break;
                 }
                 case "cancel":
-                    ticketDao.cancel(Integer.parseInt(httpReq.getParameter("id")));
+                    ticketService.cancel(Integer.parseInt(httpReq.getParameter("id")));
                     break;
             }
         } catch (Exception e) { e.printStackTrace(); }

@@ -1,6 +1,6 @@
 package controller.warehouse;
 
-import dao.InternalDestinationDAO;
+import service.InternalDestinationService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -37,7 +37,7 @@ public class InternalDestinationServlet extends HttpServlet {
             action = "list";
         }
 
-        InternalDestinationDAO dao = new InternalDestinationDAO();
+        InternalDestinationService dao = new InternalDestinationService();
 
         switch (action) {
             case "list":
@@ -107,7 +107,7 @@ public class InternalDestinationServlet extends HttpServlet {
             }
         }
 
-        InternalDestinationDAO dao = new InternalDestinationDAO();
+        InternalDestinationService dao = new InternalDestinationService();
 
         try {
             switch (action) {

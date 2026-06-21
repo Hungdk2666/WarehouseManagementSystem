@@ -1,8 +1,8 @@
 package controller.warehouse;
 
-import dao.RequestDAO;
-import dao.TicketDAO;
-import dao.ProductItemDAO;
+import service.RequestService;
+import service.TicketService;
+import service.ProductItemService;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,37 +40,37 @@ public class ImportTicketServlet extends HttpServlet {
             action = "list";
 
         if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("TICKET_VIEW_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem phiếu nhập.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n xem phiáº¿u nháº­p.");
             return;
         }
         if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo phiếu nhập.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o phiáº¿u nháº­p.");
             return;
         }
 
-        TicketDAO ticketDao = new TicketDAO();
-        RequestDAO requestDao = new RequestDAO();
+        TicketService ticketService = new TicketService();
+        RequestService requestService = new RequestService();
 
         switch (action) {
             case "list":
-                httpReq.setAttribute("ticketList", ticketDao.getAll(TYPE));
+                httpReq.setAttribute("ticketList", ticketService.getAll(TYPE));
                 httpReq.getRequestDispatcher("/import/import-list.jsp").forward(httpReq, response);
                 break;
             case "detail": {
                 int id = Integer.parseInt(httpReq.getParameter("id"));
-                Ticket ticket = ticketDao.getById(id);
+                Ticket ticket = ticketService.getById(id);
                 if (ticket == null) {
                     response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=list");
                     return;
                 }
                 if (Ticket.STATUS_CONFIRMED.equals(ticket.getStatus())
                         || Ticket.STATUS_COMPLETED.equals(ticket.getStatus())) {
-                    List<ProductItem> serials = new ProductItemDAO().getItemsByTicketId(id);
+                    List<ProductItem> serials = new ProductItemService().getItemsByTicketId(id);
                     httpReq.setAttribute("importedSerials", serials);
                 } else if (Ticket.STATUS_DRAFT.equals(ticket.getStatus())
                         && Request.REASON_RETURN.equals(ticket.getRequestReason()) && ticket.getDetails() != null) {
                     java.util.Map<Integer, List<String>> availableSerials = new java.util.HashMap<>();
-                    Request req = requestDao.getById(ticket.getRequestId());
+                    Request req = requestService.getById(ticket.getRequestId());
                     String expectedSerialsStr = req != null ? req.getExpectedSerials() : null;
                     List<String> expectedSerialsList = new ArrayList<>();
                     if (expectedSerialsStr != null && !expectedSerialsStr.trim().isEmpty()) {
@@ -105,15 +105,15 @@ public class ImportTicketServlet extends HttpServlet {
                 break;
             }
             case "add": {
-                // Lọc theo kho của user: staff_hcm chỉ thấy yêu cầu nhập của TPHCM, staff_hn
-                // chỉ thấy HN
+                // Lá»c theo kho cá»§a user: staff_hcm chá»‰ tháº¥y yĂªu cáº§u nháº­p cá»§a TPHCM, staff_hn
+                // chá»‰ tháº¥y HN
                 Integer userWh = loggedInUser.getWarehouseId();
-                List<Request> pendingRequests = requestDao.getPendingOrApproved(Request.TYPE_IN, userWh);
+                List<Request> pendingRequests = requestService.getPendingOrApproved(Request.TYPE_IN, userWh);
                 httpReq.setAttribute("requestList", pendingRequests);
                 String reqIdParam = httpReq.getParameter("request_id");
                 if (reqIdParam != null && !reqIdParam.trim().isEmpty()) {
                     int reqId = Integer.parseInt(reqIdParam);
-                    httpReq.setAttribute("selectedRequest", requestDao.getById(reqId));
+                    httpReq.setAttribute("selectedRequest", requestService.getById(reqId));
                 }
                 httpReq.getRequestDispatcher("/import/import-add.jsp").forward(httpReq, response);
                 break;
@@ -140,26 +140,26 @@ public class ImportTicketServlet extends HttpServlet {
         }
 
         if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o.");
             return;
         }
         if ("confirm".equals(action) && !loggedInUser.hasPermission("TICKET_CONFIRM_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền confirm.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n confirm.");
             return;
         }
         if ("cancel".equals(action) && !loggedInUser.hasPermission("TICKET_CANCEL_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n há»§y.");
             return;
         }
 
-        TicketDAO ticketDao = new TicketDAO();
-        RequestDAO requestDao = new RequestDAO();
+        TicketService ticketService = new TicketService();
+        RequestService requestService = new RequestService();
 
         try {
             switch (action) {
                 case "add": {
                     int reqId = Integer.parseInt(httpReq.getParameter("request_id"));
-                    Request req = requestDao.getById(reqId);
+                    Request req = requestService.getById(reqId);
                     if (req == null || req.getCancelRequestedAt() != null
                             || Request.STATUS_CANCELLED.equals(req.getStatus())) {
                         response.sendRedirect(
@@ -172,8 +172,8 @@ public class ImportTicketServlet extends HttpServlet {
                                         + "&error=RequiresWarehouseAssignment");
                         return;
                     }
-                    // Check: user phải cùng kho với Request (Request.warehouseId = kho đích nhập
-                    // hàng)
+                    // Check: user pháº£i cĂ¹ng kho vá»›i Request (Request.warehouseId = kho Ä‘Ă­ch nháº­p
+                    // hĂ ng)
                     if (loggedInUser.getWarehouseId() != req.getWarehouseId()) {
                         response.sendRedirect(httpReq.getContextPath()
                                 + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=WrongWarehouse");
@@ -209,7 +209,7 @@ public class ImportTicketServlet extends HttpServlet {
                     ticket.setRequestId(reqId);
                     ticket.setWarehouseId(loggedInUser.getWarehouseId());
                     ticket.setKeeperId(loggedInUser.getId());
-                    if (!ticketDao.add(ticket, details)) {
+                    if (!ticketService.add(ticket, details)) {
                         response.sendRedirect(httpReq.getContextPath()
                                 + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=Failed");
                         return;
@@ -227,11 +227,11 @@ public class ImportTicketServlet extends HttpServlet {
                                 serials.add(s.trim());
                         }
                     }
-                    ticketDao.confirm(confirmId, loggedInUser.getId(), serials);
+                    ticketService.confirm(confirmId, loggedInUser.getId(), serials);
                     break;
                 }
                 case "cancel":
-                    ticketDao.cancel(Integer.parseInt(httpReq.getParameter("id")));
+                    ticketService.cancel(Integer.parseInt(httpReq.getParameter("id")));
                     break;
             }
         } catch (Exception e) {

@@ -1,6 +1,6 @@
 package controller.warehouse;
 
-import dao.CategoryDAO;
+import service.CategoryService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -37,7 +37,7 @@ public class CategoryServlet extends HttpServlet {
             action = "list";
         }
 
-        CategoryDAO dao = new CategoryDAO();
+        CategoryService dao = new CategoryService();
 
         switch (action) {
             case "list":
@@ -107,7 +107,7 @@ public class CategoryServlet extends HttpServlet {
             }
         }
 
-        CategoryDAO dao = new CategoryDAO();
+        CategoryService dao = new CategoryService();
 
         try {
             switch (action) {

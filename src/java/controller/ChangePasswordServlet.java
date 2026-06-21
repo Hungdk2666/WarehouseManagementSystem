@@ -7,9 +7,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import dao.UserDAO;
+import service.UserService;
 import model.User;
-import utils.SecurityUtils;
 
 @WebServlet(name = "ChangePasswordServlet", urlPatterns = {"/change-password"})
 public class ChangePasswordServlet extends HttpServlet {
@@ -40,10 +39,8 @@ public class ChangePasswordServlet extends HttpServlet {
         String newPassword = request.getParameter("newPassword");
         String confirmPassword = request.getParameter("confirmPassword");
         
-        String hashedOldPass = SecurityUtils.hashSHA256(oldPassword);
-        
-        UserDAO dao = new UserDAO();
-        User verifyUser = dao.login(loggedInUser.getUsername(), hashedOldPass);
+        UserService userService = new UserService();
+        User verifyUser = userService.login(loggedInUser.getUsername(), oldPassword);
         
         if (verifyUser == null) {
             request.setAttribute("error", "Incorrect old password!");
@@ -57,8 +54,7 @@ public class ChangePasswordServlet extends HttpServlet {
             return;
         }
         
-        String hashedNewPass = SecurityUtils.hashSHA256(newPassword);
-        boolean success = dao.updatePassword(loggedInUser.getId(), hashedNewPass);
+        boolean success = userService.updatePassword(loggedInUser.getId(), newPassword);
         
         if (success) {
             request.setAttribute("message", "Password changed successfully!");

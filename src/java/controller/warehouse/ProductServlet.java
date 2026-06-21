@@ -1,8 +1,8 @@
 package controller.warehouse;
 
-import dao.BrandDAO;
-import dao.CategoryDAO;
-import dao.ProductDAO;
+import service.BrandService;
+import service.CategoryService;
+import service.ProductService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -17,8 +17,8 @@ import model.Product;
 import model.ProductItem;
 import model.ProductSpecification;
 import model.User;
-import dao.ProductItemDAO;
-import dao.WarehouseDAO;
+import service.ProductItemService;
+import service.WarehouseService;
 import model.WarehouseStockBreakdown;
 
 @WebServlet(name = "ProductServlet", urlPatterns = {"/warehouse/product"})
@@ -46,9 +46,9 @@ public class ProductServlet extends HttpServlet {
             action = "list";
         }
 
-        ProductDAO dao = new ProductDAO();
-        CategoryDAO catDao = new CategoryDAO();
-        BrandDAO brandDao = new BrandDAO();
+        ProductService dao = new ProductService();
+        CategoryService catService = new CategoryService();
+        BrandService brandService = new BrandService();
 
         switch (action) {
             case "list":
@@ -73,12 +73,12 @@ public class ProductServlet extends HttpServlet {
                 }
 
                 List<Product> products = dao.searchAndFilterProducts(search, catId, brandId, lowStockOnly, userWarehouseId);
-                List<Category> categories = catDao.getAllCategories();
-                List<Brand> brands = brandDao.getAllBrands();
+                List<Category> categories = catService.getAllCategories();
+                List<Brand> brands = brandService.getAllBrands();
 
                 if (loggedInUser.getWarehouseId() == null) {
-                    WarehouseDAO whDao = new WarehouseDAO();
-                    request.setAttribute("warehouseList", whDao.getAllActiveWarehouses());
+                    WarehouseService whService = new WarehouseService();
+                    request.setAttribute("warehouseList", whService.getAllActiveWarehouses());
                 }
 
                 request.setAttribute("productList", products);
@@ -95,8 +95,8 @@ public class ProductServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/product?action=list");
                     return;
                 }
-                ProductItemDAO itemDao = new ProductItemDAO();
-                List<ProductItem> inStockSerials = itemDao.getInStockItemsByProductId(id, detailWarehouseId);
+                ProductItemService itemService = new ProductItemService();
+                List<ProductItem> inStockSerials = itemService.getInStockItemsByProductId(id, detailWarehouseId);
                 
                 if (loggedInUser.getWarehouseId() == null) {
                     List<WarehouseStockBreakdown> breakdown = dao.getWarehouseStockBreakdown(id);
@@ -114,8 +114,8 @@ public class ProductServlet extends HttpServlet {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add products.");
                     return;
                 }
-                List<Category> addCategories = catDao.getAllCategories();
-                List<Brand> addBrands = brandDao.getAllBrands();
+                List<Category> addCategories = catService.getAllCategories();
+                List<Brand> addBrands = brandService.getAllBrands();
                 request.setAttribute("categoryList", addCategories);
                 request.setAttribute("brandList", addBrands);
                 request.getRequestDispatcher("/products/product-add.jsp").forward(request, response);
@@ -133,8 +133,8 @@ public class ProductServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/product?action=list");
                     return;
                 }
-                List<Category> updateCategories = catDao.getAllCategories();
-                List<Brand> updateBrands = brandDao.getAllBrands();
+                List<Category> updateCategories = catService.getAllCategories();
+                List<Brand> updateBrands = brandService.getAllBrands();
                 request.setAttribute("product", updateProd);
                 request.setAttribute("categoryList", updateCategories);
                 request.setAttribute("brandList", updateBrands);
@@ -182,7 +182,7 @@ public class ProductServlet extends HttpServlet {
             }
         }
 
-        ProductDAO dao = new ProductDAO();
+        ProductService dao = new ProductService();
 
         try {
             switch (action) {

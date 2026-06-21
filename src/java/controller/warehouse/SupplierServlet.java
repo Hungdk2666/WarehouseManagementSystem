@@ -1,6 +1,6 @@
 package controller.warehouse;
 
-import dao.SupplierDAO;
+import service.SupplierService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -37,7 +37,7 @@ public class SupplierServlet extends HttpServlet {
             action = "list";
         }
 
-        SupplierDAO dao = new SupplierDAO();
+        SupplierService dao = new SupplierService();
 
         switch (action) {
             case "list":
@@ -107,7 +107,7 @@ public class SupplierServlet extends HttpServlet {
             }
         }
 
-        SupplierDAO dao = new SupplierDAO();
+        SupplierService dao = new SupplierService();
 
         try {
             switch (action) {

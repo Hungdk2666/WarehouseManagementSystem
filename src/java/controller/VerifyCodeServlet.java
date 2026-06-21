@@ -1,3 +1,4 @@
+
 package controller;
 
 import java.io.IOException;
@@ -7,7 +8,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import dao.UserDAO;
+import service.UserService;
 import model.User;
 
 @WebServlet(name = "VerifyCodeServlet", urlPatterns = {"/verify-code"})
@@ -25,8 +26,8 @@ public class VerifyCodeServlet extends HttpServlet {
         String email = request.getParameter("email");
         String code = request.getParameter("code");
         
-        UserDAO dao = new UserDAO();
-        User user = dao.verifyResetCode(email, code);
+        UserService userService = new UserService();
+        User user = userService.verifyResetCode(email, code);
         
         if (user != null) {
             HttpSession session = request.getSession();

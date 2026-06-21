@@ -7,7 +7,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import dao.UserDAO;
+import service.UserService;
 import model.User;
 
 @WebServlet(name = "ForgotPasswordServlet", urlPatterns = {"/forgot-password"})
@@ -23,12 +23,12 @@ public class ForgotPasswordServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String email = request.getParameter("email");
-        UserDAO dao = new UserDAO();
-        User user = dao.getUserByEmail(email);
+        UserService userService = new UserService();
+        User user = userService.getUserByEmail(email);
         
         if (user != null) {
             String resetCode = String.valueOf((int) (Math.random() * 900000) + 100000); // 6-digit code
-            dao.setResetCode(user.getId(), resetCode);
+            userService.setResetCode(user.getId(), resetCode);
             HttpSession session = request.getSession();
             session.setAttribute("resetEmail", user.getEmail());
             response.sendRedirect("verify_code.jsp");

@@ -1,11 +1,11 @@
 package controller.warehouse;
 
-import dao.RequestDAO;
-import dao.TicketDAO;
-import dao.InternalDestinationDAO;
-import dao.ProductDAO;
-import dao.WarehouseDAO;
-import dao.CustomerDAO;
+import service.RequestService;
+import service.TicketService;
+import service.InternalDestinationService;
+import service.ProductService;
+import service.WarehouseService;
+import service.CustomerService;
 import java.io.IOException;
 import java.sql.Date;
 import java.util.ArrayList;
@@ -43,14 +43,14 @@ public class ExportRequestServlet extends HttpServlet {
         if (action == null) action = "list";
 
         if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("REQUEST_VIEW_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem yêu cầu xuất."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n xem yĂªu cáº§u xuáº¥t."); return;
         }
         if ("add".equals(action) && !loggedInUser.hasPermission("REQUEST_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo yêu cầu xuất."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o yĂªu cáº§u xuáº¥t."); return;
         }
 
-        RequestDAO dao = new RequestDAO();
-        TicketDAO ticketDao = new TicketDAO();
+        RequestService dao = new RequestService();
+        TicketService ticketService = new TicketService();
 
         switch (action) {
             case "list":
@@ -61,26 +61,26 @@ public class ExportRequestServlet extends HttpServlet {
                 int id = Integer.parseInt(httpReq.getParameter("id"));
                 Request req = dao.getById(id);
                 if (req == null) { response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"); return; }
-                List<Ticket> tickets = ticketDao.getByRequestId(id);
+                List<Ticket> tickets = ticketService.getByRequestId(id);
                 httpReq.setAttribute("req", req);
                 httpReq.setAttribute("ticketList", tickets);
                 httpReq.getRequestDispatcher("/export_request/request-detail.jsp").forward(httpReq, response);
                 break;
             }
             case "add": {
-                ProductDAO pDao = new ProductDAO();
-                List<Warehouse> warehouses = new WarehouseDAO().getAllActiveWarehouses();
-                httpReq.setAttribute("destinationList", new InternalDestinationDAO().getAllDestinations());
-                httpReq.setAttribute("productList",    pDao.getAllProducts());
+                ProductService pService = new ProductService();
+                List<Warehouse> warehouses = new WarehouseService().getAllActiveWarehouses();
+                httpReq.setAttribute("destinationList", new InternalDestinationService().getAllDestinations());
+                httpReq.setAttribute("productList",    pService.getAllProducts());
                 httpReq.setAttribute("warehouseList",  warehouses);
-                httpReq.setAttribute("customerList",   new CustomerDAO().getAllCustomers());
+                httpReq.setAttribute("customerList",   new CustomerService().getAllCustomers());
                 // Map kho -> map product -> available qty (NEW/USED)
                 Map<Integer, Map<Integer, Integer>> stockMapNew = new HashMap<>();
                 Map<Integer, Map<Integer, Integer>> stockMapUsed = new HashMap<>();
                 for (Warehouse w : warehouses) {
                     Map<Integer, Integer> wStockNew = new HashMap<>();
                     Map<Integer, Integer> wStockUsed = new HashMap<>();
-                    for (Product p : pDao.getAllProducts(w.getId())) {
+                    for (Product p : pService.getAllProducts(w.getId())) {
                         wStockNew.put(p.getId(), p.getAvailableNewQty());
                         wStockUsed.put(p.getId(), p.getAvailableUsedQty());
                     }
@@ -108,17 +108,17 @@ public class ExportRequestServlet extends HttpServlet {
         if (action == null) { response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"); return; }
 
         if ("add".equals(action) && !loggedInUser.hasPermission("REQUEST_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo yêu cầu xuất."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o yĂªu cáº§u xuáº¥t."); return;
         }
         if (("approve".equals(action) || "reject".equals(action)) && !loggedInUser.hasPermission("REQUEST_APPROVE_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n duyá»‡t."); return;
         }
         if (("approveCancel".equals(action) || "rejectCancel".equals(action))
                 && !loggedInUser.hasPermission("REQUEST_APPROVE_CANCEL_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt hủy."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n duyá»‡t há»§y."); return;
         }
 
-        RequestDAO dao = new RequestDAO();
+        RequestService dao = new RequestService();
 
         try {
             switch (action) {
@@ -229,13 +229,13 @@ public class ExportRequestServlet extends HttpServlet {
                     if (req == null) break;
                     if (Request.STATUS_PENDING.equals(req.getStatus())) {
                         if (!loggedInUser.hasPermission("REQUEST_CANCEL_OUT")) {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy."); return;
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n há»§y."); return;
                         }
                         dao.cancelRequest(cancelId, loggedInUser.getId());
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"); return;
                     } else if (Request.STATUS_APPROVED.equals(req.getStatus())) {
                         if (!loggedInUser.hasPermission("REQUEST_REQUEST_CANCEL_OUT")) {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền đề xuất hủy."); return;
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n Ä‘á» xuáº¥t há»§y."); return;
                         }
                         dao.requestCancel(cancelId, loggedInUser.getId(), httpReq.getParameter("reason"));
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=detail&id=" + cancelId); return;

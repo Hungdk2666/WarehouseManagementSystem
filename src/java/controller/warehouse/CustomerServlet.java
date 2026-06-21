@@ -1,6 +1,6 @@
 package controller.warehouse;
 
-import dao.CustomerDAO;
+import service.CustomerService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -15,7 +15,7 @@ import model.User;
 @WebServlet(name = "CustomerServlet", urlPatterns = {"/warehouse/customer"})
 public class CustomerServlet extends HttpServlet {
 
-    private final CustomerDAO dao = new CustomerDAO();
+    private final CustomerService dao = new CustomerService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -32,7 +32,7 @@ public class CustomerServlet extends HttpServlet {
         if (action == null) action = "list";
 
         if (!loggedInUser.hasPermission("CUSTOMER_VIEW")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Báº¡n khĂ´ng cĂ³ quyá»n truy cáº­p.");
             return;
         }
 
@@ -58,14 +58,14 @@ public class CustomerServlet extends HttpServlet {
                 break;
             case "add":
                 if (!loggedInUser.hasPermission("CUSTOMER_ADD")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm khách hàng.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Báº¡n khĂ´ng cĂ³ quyá»n thĂªm khĂ¡ch hĂ ng.");
                     return;
                 }
                 request.getRequestDispatcher("/customer/customer-add.jsp").forward(request, response);
                 break;
             case "edit":
                 if (!loggedInUser.hasPermission("CUSTOMER_EDIT")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền chỉnh sửa khách hàng.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Báº¡n khĂ´ng cĂ³ quyá»n chá»‰nh sá»­a khĂ¡ch hĂ ng.");
                     return;
                 }
                 try {
@@ -109,7 +109,7 @@ public class CustomerServlet extends HttpServlet {
                 try {
                     String name = request.getParameter("customer_name");
                     if (name == null || name.trim().isEmpty()) {
-                        request.setAttribute("error", "Tên khách hàng không được để trống.");
+                        request.setAttribute("error", "TĂªn khĂ¡ch hĂ ng khĂ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
                         request.getRequestDispatcher("/customer/customer-add.jsp").forward(request, response);
                         return;
                     }
@@ -123,7 +123,7 @@ public class CustomerServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/customer?action=list");
                 } catch (Exception e) {
                     e.printStackTrace();
-                    request.setAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
+                    request.setAttribute("error", "CĂ³ lá»—i xáº£y ra: " + e.getMessage());
                     request.getRequestDispatcher("/customer/customer-add.jsp").forward(request, response);
                 }
                 break;
@@ -136,7 +136,7 @@ public class CustomerServlet extends HttpServlet {
                     int id = Integer.parseInt(request.getParameter("id"));
                     String name = request.getParameter("customer_name");
                     if (name == null || name.trim().isEmpty()) {
-                        request.setAttribute("error", "Tên khách hàng không được để trống.");
+                        request.setAttribute("error", "TĂªn khĂ¡ch hĂ ng khĂ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
                         Customer existing = dao.getCustomerById(id);
                         request.setAttribute("customer", existing);
                         request.getRequestDispatcher("/customer/customer-add.jsp").forward(request, response);

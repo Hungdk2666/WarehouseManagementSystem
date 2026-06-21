@@ -1,6 +1,6 @@
 package controller.warehouse;
 
-import dao.WarehouseDAO;
+import service.WarehouseService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -33,7 +33,7 @@ public class WarehouseServlet extends HttpServlet {
         String action = request.getParameter("action");
         if (action == null) action = "list";
 
-        WarehouseDAO dao = new WarehouseDAO();
+        WarehouseService dao = new WarehouseService();
 
         switch (action) {
             case "list":
@@ -77,7 +77,7 @@ public class WarehouseServlet extends HttpServlet {
         String action = request.getParameter("action");
         if (action == null) action = "";
 
-        WarehouseDAO dao = new WarehouseDAO();
+        WarehouseService dao = new WarehouseService();
 
         switch (action) {
             case "add":
@@ -87,7 +87,7 @@ public class WarehouseServlet extends HttpServlet {
                 String name = request.getParameter("warehouse_name");
                 String address = request.getParameter("address");
                 if (name == null || name.trim().isEmpty()) {
-                    request.setAttribute("error", "Tên kho không được để trống.");
+                    request.setAttribute("error", "TĂªn kho khĂ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
                     request.getRequestDispatcher("/warehouse_mgmt/warehouse-form.jsp").forward(request, response);
                     return;
                 }
@@ -95,7 +95,7 @@ public class WarehouseServlet extends HttpServlet {
                 newW.setWarehouseName(name);
                 newW.setAddress(address);
                 if (!dao.add(newW)) {
-                    request.setAttribute("error", "Tên kho đã tồn tại hoặc có lỗi xảy ra.");
+                    request.setAttribute("error", "TĂªn kho Ä‘Ă£ tá»“n táº¡i hoáº·c cĂ³ lá»—i xáº£y ra.");
                     request.getRequestDispatcher("/warehouse_mgmt/warehouse-form.jsp").forward(request, response);
                     return;
                 }
@@ -109,7 +109,7 @@ public class WarehouseServlet extends HttpServlet {
                 String eName = request.getParameter("warehouse_name");
                 String eAddr = request.getParameter("address");
                 if (eName == null || eName.trim().isEmpty()) {
-                    request.setAttribute("error", "Tên kho không được để trống.");
+                    request.setAttribute("error", "TĂªn kho khĂ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
                     request.setAttribute("warehouse", dao.getById(editId));
                     request.getRequestDispatcher("/warehouse_mgmt/warehouse-form.jsp").forward(request, response);
                     return;

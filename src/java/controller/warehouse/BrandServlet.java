@@ -1,6 +1,6 @@
 package controller.warehouse;
 
-import dao.BrandDAO;
+import service.BrandService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -37,7 +37,7 @@ public class BrandServlet extends HttpServlet {
             action = "list";
         }
 
-        BrandDAO dao = new BrandDAO();
+        BrandService dao = new BrandService();
 
         switch (action) {
             case "list":
@@ -107,7 +107,7 @@ public class BrandServlet extends HttpServlet {
             }
         }
 
-        BrandDAO dao = new BrandDAO();
+        BrandService dao = new BrandService();
 
         try {
             switch (action) {

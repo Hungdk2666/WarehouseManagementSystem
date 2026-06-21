@@ -1,6 +1,6 @@
 package controller.admin;
 
-import dao.UserDAO;
+import service.UserService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -11,8 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.User;
 import model.Role;
-import dao.RoleDAO;
-import utils.SecurityUtils;
+import service.RoleService;
 
 @WebServlet(name = "AdminUserServlet", urlPatterns = {"/admin/user"})
 public class UserServlet extends HttpServlet {
@@ -51,8 +50,8 @@ public class UserServlet extends HttpServlet {
             }
         }
 
-        UserDAO dao = new UserDAO();
-        RoleDAO roleDao = new RoleDAO();
+        UserService dao = new UserService();
+        RoleService roleService = new RoleService();
 
         switch (action) {
             case "list":
@@ -64,15 +63,15 @@ public class UserServlet extends HttpServlet {
                 } else {
                     list = dao.getAllUsers();
                 }
-                List<Role> roleList = roleDao.getAllRoles();
+                List<Role> roleList = roleService.getAllRoles();
                 request.setAttribute("userList", list);
                 request.setAttribute("roleList", roleList);
                 request.getRequestDispatcher("/admin/user-list.jsp").forward(request, response);
                 break;
             case "add":
-                List<Role> addRoleList = roleDao.getAllRoles();
+                List<Role> addRoleList = roleService.getAllRoles();
                 request.setAttribute("roleList", addRoleList);
-                request.setAttribute("warehouseList", new dao.WarehouseDAO().getAllActiveWarehouses());
+                request.setAttribute("warehouseList", new service.WarehouseService().getAllActiveWarehouses());
                 request.getRequestDispatcher("/admin/user-add.jsp").forward(request, response);
                 break;
             case "info":
@@ -84,9 +83,9 @@ public class UserServlet extends HttpServlet {
             case "update":
                 int idUpdate = Integer.parseInt(request.getParameter("id"));
                 User userUpdate = dao.getUserById(idUpdate);
-                List<Role> updateRoleList = roleDao.getAllRoles();
+                List<Role> updateRoleList = roleService.getAllRoles();
                 request.setAttribute("roleList", updateRoleList);
-                request.setAttribute("warehouseList", new dao.WarehouseDAO().getAllActiveWarehouses());
+                request.setAttribute("warehouseList", new service.WarehouseService().getAllActiveWarehouses());
                 request.setAttribute("userInfo", userUpdate);
                 request.getRequestDispatcher("/admin/user-update.jsp").forward(request, response);
                 break;
@@ -131,7 +130,7 @@ public class UserServlet extends HttpServlet {
             }
         }
 
-        UserDAO dao = new UserDAO();
+        UserService dao = new UserService();
 
         try {
             switch (action) {
@@ -150,9 +149,7 @@ public class UserServlet extends HttpServlet {
                     newUser.setRoleId(roleId);
                     newUser.setWarehouseId(warehouseId);
                     newUser.setStatus(true); // default active
-                    newUser.setPassword(SecurityUtils.hashSHA256("123456")); // Hashed immediately
-                    
-                    dao.addUser(newUser);
+                    dao.addUser(newUser, "123456");
                     break;
                 case "update":
                     int updateId = Integer.parseInt(request.getParameter("id"));

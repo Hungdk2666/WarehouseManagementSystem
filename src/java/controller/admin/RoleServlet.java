@@ -1,6 +1,6 @@
 package controller.admin;
 
-import dao.RoleDAO;
+import service.RoleService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -45,7 +45,7 @@ public class RoleServlet extends HttpServlet {
             }
         }
 
-        RoleDAO dao = new RoleDAO();
+        RoleService dao = new RoleService();
 
         switch (action) {
             case "list":
@@ -117,7 +117,7 @@ public class RoleServlet extends HttpServlet {
             }
         }
 
-        RoleDAO dao = new RoleDAO();
+        RoleService dao = new RoleService();
 
         try {
             switch (action) {

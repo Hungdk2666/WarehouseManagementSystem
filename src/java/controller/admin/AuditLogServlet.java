@@ -1,6 +1,6 @@
 package controller.admin;
 
-import dao.AuditLogDAO;
+import service.AuditLogService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -49,7 +49,7 @@ public class AuditLogServlet extends HttpServlet {
         
         int pageSize = 15;
         
-        AuditLogDAO dao = new AuditLogDAO();
+        AuditLogService dao = new AuditLogService();
         List<AuditLog> list = dao.getLogs(search, actionFilter, startDate, endDate, page, pageSize);
         int totalLogs = dao.getLogsCount(search, actionFilter, startDate, endDate);
         int totalPages = (int) Math.ceil((double) totalLogs / pageSize);

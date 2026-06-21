@@ -7,7 +7,9 @@ import java.security.NoSuchAlgorithmException;
 public class SecurityUtils {
 
     public static String hashSHA256(String input) {
-        if (input == null) return null;
+        if (input == null) {
+            return null;
+        }
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] encodedhash = digest.digest(input.getBytes(StandardCharsets.UTF_8));

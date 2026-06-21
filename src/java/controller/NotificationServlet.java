@@ -1,6 +1,6 @@
 package controller;
 
-import dao.NotificationDAO;
+import service.NotificationService;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -33,7 +33,7 @@ public class NotificationServlet extends HttpServlet {
         }
 
         String servletPath = request.getServletPath();
-        NotificationDAO dao = new NotificationDAO();
+        NotificationService dao = new NotificationService();
 
         if ("/api/notifications".equals(servletPath)) {
             String action = request.getParameter("action");
@@ -114,7 +114,7 @@ public class NotificationServlet extends HttpServlet {
         }
 
         String servletPath = request.getServletPath();
-        NotificationDAO dao = new NotificationDAO();
+        NotificationService dao = new NotificationService();
 
         if ("/api/notifications".equals(servletPath)) {
             String action = request.getParameter("action");
