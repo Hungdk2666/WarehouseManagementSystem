@@ -62,9 +62,20 @@
                                              if (allPerms != null) {
                                                  for (Permission p : allPerms) {
                                                      String name = p.getPermissionName();
-                                                     int idx = name.lastIndexOf("_");
-                                                     if (idx > 0) {
-                                                         String resource = name.substring(0, idx);
+                                                     String resource = "";
+                                                     
+                                                     if ((name.startsWith("REQUEST_") || name.startsWith("TICKET_")) && (name.endsWith("_IN") || name.endsWith("_OUT"))) {
+                                                         String prefix = name.substring(0, name.indexOf("_"));
+                                                         String suffix = name.endsWith("_IN") ? "_IN" : "_OUT";
+                                                         resource = prefix + suffix;
+                                                     } else {
+                                                         int idx = name.lastIndexOf("_");
+                                                         if (idx > 0) {
+                                                             resource = name.substring(0, idx);
+                                                         }
+                                                     }
+                                                     
+                                                     if (!resource.isEmpty()) {
                                                          if (!groupedPerms.containsKey(resource)) {
                                                              groupedPerms.put(resource, new java.util.ArrayList<Permission>());
                                                          }
@@ -95,7 +106,7 @@
                                                             for (java.util.Map.Entry<String, java.util.List<Permission>> entry : groupedPerms.entrySet()) {
                                                                 String resource = entry.getKey();
                                                                 java.util.List<Permission> rPerms = entry.getValue();
-                                                                boolean isAdminResource = "USER".equals(resource) || "ROLE".equals(resource) || "SYSTEM_LOG".equals(resource);
+                                                                boolean isAdminResource = "USER".equals(resource) || "ROLE".equals(resource) || "AUDIT_LOG".equals(resource);
                                                                 boolean isRowEditable = isSystemAdmin ? isAdminResource : !isAdminResource;
                                                     %>
                                                         <tr class="<%= !isRowEditable ? "table-light text-muted" : "" %>" style="<%= !isRowEditable ? "opacity: 0.6;" : "" %>">
@@ -112,7 +123,13 @@
                                                                          for (Permission p : rPerms) {
                                                                              boolean hasPerm = assignedPerms != null && assignedPerms.contains(p.getId());
                                                                              String name = p.getPermissionName();
-                                                                             String action = name.substring(name.lastIndexOf("_") + 1);
+                                                                             String action = "";
+                                                                             if ((name.startsWith("REQUEST_") || name.startsWith("TICKET_")) && (name.endsWith("_IN") || name.endsWith("_OUT"))) {
+                                                                                 String suffix = name.endsWith("_IN") ? "_IN" : "_OUT";
+                                                                                 action = name.substring(name.indexOf("_") + 1, name.lastIndexOf(suffix));
+                                                                             } else {
+                                                                                 action = name.substring(name.lastIndexOf("_") + 1);
+                                                                             }
                                                                              
                                                                              String actionText = action;
                                                                              if ("VIEW".equals(action)) actionText = "XEM";
@@ -125,6 +142,9 @@
                                                                              else if ("REJECT".equals(action)) actionText = "TỪ CHỐI";
                                                                              else if ("SUBMIT".equals(action)) actionText = "GỬI BÁO CÁO";
                                                                              else if ("CANCEL".equals(action)) actionText = "HỦY";
+                                                                             else if ("CONFIRM".equals(action)) actionText = "XÁC NHẬN";
+                                                                             else if ("REQUEST_CANCEL".equals(action)) actionText = "ĐỀ XUẤT HỦY";
+                                                                             else if ("APPROVE_CANCEL".equals(action)) actionText = "DUYỆT HỦY";
                                                                              
                                                                              boolean isEditable = isSystemAdmin ? isAdminResource : !isAdminResource;
                                                                              
