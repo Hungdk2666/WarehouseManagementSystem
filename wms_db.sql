@@ -265,7 +265,7 @@ CREATE TABLE Product_Items (
     id             INT AUTO_INCREMENT PRIMARY KEY,
     product_id     INT NOT NULL,
     serial_number  VARCHAR(100) NOT NULL UNIQUE,
-    status         ENUM('IN_STOCK','EXPORTED','IN_TRANSIT','QUARANTINE') NOT NULL DEFAULT 'IN_STOCK',
+    status         ENUM('IN_STOCK','EXPORTED','IN_TRANSIT','QUARANTINE','LOST') NOT NULL DEFAULT 'IN_STOCK',
     item_condition ENUM('NEW','USED','DAMAGED') NOT NULL DEFAULT 'NEW',
     warehouse_id   INT NOT NULL DEFAULT 1,
     created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -277,7 +277,7 @@ CREATE TABLE Product_Item_Movements (
     id                INT AUTO_INCREMENT PRIMARY KEY,
     product_item_id   INT NOT NULL,
     ticket_id         INT NULL,    -- 1 FK duy nhất thay vì 2 (import_ticket_id, export_ticket_id)
-    action            ENUM('IMPORT_IN','EXPORT_OUT','TRANSFER_OUT','TRANSFER_IN','RETURN_IN','QUARANTINE') NOT NULL,
+    action            ENUM('IMPORT_IN','EXPORT_OUT','TRANSFER_OUT','TRANSFER_IN','RETURN_IN','QUARANTINE','STOCKTAKE_ADJUST') NOT NULL,
     from_warehouse_id INT NULL,
     to_warehouse_id   INT NOT NULL,
     condition_at_time ENUM('NEW','USED','DAMAGED') NOT NULL,
@@ -310,27 +310,73 @@ CREATE TABLE Notifications (
 -- ========================================================
 
 CREATE TABLE Stocktakes (
-    id              INT AUTO_INCREMENT PRIMARY KEY,
-    stocktake_code  VARCHAR(50) NOT NULL UNIQUE,
-    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    created_by      INT NOT NULL,
-    status          VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
-    submitted_at    DATETIME DEFAULT NULL,
-    approved_by     INT DEFAULT NULL,
-    approved_at     DATETIME DEFAULT NULL,
-    notes           TEXT,
-    FOREIGN KEY (created_by)  REFERENCES Users(id) ON DELETE RESTRICT,
-    FOREIGN KEY (approved_by) REFERENCES Users(id) ON DELETE SET NULL
+    id                    INT AUTO_INCREMENT PRIMARY KEY,
+    stocktake_code        VARCHAR(50) NOT NULL UNIQUE,
+    warehouse_id          INT NOT NULL,
+    scope                 ENUM('FULL','PARTIAL') NOT NULL DEFAULT 'PARTIAL',
+    count_mode            ENUM('QUANTITY','SERIAL') NOT NULL DEFAULT 'QUANTITY',
+    status                ENUM('DRAFT','COUNTING','SUBMITTED','L1_APPROVED','APPROVED','REJECTED','ADJUSTED','CANCELLED')
+                          NOT NULL DEFAULT 'DRAFT',
+    requires_l2_approval  BOOLEAN NOT NULL DEFAULT FALSE,
+    variance_percent      DECIMAL(5,2) NULL,
+    variance_value        DECIMAL(15,2) NULL,
+    notes                 TEXT,
+    reject_reason         TEXT NULL,
+    created_at            DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_by            INT NOT NULL,
+    counted_by            INT NULL,
+    counted_at            DATETIME NULL,
+    submitted_at          DATETIME NULL,
+    l1_approved_by        INT NULL,
+    l1_approved_at        DATETIME NULL,
+    l2_approved_by        INT NULL,
+    l2_approved_at        DATETIME NULL,
+    adjusted_at           DATETIME NULL,
+    FOREIGN KEY (warehouse_id)   REFERENCES Warehouses(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by)     REFERENCES Users(id)      ON DELETE RESTRICT,
+    FOREIGN KEY (counted_by)     REFERENCES Users(id)      ON DELETE SET NULL,
+    FOREIGN KEY (l1_approved_by) REFERENCES Users(id)      ON DELETE SET NULL,
+    FOREIGN KEY (l2_approved_by) REFERENCES Users(id)      ON DELETE SET NULL
 );
 
 CREATE TABLE Stocktake_Details (
     stocktake_id    INT,
     product_id      INT,
     theoretical_qty INT NOT NULL,
-    actual_qty      INT NOT NULL,
+    actual_qty      INT NOT NULL DEFAULT 0,
+    damaged_qty     INT NOT NULL DEFAULT 0,
+    variance_reason ENUM('NONE','LOST','FOUND','DAMAGED','EXPIRED','MISCOUNT','OTHER') NOT NULL DEFAULT 'NONE',
+    note            VARCHAR(255) NULL,
     PRIMARY KEY (stocktake_id, product_id),
     FOREIGN KEY (stocktake_id) REFERENCES Stocktakes(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id)   REFERENCES Products(id)   ON DELETE RESTRICT
+);
+
+-- Track từng serial khi count_mode='SERIAL'
+CREATE TABLE Stocktake_Items (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    stocktake_id    INT NOT NULL,
+    product_item_id INT NULL,                  -- NULL khi scanned_status='EXTRA' (serial mới chưa có trong DB)
+    product_id      INT NOT NULL,
+    serial_number   VARCHAR(100) NOT NULL,
+    scanned_status  ENUM('FOUND','MISSING','DAMAGED','EXTRA') NOT NULL,
+    new_condition   ENUM('NEW','USED','DAMAGED') NULL,
+    note            VARCHAR(255) NULL,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (stocktake_id)    REFERENCES Stocktakes(id)    ON DELETE CASCADE,
+    FOREIGN KEY (product_item_id) REFERENCES Product_Items(id) ON DELETE RESTRICT,
+    FOREIGN KEY (product_id)      REFERENCES Products(id)      ON DELETE RESTRICT,
+    UNIQUE KEY uk_stocktake_serial (stocktake_id, serial_number)
+);
+
+-- Config ngưỡng duyệt 2 cấp — chỉ Business Admin sửa được
+CREATE TABLE Stocktake_Config (
+    id                  INT AUTO_INCREMENT PRIMARY KEY,
+    threshold_percent   DECIMAL(5,2) NOT NULL DEFAULT 5.00,
+    threshold_value     DECIMAL(15,2) NOT NULL DEFAULT 10000000,
+    updated_by          INT,
+    updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by) REFERENCES Users(id) ON DELETE SET NULL
 );
 
 -- Thẻ kho — reference_id trỏ về Tickets.id (không còn phân biệt import/export ticket)
@@ -436,12 +482,12 @@ INSERT INTO Permissions (id, permission_name, description) VALUES
 (51, 'TICKET_CONFIRM_OUT',        'Confirm phiếu xuất, chốt tồn'),
 (52, 'TICKET_CANCEL_OUT',         'Hủy phiếu xuất kho'),
 -- Stocktake
-(53, 'STOCKTAKE_VIEW',            'Xem danh sách phiếu kiểm kê'),
-(54, 'STOCKTAKE_ADD',             'Tạo phiếu kiểm kê'),
-(55, 'STOCKTAKE_EDIT',            'Sửa phiếu kiểm kê'),
-(56, 'STOCKTAKE_SUBMIT',          'Nộp phiếu kiểm kê'),
-(57, 'STOCKTAKE_APPROVE',         'Duyệt phiếu kiểm kê'),
-(58, 'STOCKTAKE_REJECT',          'Từ chối phiếu kiểm kê'),
+(53, 'STOCKTAKE_VIEW',            'Xem danh sách và chi tiết phiếu kiểm kê'),
+(54, 'STOCKTAKE_CREATE',          'Tạo phiếu kiểm kê (Warehouse Manager)'),
+(55, 'STOCKTAKE_COUNT',           'Đếm thực tế trên phiếu (Warehouse Staff)'),
+(56, 'STOCKTAKE_SUBMIT',          'Gửi phiếu đếm xong lên duyệt'),
+(57, 'STOCKTAKE_APPROVE_L1',      'Duyệt cấp 1 phiếu kiểm kê (Warehouse Manager)'),
+(58, 'STOCKTAKE_REJECT',          'Bác bỏ phiếu kiểm kê'),
 -- Analytics
 (59, 'STOCK_LEDGER_VIEW',         'Xem lịch sử thẻ kho'),
 (60, 'LOW_STOCK_ALERT_VIEW',      'Xem cảnh báo tồn thấp'),
@@ -455,38 +501,43 @@ INSERT INTO Permissions (id, permission_name, description) VALUES
 -- Warehouse
 (67, 'WAREHOUSE_VIEW',            'Xem danh sách kho hàng'),
 (68, 'WAREHOUSE_ADD',             'Thêm kho hàng mới'),
-(69, 'WAREHOUSE_EDIT',            'Chỉnh sửa và đổi trạng thái kho');
+(69, 'WAREHOUSE_EDIT',            'Chỉnh sửa và đổi trạng thái kho'),
+-- Stocktake duyệt cấp 2 + config (Business Admin)
+(70, 'STOCKTAKE_APPROVE_L2',      'Duyệt cấp 2 khi chênh lệch vượt ngưỡng (Business Admin)'),
+(71, 'STOCKTAKE_CONFIG',          'Sửa ngưỡng duyệt 2 cấp kiểm kê (Business Admin)'),
+-- Inventory (tách khỏi Product)
+(72, 'INVENTORY_VIEW',            'Xem tồn kho theo từng warehouse'),
+(73, 'INVENTORY_EXPORT',          'Xuất báo cáo tồn kho');
 
 -- Role_Permissions
 -- 1. System Admin
 INSERT INTO Role_Permissions (role_id, permission_id) VALUES
-(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9),(1,10),
-(1,67),(1,68),(1,69);
+(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9),(1,10);
 
--- 2. Business Admin (giám đốc duyệt)
+-- 2. Business Admin (giám đốc duyệt) — bao gồm STOCKTAKE_APPROVE_L2 + STOCKTAKE_CONFIG
 INSERT INTO Role_Permissions (role_id, permission_id) VALUES
 (2,10),(2,11),(2,15),(2,19),(2,23),(2,27),
 (2,31),(2,35),(2,37),(2,38),(2,42),(2,44),
-(2,45),(2,49),(2,53),(2,57),
+(2,45),(2,49),(2,53),(2,58),(2,70),(2,71),(2,72),(2,73),
 (2,59),(2,60),(2,61),(2,62),
 (2,63),(2,64),(2,65),(2,66),(2,67);
 
--- 3. Warehouse Manager (confirm phiếu, master data)
+-- 3. Warehouse Manager (confirm phiếu, master data, tạo+duyệt L1 kiểm kê)
 INSERT INTO Role_Permissions (role_id, permission_id) VALUES
 (3,11),(3,12),(3,13),(3,14),(3,15),(3,16),(3,17),(3,18),
 (3,19),(3,20),(3,21),(3,22),(3,23),(3,24),(3,25),(3,26),
 (3,27),(3,28),(3,29),(3,30),
 (3,31),(3,38),
 (3,45),(3,47),(3,48),(3,49),(3,51),(3,52),
-(3,53),(3,58),(3,59),(3,60),
-(3,63),(3,67),(3,69);
+(3,53),(3,54),(3,57),(3,58),(3,59),(3,60),
+(3,63),(3,67),(3,69),(3,72),(3,73);
 
--- 4. Warehouse Staff (tạo phiếu, kiểm kê)
+-- 4. Warehouse Staff (tạo phiếu nhập/xuất, đếm kiểm kê)
 INSERT INTO Role_Permissions (role_id, permission_id) VALUES
 (4,11),(4,15),(4,19),(4,23),(4,27),
 (4,45),(4,46),(4,49),(4,50),
-(4,53),(4,54),(4,55),(4,56),
-(4,59),
+(4,53),(4,55),(4,56),
+(4,59),(4,72),
 (4,31),(4,38);
 
 -- 5. Sales Staff (tạo yêu cầu, quản lý NCC/KH)
@@ -635,6 +686,11 @@ INSERT INTO Product_Ledger (product_id, transaction_type, reference_id, change_q
 (5,'IMPORT',2,12,12,4,1),
 (6,'IMPORT',2, 3, 3,4,1),
 (3,'IMPORT',1,20,24,4,1);
+
+-- ========================================================
+-- SEED: Stocktake_Config
+-- ========================================================
+INSERT INTO Stocktake_Config (id, threshold_percent, threshold_value) VALUES (1, 5.00, 10000000);
 
 -- ========================================================
 -- SEED: Product_Items
