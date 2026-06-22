@@ -842,6 +842,7 @@ public class TicketDAO {
                 r.setPartnerType(rs.getString("partner_type"));
                 r.setPartnerId((Integer) rs.getObject("partner_id"));
                 r.setRefTicketId((Integer) rs.getObject("ref_ticket_id"));
+                r.setExpectedSerials(rs.getString("expected_serials"));
                 r.setStaffId(rs.getInt("staff_id"));
                 r.setRequestedCondition(rs.getString("requested_condition"));
                 r.setStatus(rs.getString("status"));
