@@ -32,16 +32,8 @@ public class ProductItemService {
         return dao.getExportedItemsByProductId(arg0);
     }
 
-    public List<ProductItem> getItemsByImportTicketId(int arg0) {
-        return dao.getItemsByImportTicketId(arg0);
-    }
-
-    public List<ProductItem> getExportedItemsByExportTicketId(int arg0) {
-        return dao.getExportedItemsByExportTicketId(arg0);
-    }
-
-    public List<ProductItem> getItemsByExportTicketId(int arg0) {
-        return dao.getItemsByExportTicketId(arg0);
+    public List<ProductItem> getExportedItemsByTicketId(int ticketId) {
+        return dao.getExportedItemsByTicketId(ticketId);
     }
 
     public List<ProductItem> getInStockItemsByProductId(int arg0, String arg1) {

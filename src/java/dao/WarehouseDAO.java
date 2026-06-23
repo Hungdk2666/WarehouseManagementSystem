@@ -125,8 +125,7 @@ public class WarehouseDAO {
         return 0;
     }
 
-    /** Count pending (DRAFT) import tickets for a warehouse. */
-    public int countPendingImportTickets(int warehouseId) {
+    public int countPendingInTickets(int warehouseId) {
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "SELECT COUNT(*) FROM Tickets WHERE type='IN' AND warehouse_id = ? AND status = 'DRAFT'")) {
@@ -138,8 +137,7 @@ public class WarehouseDAO {
         return 0;
     }
 
-    /** Count pending (DRAFT) export tickets for a warehouse. */
-    public int countPendingExportTickets(int warehouseId) {
+    public int countPendingOutTickets(int warehouseId) {
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "SELECT COUNT(*) FROM Tickets WHERE type='OUT' AND warehouse_id = ? AND status = 'DRAFT'")) {

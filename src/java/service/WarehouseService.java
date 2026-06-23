@@ -15,16 +15,16 @@ public class WarehouseService {
         return dao.getAllActiveWarehouses();
     }
 
-    public int countPendingExportTickets(int arg0) {
-        return dao.countPendingExportTickets(arg0);
+    public int countPendingOutTickets(int arg0) {
+        return dao.countPendingOutTickets(arg0);
     }
 
     public int countProductsInStock(int arg0) {
         return dao.countProductsInStock(arg0);
     }
 
-    public int countPendingImportTickets(int arg0) {
-        return dao.countPendingImportTickets(arg0);
+    public int countPendingInTickets(int arg0) {
+        return dao.countPendingInTickets(arg0);
     }
 
     public int countIncomingTransfers(int arg0) {

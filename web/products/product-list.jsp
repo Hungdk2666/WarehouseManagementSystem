@@ -70,22 +70,20 @@
                 </div>
 
                 <!-- Searching & Filtering Panel -->
-                <div class="card filter-card bg-white p-4 mb-4">
-                    <form action="product" method="GET" class="row g-3 align-items-end">
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                    <form action="product" method="GET" class="row g-2">
                         <input type="hidden" name="action" value="list">
                         
-                        <div class="<%= loggedInUser.getWarehouseId() == null ? "col-md-3" : "col-md-3" %>">
-                            <label for="search" class="form-label small">Tìm SKU / Tên sản phẩm</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                <input type="text" class="form-control border-start-0 ps-0" id="search" name="search" value="<%= searchVal != null ? searchVal : "" %>" placeholder="Nhập mã SKU hoặc tên...">
-                            </div>
+                        <div class="<%= loggedInUser.getWarehouseId() == null ? "col-md-3" : "col-md-4" %>">
+                            <label for="search" class="form-label small fw-semibold">Tìm kiếm</label>
+                            <input type="text" class="form-control form-control-sm" id="search" name="search" value="<%= searchVal != null ? searchVal : "" %>" placeholder="Nhập mã SKU hoặc tên...">
                         </div>
 
                         <% if (loggedInUser.getWarehouseId() == null) { %>
                         <div class="col-md-2">
-                            <label for="warehouseId" class="form-label small">Lọc theo Kho</label>
-                            <select class="form-select" id="warehouseId" name="warehouseId">
+                            <label for="warehouseId" class="form-label small fw-semibold">Lọc theo Kho</label>
+                            <select class="form-select form-select-sm" id="warehouseId" name="warehouseId">
                                 <option value="">Tất cả kho</option>
                                 <%
                                     if (warehouseList != null) {
@@ -101,10 +99,10 @@
                         </div>
                         <% } %>
 
-                        <div class="<%= loggedInUser.getWarehouseId() == null ? "col-md-2" : "col-md-3" %>">
-                            <label for="categoryId" class="form-label small">Lọc theo Danh mục</label>
-                            <select class="form-select" id="categoryId" name="categoryId">
-                                <option value="">Tất cả danh mục</option>
+                        <div class="col-md-2">
+                            <label for="categoryId" class="form-label small fw-semibold">Danh mục</label>
+                            <select class="form-select form-select-sm" id="categoryId" name="categoryId">
+                                <option value="">Tất cả</option>
                                 <%
                                     if (categoryList != null) {
                                         for (Category c : categoryList) {
@@ -118,10 +116,10 @@
                             </select>
                         </div>
 
-                        <div class="<%= loggedInUser.getWarehouseId() == null ? "col-md-2" : "col-md-3" %>">
-                            <label for="brandId" class="form-label small">Lọc theo Thương hiệu</label>
-                            <select class="form-select" id="brandId" name="brandId">
-                                <option value="">Tất cả thương hiệu</option>
+                        <div class="col-md-2">
+                            <label for="brandId" class="form-label small fw-semibold">Thương hiệu</label>
+                            <select class="form-select form-select-sm" id="brandId" name="brandId">
+                                <option value="">Tất cả</option>
                                 <%
                                     if (brandList != null) {
                                         for (Brand b : brandList) {
@@ -135,37 +133,31 @@
                             </select>
                         </div>
 
-                        <div class="<%= loggedInUser.getWarehouseId() == null ? "col-md-3" : "col-md-3" %> d-flex flex-column justify-content-end align-items-start">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="lowStock" name="lowStock" value="true" <%= lowStockVal ? "checked" : "" %>>
-                                <label class="form-check-label text-danger fw-semibold small" for="lowStock">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Chỉ hiển thị cảnh báo sắp hết hàng
-                                </label>
-                            </div>
-                            <div class="d-flex gap-2 w-100">
-                                <button type="submit" class="btn btn-primary btn-sm flex-fill py-2"><i class="bi bi-funnel-fill me-1"></i> Áp dụng lọc</button>
-                                <a href="product?action=list" class="btn btn-outline-secondary btn-sm flex-fill py-2 text-center">Đặt lại</a>
-                            </div>
+                        <div class="col-md-3 d-flex align-items-end gap-1">
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Lọc</button>
+                            <a href="product?action=list" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></a>
+                            <a href="<%= request.getContextPath() %>/warehouse/inventory" class="btn btn-outline-info btn-sm" title="Tồn kho riêng"><i class="bi bi-clipboard-data"></i> Tồn kho</a>
                         </div>
                     </form>
+                    </div>
                 </div>
 
                 <!-- Product List Card -->
-                <div class="card shadow-sm border-0 bg-white mb-4">
+                <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
                         <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-seam-fill me-2"></i>Danh sách sản phẩm</h5>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table id="productTable" class="table table-hover align-middle text-center mb-0">
-                                <thead>
+                                <thead class="table-light">
                                     <tr>
                                         <th class="text-nowrap">SKU</th>
                                         <th class="text-start ps-3 text-nowrap" style="width: 30%; min-width: 220px;">Tên sản phẩm</th>
                                         <th class="text-nowrap">Danh mục</th>
                                         <th class="text-nowrap">Thương hiệu</th>
                                         <th class="text-nowrap">Đơn vị</th>
-                                        <th class="text-nowrap">Tồn kho (Khả dụng / Thực tế)</th>
+                                        <th class="text-nowrap">Mức tồn tối thiểu</th>
                                         <th class="text-nowrap">Giá vốn trung bình</th>
                                         <th class="text-nowrap">Trạng thái</th>
                                         <th class="text-nowrap">Thao tác</th>
@@ -175,35 +167,22 @@
                                     <%
                                         if (productList != null && !productList.isEmpty()) {
                                             for (Product p : productList) {
-                                                boolean isLowStock = p.getAvailableQty() <= p.getMinStock();
                                     %>
-                                    <tr class="<%= isLowStock ? "low-stock-row" : "" %>">
+                                    <tr>
                                         <td class="fw-bold text-primary text-nowrap"><%= p.getSku() %></td>
                                         <td class="fw-bold text-slate-800 text-start ps-3"><%= p.getProductName() %></td>
-                                        <td class="text-nowrap"><span class="badge bg-light text-dark px-2.5 py-1.5"><%= p.getCategoryName() != null ? p.getCategoryName() : "Chưa phân loại" %></span></td>
-                                        <td class="text-nowrap"><span class="badge bg-light text-dark px-2.5 py-1.5"><%= p.getBrandName() != null ? p.getBrandName() : "Chưa phân loại" %></span></td>
+                                        <td class="text-nowrap"><span class="badge bg-light text-dark"><%= p.getCategoryName() != null ? p.getCategoryName() : "Chưa phân loại" %></span></td>
+                                        <td class="text-nowrap"><span class="badge bg-light text-dark"><%= p.getBrandName() != null ? p.getBrandName() : "Chưa phân loại" %></span></td>
                                         <td class="text-muted text-nowrap"><%= p.getUnit() %></td>
-                                        <td class="text-nowrap">
-                                            <% if (isLowStock) { %>
-                                                <span class="badge bg-danger bg-opacity-10 text-danger fw-bold px-2.5 py-1.5" title="Cảnh báo sắp hết hàng! Giới hạn an toàn: <%= p.getMinStock() %>">
-                                                    <%= p.getAvailableQty() %> <i class="bi bi-exclamation-triangle-fill"></i>
-                                                </span>
-                                            <% } else { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5">
-                                                    <%= p.getAvailableQty() %>
-                                                </span>
-                                            <% } %>
-                                            <span class="text-muted mx-1">/</span>
-                                            <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5" title="Tồn kho thực tế trong kho">
-                                                <%= p.getPhysicalQty() %>
-                                            </span>
+                                        <td class="text-nowrap text-muted small">
+                                            <i class="bi bi-shield-check"></i> <%= p.getMinStock() %> <%= p.getUnit() %>
                                         </td>
                                         <td class="fw-bold text-success-emphasis text-nowrap"><%= String.format("%,.0f đ", p.getAverageCost()) %></td>
                                         <td class="text-nowrap">
                                             <% if (p.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-danger bg-opacity-10 text-danger px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
+                                                <span class="badge bg-danger bg-opacity-10 text-danger"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
                                             <% } %>
                                         </td>
                                         <td class="text-nowrap">
@@ -242,7 +221,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent border-top-0 d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 bg-light rounded-bottom-3 gap-3">
+                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
                         <div class="d-flex align-items-center gap-2">
                             <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
                             <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">

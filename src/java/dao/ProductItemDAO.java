@@ -176,18 +176,7 @@ public class ProductItemDAO {
         return list;
     }
 
-    /** Backward-compat alias — same as getItemsByTicketId. */
-    public List<ProductItem> getItemsByExportTicketId(int ticketId) {
-        return getItemsByTicketId(ticketId);
-    }
-
-    /** Backward-compat alias — same as getItemsByTicketId. */
-    public List<ProductItem> getItemsByImportTicketId(int ticketId) {
-        return getItemsByTicketId(ticketId);
-    }
-
-    /** Returns EXPORTED items that were on a given export ticket (for return flow). */
-    public List<ProductItem> getExportedItemsByExportTicketId(int exportTicketId) {
+    public List<ProductItem> getExportedItemsByTicketId(int ticketId) {
         List<ProductItem> list = new ArrayList<>();
         String query = "SELECT DISTINCT i.*, p.product_name, p.sku, p.unit "
                      + "FROM Product_Items i "
@@ -198,7 +187,7 @@ public class ProductItemDAO {
                      + "ORDER BY i.id ASC";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setInt(1, exportTicketId);
+            ps.setInt(1, ticketId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     ProductItem item = mapRow(rs);
