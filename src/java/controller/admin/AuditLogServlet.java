@@ -47,7 +47,15 @@ public class AuditLogServlet extends HttpServlet {
             }
         }
         
-        int pageSize = 15;
+        int pageSize = 10;
+        String pageSizeStr = request.getParameter("pageSize");
+        if (pageSizeStr != null && !pageSizeStr.isEmpty()) {
+            try {
+                pageSize = Integer.parseInt(pageSizeStr);
+            } catch (NumberFormatException e) {
+                pageSize = 10;
+            }
+        }
         
         AuditLogService dao = new AuditLogService();
         List<AuditLog> list = dao.getLogs(search, actionFilter, startDate, endDate, page, pageSize);
@@ -64,6 +72,7 @@ public class AuditLogServlet extends HttpServlet {
         request.setAttribute("currentPage", page);
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("totalCount", totalLogs);
+        request.setAttribute("pageSize", pageSize);
         
         request.setAttribute("search", search);
         request.setAttribute("actionFilter", actionFilter);

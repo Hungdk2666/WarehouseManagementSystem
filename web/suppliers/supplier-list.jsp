@@ -47,25 +47,22 @@
                 </div>
 
                 <!-- Search Panel -->
-                <div class="card shadow-sm border-0 bg-white mb-4">
-                    <div class="card-body p-3">
-                        <div class="row g-2 align-items-center">
-                            <div class="col-md-9 col-lg-10">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                    <input type="text" id="supplierSearchInput" class="form-control border-start-0 ps-0 shadow-none" placeholder="Tìm kiếm theo tên, liên hệ, điện thoại, email, địa chỉ...">
-                                </div>
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Tìm kiếm</label>
+                                <input type="text" id="supplierSearchInput" class="form-control form-control-sm" placeholder="Tìm kiếm theo tên, liên hệ, điện thoại, email, địa chỉ...">
                             </div>
-                            <div class="col-md-3 col-lg-2">
-                                <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
-                                    <i class="bi bi-x-circle"></i> Xóa lọc
-                                </button>
+                            <div class="col-md-2 d-flex align-items-end gap-1">
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
+                                <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 bg-white mb-4">
+                <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-truck me-2"></i>Quản lý nhà cung cấp</h5>
                         <% if (canAdd) { %>
@@ -77,7 +74,7 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table id="supplierTable" class="table table-hover align-middle text-center mb-0">
-                                <thead>
+                                <thead class="table-light">
                                     <tr>
                                         <th>Mã ID</th>
                                         <th>Tên nhà cung cấp</th>
@@ -105,9 +102,9 @@
                                         <td class="text-muted text-start text-truncate" style="max-width: 250px;"><%= s.getAddress() != null ? s.getAddress() : "" %></td>
                                         <td>
                                             <% if (s.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Không hoạt động</span>
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Không hoạt động</span>
                                             <% } %>
                                         </td>
                                         <% if (canManage) { %>
@@ -145,7 +142,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent border-top-0 d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 bg-light rounded-bottom-3 gap-3">
+                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
                         <div class="d-flex align-items-center gap-2">
                             <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
                             <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
@@ -174,7 +171,8 @@
             if (clearBtn && searchInput) {
                 clearBtn.addEventListener("click", function() {
                     searchInput.value = "";
-                    searchInput.dispatchEvent(new Event('input'));
+                    const event = new Event('filterReset');
+                    document.getElementById("supplierTable").dispatchEvent(event);
                 });
             }
         });
@@ -320,12 +318,17 @@
                 updateTable();
             });
 
-            if (searchInput) {
-                searchInput.addEventListener("input", function() {
+            if (document.getElementById("filterBtn")) {
+                document.getElementById("filterBtn").addEventListener("click", function() {
                     currentPage = 1;
                     updateTable();
                 });
             }
+
+            document.getElementById("supplierTable").addEventListener("filterReset", function() {
+                currentPage = 1;
+                updateTable();
+            });
             
             updateTable();
         }

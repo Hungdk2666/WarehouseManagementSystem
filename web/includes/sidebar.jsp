@@ -2,7 +2,10 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUserSidebar = (User) session.getAttribute("user");
-    String requestURI = request.getRequestURI();
+    String requestURI = (String) request.getAttribute("javax.servlet.forward.request_uri");
+    if (requestURI == null) {
+        requestURI = request.getRequestURI();
+    }
 %>
 <style>
     .list-group-custom .sidebar-header {
@@ -31,7 +34,7 @@
         display: block !important;
     }
     .list-group-custom .collapse.show {
-        max-height: 350px;
+        max-height: 1000px;
         opacity: 1;
     }
 </style>
@@ -128,6 +131,41 @@
         </div>
         <% } %>
 
+        <!-- Inventory Section -->
+        <% if (loggedInUserSidebar != null && loggedInUserSidebar.hasPermission("INVENTORY_VIEW")) { %>
+        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header"
+             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
+             data-custom-toggle="collapse" data-custom-target="#collapseInventory" aria-expanded="false">
+            <span><i class="bi bi-boxes me-2"></i> Tồn kho</span>
+            <i class="bi bi-chevron-right chevron-icon"></i>
+        </div>
+        <div class="collapse" id="collapseInventory">
+            <a href="<%= request.getContextPath() %>/warehouse/inventory" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/inventory") ? "active" : "" %>">
+                <i class="bi bi-clipboard-data me-2"></i> Số liệu tồn kho
+            </a>
+        </div>
+        <% } %>
+
+        <!-- Stocktake Section -->
+        <% if (loggedInUserSidebar != null && loggedInUserSidebar.hasPermission("STOCKTAKE_VIEW")) { %>
+        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header"
+             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
+             data-custom-toggle="collapse" data-custom-target="#collapseStocktake" aria-expanded="false">
+            <span><i class="bi bi-clipboard-check-fill me-2"></i> Kiểm kê tồn kho</span>
+            <i class="bi bi-chevron-right chevron-icon"></i>
+        </div>
+        <div class="collapse" id="collapseStocktake">
+            <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/stocktake") && !"config".equals(request.getParameter("action")) ? "active" : "" %>">
+                <i class="bi bi-list-check me-2"></i> Phiếu kiểm kê
+            </a>
+            <% if (loggedInUserSidebar.hasPermission("STOCKTAKE_CONFIG")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=config" class="list-group-item list-group-item-action d-flex align-items-center <%= "config".equals(request.getParameter("action")) ? "active" : "" %>">
+                <i class="bi bi-sliders me-2"></i> Ngưỡng duyệt 2 cấp
+            </a>
+            <% } %>
+        </div>
+        <% } %>
+
         <!-- Master Data Section -->
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PRODUCT_VIEW") || loggedInUserSidebar.hasPermission("CATEGORY_VIEW") || loggedInUserSidebar.hasPermission("BRAND_VIEW") || loggedInUserSidebar.hasPermission("DESTINATION_VIEW") || loggedInUserSidebar.hasPermission("SUPPLIER_VIEW") || loggedInUserSidebar.hasPermission("WAREHOUSE_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
@@ -168,7 +206,7 @@
             </a>
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("WAREHOUSE_VIEW")) { %>
-            <a href="<%= request.getContextPath() %>/warehouse/warehouse" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/warehouse/warehouse") ? "active" : "" %>">
+            <a href="<%= request.getContextPath() %>/warehouse/warehouse" class="list-group-item list-group-item-action d-flex align-items-center <%= (requestURI.contains("/warehouse/warehouse") || requestURI.contains("warehouse-list") || requestURI.contains("warehouse-form")) ? "active" : "" %>">
                 <i class="bi bi-building-fill me-2"></i> Danh sách kho
             </a>
             <% } %>

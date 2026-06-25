@@ -37,6 +37,7 @@
 
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10">
+                <jsp:include page="/includes/frozen-banner.jsp" />
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <div>
                         <h2 class="fw-bold text-slate-800 mb-1">Yêu cầu xuất kho</h2>
@@ -50,24 +51,28 @@
                 </div>
 
                 <!-- Filters -->
-                <div class="card shadow-sm border-0 mb-4 bg-white">
-                    <div class="card-body p-3">
-                        <div class="row g-2 align-items-end">
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <div class="row g-2">
                             <!-- Search -->
-                            <div class="col-md-3">
-                                <label for="searchInput" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-search me-1"></i>Tìm kiếm mã</label>
-                                <input type="text" id="searchInput" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Nhập mã yêu cầu..." style="box-shadow: none; font-size: 0.85rem;">
+                            <div class="col-md-2">
+                                <label for="searchInput" class="form-label small fw-semibold">Tìm kiếm mã</label>
+                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Nhập mã yêu cầu...">
                             </div>
                             <!-- Date Filter -->
-                            <div class="col-md-3">
-                                <label for="dateFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-calendar3 me-1"></i>Ngày tạo</label>
-                                <input type="date" id="dateFilter" class="form-control form-control-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
+                            <div class="col-md-2">
+                                <label for="startDateFilter" class="form-label small fw-semibold">Từ ngày</label>
+                                <input type="date" id="startDateFilter" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="endDateFilter" class="form-label small fw-semibold">Đến ngày</label>
+                                <input type="date" id="endDateFilter" class="form-control form-control-sm">
                             </div>
                             <!-- Status Filter -->
-                            <div class="col-md-3">
-                                <label for="statusFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-tag-fill me-1"></i>Trạng thái</label>
-                                <select id="statusFilter" class="form-select form-select-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
-                                    <option value="">-- Tất cả trạng thái --</option>
+                            <div class="col-md-2">
+                                <label for="statusFilter" class="form-label small fw-semibold">Trạng thái</label>
+                                <select id="statusFilter" class="form-select form-select-sm">
+                                    <option value="">-- Tất cả --</option>
                                     <option value="Chờ duyệt">Chờ duyệt</option>
                                     <option value="Đã duyệt">Đã duyệt</option>
                                     <option value="Chờ hủy">Chờ hủy</option>
@@ -77,16 +82,21 @@
                                 </select>
                             </div>
                             <!-- Creator Filter -->
-                            <div class="col-md-3">
-                                <label for="creatorFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-person-fill me-1"></i>Người tạo</label>
-                                <input type="text" id="creatorFilter" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Nhập tên..." style="box-shadow: none; font-size: 0.85rem;">
+                            <div class="col-md-2">
+                                <label for="creatorFilter" class="form-label small fw-semibold">Người tạo</label>
+                                <input type="text" id="creatorFilter" class="form-control form-control-sm" placeholder="Nhập tên...">
+                            </div>
+                            <!-- Action Buttons -->
+                            <div class="col-md-2 d-flex align-items-end gap-1">
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
+                                <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Requests Directory Table -->
-                <div class="card shadow-sm border-0 bg-white">
+                <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-list-task me-2"></i>Danh sách yêu cầu xuất kho</h5>
                         <div class="d-flex align-items-center gap-2">
@@ -103,7 +113,7 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table id="requestTable" class="table table-hover align-middle mb-0 text-center">
-                                <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;">
+                                <thead class="table-light">
                                     <tr>
                                         <th>Mã yêu cầu</th>
                                         <th class="text-start ps-3">Điểm nhận</th>
@@ -173,7 +183,7 @@
                                         <td><%= r.getExpectedDate() %></td>
                                         <td><%= r.getStaffFullName() %></td>
                                         <td>
-                                            <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= displayStatus %></span>
+                                            <span class="badge <%= statusBadge %> bg-opacity-10"><%= displayStatus %></span>
                                         </td>
                                         <td class="text-muted small"><%= r.getCreatedAt() %></td>
                                         <td>
@@ -244,7 +254,8 @@
             if (allRows.length === 1 && allRows[0].cells.length === 1) return;
 
             const searchInput = document.getElementById("searchInput");
-            const dateFilter = document.getElementById("dateFilter");
+            const startDateFilter = document.getElementById("startDateFilter");
+            const endDateFilter = document.getElementById("endDateFilter");
             const statusFilter = document.getElementById("statusFilter");
             const creatorFilter = document.getElementById("creatorFilter");
             const select = document.getElementById("entriesPerPage");
@@ -256,7 +267,8 @@
 
             function filterAndPaginate() {
                 const searchVal = searchInput.value.toLowerCase().trim();
-                const dateVal = dateFilter.value;
+                const startDateVal = startDateFilter.value;
+                const endDateVal = endDateFilter.value;
                 const statusVal = statusFilter.value;
                 const creatorVal = creatorFilter.value.toLowerCase().trim();
 
@@ -274,7 +286,11 @@
 
                     // Match filters
                     if (searchVal && !code.includes(searchVal)) return false;
-                    if (dateVal && !createdAt.startsWith(dateVal)) return false;
+                    let matchesDate = true;
+                    const createdAtDatePart = createdAt.trim().split(" ")[0];
+                    if (startDateVal && createdAtDatePart < startDateVal) matchesDate = false;
+                    if (endDateVal && createdAtDatePart > endDateVal) matchesDate = false;
+                    if (!matchesDate) return false;
                     if (statusVal && status !== statusVal) return false;
                     if (creatorVal && !creator.includes(creatorVal)) return false;
 
@@ -380,10 +396,20 @@
                 filterAndPaginate();
             });
 
-            searchInput.addEventListener("input", () => { currentPage = 1; filterAndPaginate(); });
-            dateFilter.addEventListener("change", () => { currentPage = 1; filterAndPaginate(); });
-            statusFilter.addEventListener("change", () => { currentPage = 1; filterAndPaginate(); });
-            creatorFilter.addEventListener("input", () => { currentPage = 1; filterAndPaginate(); });
+            document.getElementById("filterBtn").addEventListener("click", () => {
+                currentPage = 1;
+                filterAndPaginate();
+            });
+
+            document.getElementById("resetBtn").addEventListener("click", () => {
+                searchInput.value = "";
+                startDateFilter.value = "";
+                endDateFilter.value = "";
+                statusFilter.value = "";
+                creatorFilter.value = "";
+                currentPage = 1;
+                filterAndPaginate();
+            });
 
             filterAndPaginate();
         }

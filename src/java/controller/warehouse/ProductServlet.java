@@ -1,4 +1,4 @@
-package controller.warehouse;
+ package controller.warehouse;
 
 import service.BrandService;
 import service.CategoryService;

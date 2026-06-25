@@ -30,6 +30,7 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
+                <jsp:include page="/includes/frozen-banner.jsp" />
 
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
@@ -48,19 +49,23 @@
                         <% } %>
                     </div>
                     <div class="card-body p-0">
-                        <div class="px-4 pt-4 pb-2">
-                            <div class="row g-3 align-items-end">
-                                <div class="col-md-3">
-                                    <label for="reqSearch" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-search me-1"></i>Tìm kiếm</label>
-                                    <input type="text" id="reqSearch" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Mã, nhà cung cấp, người tạo...">
+                        <div class="px-3 pt-3 pb-2">
+                            <div class="row g-2">
+                                <div class="col-md-2">
+                                    <label for="reqSearch" class="form-label small fw-semibold">Tìm kiếm</label>
+                                    <input type="text" id="reqSearch" class="form-control form-control-sm" placeholder="Mã, nhà cung cấp, người tạo...">
                                 </div>
-                                <div class="col-md-3">
-                                    <label for="dateFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-calendar3 me-1"></i>Ngày tạo</label>
-                                    <input type="date" id="dateFilter" class="form-control form-control-sm shadow-sm rounded-3">
+                                <div class="col-md-2">
+                                    <label for="startDateFilter" class="form-label small fw-semibold">Từ ngày</label>
+                                    <input type="date" id="startDateFilter" class="form-control form-control-sm">
                                 </div>
-                                <div class="col-md-3">
-                                    <label for="statusFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-tag-fill me-1"></i>Trạng thái</label>
-                                    <select id="statusFilter" class="form-select form-select-sm shadow-sm rounded-3">
+                                <div class="col-md-2">
+                                    <label for="endDateFilter" class="form-label small fw-semibold">Đến ngày</label>
+                                    <input type="date" id="endDateFilter" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="statusFilter" class="form-label small fw-semibold">Trạng thái</label>
+                                    <select id="statusFilter" class="form-select form-select-sm">
                                         <option value="">-- Tất cả --</option>
                                         <option value="Chờ duyệt">Chờ duyệt</option>
                                         <option value="Đã duyệt">Đã duyệt</option>
@@ -70,19 +75,23 @@
                                         <option value="Đã hủy">Đã hủy</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
-                                    <label for="typeFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-funnel me-1"></i>Loại</label>
-                                    <select id="typeFilter" class="form-select form-select-sm shadow-sm rounded-3">
+                                <div class="col-md-2">
+                                    <label for="typeFilter" class="form-label small fw-semibold">Loại</label>
+                                    <select id="typeFilter" class="form-select form-select-sm">
                                         <option value="">-- Tất cả --</option>
                                         <option value="MUA HÀNG">MUA HÀNG</option>
                                         <option value="TRẢ HÀNG">TRẢ HÀNG</option>
                                     </select>
                                 </div>
+                                <div class="col-md-2 d-flex align-items-end gap-1">
+                                    <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
+                                    <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                </div>
                             </div>
                         </div>
                         <div class="table-responsive">
                             <table id="reqTable" class="table table-hover align-middle text-center mb-0">
-                                <thead>
+                                <thead class="table-light">
                                     <tr>
                                         <th>Mã</th>
                                         <th>Loại</th>
@@ -132,7 +141,7 @@
                                         </td>
                                         <td><%= r.getExpectedDate() %></td>
                                         <td><%= r.getStaffFullName() %></td>
-                                        <td><span class="badge <%= statusBadge %> bg-opacity-10 px-2 py-1"><%= displayStatus %></span></td>
+                                        <td><span class="badge <%= statusBadge %> bg-opacity-10"><%= displayStatus %></span></td>
                                         <td class="text-muted small"><%= r.getCreatedAt() %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
@@ -173,7 +182,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent border-top-0 d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 bg-light rounded-bottom-3 gap-3">
+                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
                         <div class="d-flex align-items-center gap-2">
                             <label class="text-muted small mb-0">Hiển thị</label>
                             <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
@@ -201,7 +210,8 @@
             const container = document.getElementById("paginationContainer");
             const selectEl  = document.getElementById("entriesPerPage");
             const searchInput  = document.getElementById("reqSearch");
-            const dateFilter   = document.getElementById("dateFilter");
+            const startDateFilter   = document.getElementById("startDateFilter");
+            const endDateFilter   = document.getElementById("endDateFilter");
             const statusFilter = document.getElementById("statusFilter");
             const typeFilter   = document.getElementById("typeFilter");
 
@@ -211,7 +221,8 @@
 
             function filterAndPaginate() {
                 const q      = searchInput.value.toLowerCase();
-                const date   = dateFilter.value;
+                const startDate   = startDateFilter.value;
+                const endDate     = endDateFilter.value;
                 const status = statusFilter.value;
                 const type   = typeFilter.value;
 
@@ -224,8 +235,12 @@
                     const stat    = row.cells[5].textContent.trim();
                     const created = row.cells[6].textContent.trim().split(" ")[0];
 
+                    let matchesDate = true;
+                    if (startDate && created < startDate) matchesDate = false;
+                    if (endDate && created > endDate) matchesDate = false;
+
                     return (!q || code.includes(q) || ref.includes(q) || creator.includes(q)) &&
-                           (!date || created === date) &&
+                           matchesDate &&
                            (!status || stat === status) &&
                            (!type || typeVal.includes(type));
                 });
@@ -261,7 +276,22 @@
             }
 
             selectEl.addEventListener("change", () => { pageSize = +selectEl.value; currentPage=1; filterAndPaginate(); });
-            [searchInput, dateFilter, statusFilter, typeFilter].forEach(el => el.addEventListener(el.tagName==="SELECT"?"change":"input", () => { currentPage=1; filterAndPaginate(); }));
+            
+            document.getElementById("filterBtn").addEventListener("click", () => {
+                currentPage = 1;
+                filterAndPaginate();
+            });
+            
+            document.getElementById("resetBtn").addEventListener("click", () => {
+                searchInput.value = "";
+                startDateFilter.value = "";
+                endDateFilter.value = "";
+                statusFilter.value = "";
+                typeFilter.value = "";
+                currentPage = 1;
+                filterAndPaginate();
+            });
+
             filterAndPaginate();
         });
     </script>

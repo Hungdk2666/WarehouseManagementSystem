@@ -56,7 +56,7 @@
                     
                     <!-- Roles Tab Pane -->
                     <div class="tab-pane fade show active" id="roles-pane" role="tabpanel" aria-labelledby="roles-tab">
-                        <div class="card shadow-sm border-0 bg-white mb-4">
+                        <div class="card shadow-sm border-0 mb-4">
                             <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-safe-fill me-2"></i>Vai trò truy cập hệ thống</h5>
                                 <% if (loggedInUser.hasPermission("ROLE_ADD")) { %>
@@ -68,7 +68,7 @@
                             <div class="card-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle text-center mb-0">
-                                        <thead>
+                                        <thead class="table-light">
                                             <tr>
                                                 <th>ID</th>
                                                 <th>Tên vai trò</th>
@@ -86,9 +86,9 @@
                                                 <td class="fw-bold text-slate-800"><%= r.getRoleName() %></td>
                                                 <td>
                                                     <% if (r.isStatus()) { %>
-                                                        <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                        <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
                                                     <% } else { %>
-                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
+                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
                                                     <% } %>
                                                 </td>
                                                 <td>

@@ -35,7 +35,8 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
-                
+                <jsp:include page="/includes/frozen-banner.jsp" />
+
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2 class="fw-bold text-slate-800 mb-1">Phiếu nhập kho</h2>
@@ -56,46 +57,55 @@
                         <% } %>
                     </div>
                     <div class="card-body p-0">
-                        <div class="px-4 pt-4 pb-2">
-                            <div class="row g-3 align-items-end">
+                        <div class="px-3 pt-3 pb-2">
+                            <div class="row g-2">
                                 <!-- Search Bar -->
                                 <div class="col-md-3">
-                                    <label for="importSearch" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-search me-1"></i>Tìm kiếm</label>
-                                    <input type="text" id="importSearch" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Phiếu nhập, mã yêu cầu, thủ kho..." style="box-shadow: none; font-size: 0.85rem;">
+                                    <label for="importSearch" class="form-label small fw-semibold">Tìm kiếm</label>
+                                    <input type="text" id="importSearch" class="form-control form-control-sm" placeholder="Phiếu nhập, yêu cầu, thủ kho...">
                                 </div>
                                 <!-- Date Filter -->
-                                <div class="col-md-3">
-                                    <label for="dateFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-calendar3 me-1"></i>Ngày tạo</label>
-                                    <input type="date" id="dateFilter" class="form-control form-control-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
+                                <div class="col-md-2">
+                                    <label for="startDateFilter" class="form-label small fw-semibold">Từ ngày</label>
+                                    <input type="date" id="startDateFilter" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="endDateFilter" class="form-label small fw-semibold">Đến ngày</label>
+                                    <input type="date" id="endDateFilter" class="form-control form-control-sm">
                                 </div>
                                 <!-- Status Filter -->
-                                <div class="col-md-3">
-                                    <label for="statusFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-tag-fill me-1"></i>Trạng thái</label>
-                                    <select id="statusFilter" class="form-select form-select-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
-                                        <option value="">-- Tất cả trạng thái --</option>
+                                <div class="col-md-2">
+                                    <label for="statusFilter" class="form-label small fw-semibold">Trạng thái</label>
+                                    <select id="statusFilter" class="form-select form-select-sm">
+                                        <option value="">-- Tất cả --</option>
                                         <option value="BẢN NHÁP">BẢN NHÁP</option>
                                         <option value="ĐÃ XÁC NHẬN">ĐÃ XÁC NHẬN</option>
                                         <option value="ĐÃ HỦY">ĐÃ HỦY</option>
                                     </select>
                                 </div>
                                 <!-- Warehouse Filter -->
-                                <div class="col-md-3">
-                                    <label for="warehouseFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-building me-1"></i>Kho nhập</label>
-                                    <select id="warehouseFilter" class="form-select form-select-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
+                                <div class="col-md-2">
+                                    <label for="warehouseFilter" class="form-label small fw-semibold">Kho nhập</label>
+                                    <select id="warehouseFilter" class="form-select form-select-sm">
                                         <option value="">-- Tất cả kho --</option>
                                     </select>
                                 </div>
                                 <!-- Keeper Filter -->
-                                <div class="col-md-3">
-                                    <label for="keeperFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-person-fill me-1"></i>Thủ kho (Nhân viên)</label>
-                                    <input type="text" id="keeperFilter" list="keeperDatalist" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Nhập hoặc chọn..." style="box-shadow: none; font-size: 0.85rem;">
+                                <div class="col-md-2">
+                                    <label for="keeperFilter" class="form-label small fw-semibold">Thủ kho</label>
+                                    <input type="text" id="keeperFilter" list="keeperDatalist" class="form-control form-control-sm" placeholder="Nhập hoặc chọn...">
                                     <datalist id="keeperDatalist"></datalist>
+                                </div>
+                                <!-- Action Buttons -->
+                                <div class="col-md-2 d-flex align-items-end gap-1">
+                                    <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
+                                    <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
                                 </div>
                             </div>
                         </div>
                         <div class="table-responsive">
                             <table id="grnTable" class="table table-hover align-middle text-center mb-0">
-                                <thead>
+                                <thead class="table-light">
                                     <tr>
                                         <th>Mã phiếu</th>
                                         <th>Yêu cầu liên kết</th>
@@ -130,7 +140,7 @@
                                                 else if ("DRAFT".equals(t.getStatus())) displayTStatus = "BẢN NHÁP";
                                                 else if ("CANCELLED".equals(t.getStatus())) displayTStatus = "ĐÃ HỦY";
                                             %>
-                                            <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= displayTStatus %></span>
+                                            <span class="badge <%= statusBadge %> bg-opacity-10"><%= displayTStatus %></span>
                                         </td>
                                         <td><%= t.getKeeperFullName() %></td>
                                         <td class="text-muted small"><%= t.getCreatedAt() %></td>
@@ -175,7 +185,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent border-top-0 d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 bg-light rounded-bottom-3 gap-3">
+                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
                         <div class="d-flex align-items-center gap-2">
                                     <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
                                     <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
@@ -198,11 +208,11 @@
         const userWarehouseName = '<%= loggedInUser.getWarehouseName() != null ? loggedInUser.getWarehouseName().replace("'", "\\'") : "" %>';
 
         document.addEventListener("DOMContentLoaded", function() {
-            initPaginationAndFilter("grnTable", "paginationContainer", "entriesPerPage", "importSearch", "dateFilter", "statusFilter", "warehouseFilter", "keeperFilter");
+            initPaginationAndFilter("grnTable", "paginationContainer", "entriesPerPage", "importSearch", "startDateFilter", "endDateFilter", "statusFilter", "warehouseFilter", "keeperFilter");
         });
 
         // Col indices: 0=code, 1=PO, 2=supplier, 3=warehouse, 4=status, 5=keeper, 6=createdAt, 7=confirmedBy, 8=confirmedAt, 9=actions
-        function initPaginationAndFilter(tableId, containerId, selectId, searchInputId, dateFilterId, statusFilterId, warehouseFilterId, keeperFilterId) {
+        function initPaginationAndFilter(tableId, containerId, selectId, searchInputId, startDateFilterId, endDateFilterId, statusFilterId, warehouseFilterId, keeperFilterId) {
             const table = document.getElementById(tableId);
             if (!table) return;
             const tbody = table.querySelector("tbody");
@@ -216,7 +226,8 @@
             const container = document.getElementById(containerId);
             const select = document.getElementById(selectId);
             const searchInput = document.getElementById(searchInputId);
-            const dateFilter = document.getElementById(dateFilterId);
+            const startDateFilter = document.getElementById(startDateFilterId);
+            const endDateFilter = document.getElementById(endDateFilterId);
             const statusFilter = document.getElementById(statusFilterId);
             const warehouseFilter = document.getElementById(warehouseFilterId);
             const keeperFilter = document.getElementById(keeperFilterId);
@@ -261,7 +272,8 @@
 
             function filterAndPaginate() {
                 const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : "";
-                const selectedDate = dateFilter ? dateFilter.value : "";
+                const selectedStartDate = startDateFilter ? startDateFilter.value : "";
+                const selectedEndDate = endDateFilter ? endDateFilter.value : "";
                 const selectedStatus = statusFilter ? statusFilter.value : "";
                 const selectedWarehouse = warehouseFilter ? warehouseFilter.value.trim() : "";
                 const selectedKeeper = keeperFilter ? keeperFilter.value.trim() : "";
@@ -282,7 +294,9 @@
 
                     const createdAtText = row.cells[6].textContent.trim();
                     const createdAtDatePart = createdAtText.split(" ")[0];
-                    const matchesDate = selectedDate === "" || createdAtDatePart === selectedDate;
+                    let matchesDate = true;
+                    if (selectedStartDate !== "" && createdAtDatePart < selectedStartDate) matchesDate = false;
+                    if (selectedEndDate !== "" && createdAtDatePart > selectedEndDate) matchesDate = false;
 
                     const status = row.cells[4].textContent.trim();
                     const matchesStatus = selectedStatus === "" || status === selectedStatus;
@@ -393,36 +407,21 @@
                 filterAndPaginate();
             });
 
-            if (searchInput) {
-                searchInput.addEventListener("input", function() {
-                    currentPage = 1;
-                    filterAndPaginate();
-                });
-            }
-            if (dateFilter) {
-                dateFilter.addEventListener("change", function() {
-                    currentPage = 1;
-                    filterAndPaginate();
-                });
-            }
-            if (statusFilter) {
-                statusFilter.addEventListener("change", function() {
-                    currentPage = 1;
-                    filterAndPaginate();
-                });
-            }
-            if (warehouseFilter) {
-                warehouseFilter.addEventListener("change", function() {
-                    currentPage = 1;
-                    filterAndPaginate();
-                });
-            }
-            if (keeperFilter) {
-                keeperFilter.addEventListener("input", function() {
-                    currentPage = 1;
-                    filterAndPaginate();
-                });
-            }
+            document.getElementById("filterBtn").addEventListener("click", function() {
+                currentPage = 1;
+                filterAndPaginate();
+            });
+
+            document.getElementById("resetBtn").addEventListener("click", function() {
+                if (searchInput) searchInput.value = "";
+                if (startDateFilter) startDateFilter.value = "";
+                if (endDateFilter) endDateFilter.value = "";
+                if (statusFilter) statusFilter.value = "";
+                if (warehouseFilter) warehouseFilter.value = "";
+                if (keeperFilter) keeperFilter.value = "";
+                currentPage = 1;
+                filterAndPaginate();
+            });
             
             filterAndPaginate();
         }

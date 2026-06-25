@@ -32,7 +32,7 @@ public class CustomerServlet extends HttpServlet {
         if (action == null) action = "list";
 
         if (!loggedInUser.hasPermission("CUSTOMER_VIEW")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Báº¡n khĂ´ng cĂ³ quyá»n truy cáº­p.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập.");
             return;
         }
 
@@ -58,14 +58,14 @@ public class CustomerServlet extends HttpServlet {
                 break;
             case "add":
                 if (!loggedInUser.hasPermission("CUSTOMER_ADD")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Báº¡n khĂ´ng cĂ³ quyá»n thĂªm khĂ¡ch hĂ ng.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm khách hàng.");
                     return;
                 }
                 request.getRequestDispatcher("/customer/customer-add.jsp").forward(request, response);
                 break;
             case "edit":
                 if (!loggedInUser.hasPermission("CUSTOMER_EDIT")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Báº¡n khĂ´ng cĂ³ quyá»n chá»‰nh sá»­a khĂ¡ch hĂ ng.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền chỉnh sửa khách hàng.");
                     return;
                 }
                 try {
@@ -123,7 +123,7 @@ public class CustomerServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/customer?action=list");
                 } catch (Exception e) {
                     e.printStackTrace();
-                    request.setAttribute("error", "CĂ³ lá»—i xáº£y ra: " + e.getMessage());
+                    request.setAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
                     request.getRequestDispatcher("/customer/customer-add.jsp").forward(request, response);
                 }
                 break;

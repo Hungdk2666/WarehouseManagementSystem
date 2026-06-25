@@ -40,7 +40,7 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
-                                <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; font-weight: 700;">
+                                <thead class="table-light">
                                     <tr>
                                         <th class="ps-4">#</th>
                                         <th>Tên khách hàng</th>

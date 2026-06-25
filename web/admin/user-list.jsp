@@ -44,50 +44,45 @@
                 </div>
 
                 <!-- Server-Side Search and Filter Panel -->
-                <div class="card shadow-sm border-0 bg-white mb-4">
-                    <div class="card-body p-3">
-                        <form action="user" method="GET" class="row g-2 align-items-center">
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <form action="user" method="GET" class="row g-2">
                             <input type="hidden" name="action" value="list">
-                            <div class="col-md-6 col-lg-7">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                    <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Tìm theo tên đăng nhập, email, họ tên..." value="<%= request.getParameter("search") != null ? request.getParameter("search") : "" %>">
-                                </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-semibold">Tìm kiếm</label>
+                                <input type="text" name="search" class="form-control form-control-sm" placeholder="Tìm theo tên đăng nhập, email, họ tên..." value="<%= request.getParameter("search") != null ? request.getParameter("search") : "" %>">
                             </div>
-                            <div class="col-md-4 col-lg-3">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-funnel"></i></span>
-                                    <select name="roleFilter" class="form-select border-start-0 ps-0">
-                                        <option value="">Tất cả vai trò</option>
-                                        <%
-                                            List<Role> roleList = (List<Role>) request.getAttribute("roleList");
-                                            String selectedRole = request.getParameter("roleFilter");
-                                            if (roleList != null) {
-                                                for (Role r : roleList) {
-                                                    boolean isSelected = r.getRoleName().equals(selectedRole);
-                                        %>
-                                            <option value="<%= r.getRoleName() %>" <%= isSelected ? "selected" : "" %>><%= r.getRoleName() %></option>
-                                        <%
-                                                }
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Vai trò</label>
+                                <select name="roleFilter" class="form-select form-select-sm">
+                                    <option value="">Tất cả</option>
+                                    <%
+                                        List<Role> roleList = (List<Role>) request.getAttribute("roleList");
+                                        String selectedRole = request.getParameter("roleFilter");
+                                        if (roleList != null) {
+                                            for (Role r : roleList) {
+                                                boolean isSelected = r.getRoleName().equals(selectedRole);
+                                    %>
+                                        <option value="<%= r.getRoleName() %>" <%= isSelected ? "selected" : "" %>><%= r.getRoleName() %></option>
+                                    <%
                                             }
-                                        %>
-                                    </select>
-                                </div>
+                                        }
+                                    %>
+                                </select>
                             </div>
-                            <div class="col-md-2 col-lg-2">
-                                <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2">
-                                    <i class="bi bi-sliders"></i> Lọc
-                                </button>
+                            <div class="col-md-2 d-flex align-items-end gap-1">
+                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
+                                <a href="user?action=list" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></a>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 bg-white">
+                <div class="card shadow-sm border-0 mb-4">
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle text-center mb-0">
-                                <thead>
+                                <thead class="table-light">
                                     <tr>
                                         <th>ID</th>
                                         <th>Tên đăng nhập</th>
@@ -110,18 +105,18 @@
                                         <td><%= u.getEmail() %></td>
                                         <td><%= u.getFullName() %></td>
                                         <td>
-                                            <span class="badge bg-primary bg-opacity-10 text-primary px-2.5 py-1.5"><%= u.getRoleName() != null ? u.getRoleName() : "Chưa có vai trò" %></span>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary"><%= u.getRoleName() != null ? u.getRoleName() : "Chưa có vai trò" %></span>
                                         </td>
                                         <td>
                                             <% if (u.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2.5 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
                                             <% } %>
                                         </td>
                                         <td>
                                             <% if (u.getResetCode() != null) { %>
-                                                <span class="badge bg-danger bg-opacity-10 text-danger px-2.5 py-1.5"><%= u.getResetCode() %></span>
+                                                <span class="badge bg-danger bg-opacity-10 text-danger"><%= u.getResetCode() %></span>
                                             <% } else { %>
                                                 <span class="text-muted">-</span>
                                             <% } %>

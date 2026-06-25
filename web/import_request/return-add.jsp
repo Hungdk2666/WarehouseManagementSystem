@@ -41,7 +41,7 @@
                     <div class="col-12">
                         <form action="<%= request.getContextPath() %>/warehouse/import-request?action=addReturn" method="POST" id="reqForm">
                             <!-- Hidden input for locked Export Ticket -->
-                            <input type="hidden" name="export_ticket_id" id="exportTicketId" value="">
+                            <input type="hidden" name="ref_ticket_id" id="refTicketId" value="">
 
                             <!-- Customer Info (Dynamically populated & shown) -->
                             <div class="card shadow-sm border-0 bg-white mb-4 d-none" id="customerInfoCard">
@@ -74,7 +74,7 @@
                                             String errMsg = "Đã xảy ra lỗi.";
                                             if ("NoReason".equals(errParam)) errMsg = "Vui lòng nhập lý do trả hàng.";
                                             else if ("NoProducts".equals(errParam) || "NoValidDetails".equals(errParam)) errMsg = "Vui lòng nhập ít nhất một Serial sản phẩm hợp lệ.";
-                                            else if ("NoExportTicket".equals(errParam) || "InvalidTicket".equals(errParam)) errMsg = "Đơn xuất gốc liên kết không hợp lệ.";
+                                            else if ("NoRefTicket".equals(errParam) || "InvalidTicket".equals(errParam)) errMsg = "Đơn xuất gốc liên kết không hợp lệ.";
                                             else if ("Failed".equals(errParam)) errMsg = "Không thể lưu vào cơ sở dữ liệu. Vui lòng kiểm tra lại.";
                                     %>
                                     <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i><%= errMsg %></div>
@@ -178,7 +178,7 @@
         const itemsBody = document.getElementById("itemsBody");
         const emptyRow = document.getElementById("emptyRow");
         const reqForm = document.getElementById("reqForm");
-        const exportTicketIdInput = document.getElementById("exportTicketId");
+        const refTicketIdInput = document.getElementById("refTicketId");
         
         const customerInfoCard = document.getElementById("customerInfoCard");
         const infoPartnerName = document.getElementById("infoPartnerName");
@@ -253,7 +253,7 @@
                         return;
                     }
                     
-                    const currentLockedTicket = exportTicketIdInput.value;
+                    const currentLockedTicket = refTicketIdInput.value;
                     if (currentLockedTicket && currentLockedTicket !== String(res.ticketId)) {
                         alert("Mã Serial này thuộc phiếu xuất #" + res.ticketCode + " của khách " + res.partnerName + ".\n" +
                               "Mỗi yêu cầu trả hàng chỉ được phép chọn các Serial thuộc CÙNG MỘT đơn xuất gốc.\n" +
@@ -263,7 +263,7 @@
                     
                     // Lock form to this export ticket on first item
                     if (!currentLockedTicket) {
-                        exportTicketIdInput.value = res.ticketId;
+                        refTicketIdInput.value = res.ticketId;
                         infoPartnerName.innerText = res.partnerName ? res.partnerName : "Khách vãng lai";
                         infoTicketCode.innerText = res.ticketCode;
                         customerInfoCard.classList.remove("d-none");
@@ -308,7 +308,7 @@
                 addedSerials.delete(serial);
             }
             if (addedSerials.size === 0) {
-                exportTicketIdInput.value = "";
+                refTicketIdInput.value = "";
                 customerInfoCard.classList.add("d-none");
                 if (emptyRow) emptyRow.style.display = "";
             } else {

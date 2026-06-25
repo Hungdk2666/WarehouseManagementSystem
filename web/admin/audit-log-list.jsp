@@ -14,6 +14,7 @@
     int currentPage = (int) request.getAttribute("currentPage");
     int totalPages = (int) request.getAttribute("totalPages");
     int totalCount = (int) request.getAttribute("totalCount");
+    int pageSize = (int) request.getAttribute("pageSize");
     
     String search = (String) request.getAttribute("search");
     String actionFilter = (String) request.getAttribute("actionFilter");
@@ -58,7 +59,7 @@
                 <!-- Advanced Filters Panel -->
                 <div class="card shadow-sm border-0 bg-white mb-4">
                     <div class="card-body p-4">
-                        <form action="audit-log" method="GET" class="row g-3">
+                        <form id="filterForm" action="audit-log" method="GET" class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold text-muted small">Tìm người dùng hoặc Chi tiết</label>
                                 <div class="input-group">
@@ -110,7 +111,7 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                                <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
                                     <tr>
                                         <th class="ps-4">Thời gian</th>
                                         <th>Người dùng</th>
@@ -175,30 +176,73 @@
                     </div>
                 </div>
 
-                <!-- Pagination -->
-                <% if (totalPages > 1) { %>
-                <nav aria-label="Page navigation" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item <%= currentPage == 1 ? "disabled" : "" %>">
-                            <a class="page-link d-flex align-items-center gap-1" href="audit-log?page=<%= currentPage - 1 %>&search=<%= search %>&actionFilter=<%= actionFilter %>&startDate=<%= startDate %>&endDate=<%= endDate %>" aria-label="Previous">
-                                <i class="bi bi-chevron-left"></i> Trước
-                            </a>
-                        </li>
-                        
-                        <% for (int i = 1; i <= totalPages; i++) { %>
-                            <li class="page-item <%= currentPage == i ? "active" : "" %>">
-                                <a class="page-link" href="audit-log?page=<%= i %>&search=<%= search %>&actionFilter=<%= actionFilter %>&startDate=<%= startDate %>&endDate=<%= endDate %>"><%= i %></a>
-                            </li>
-                        <% } %>
-                        
-                        <li class="page-item <%= currentPage == totalPages ? "disabled" : "" %>">
-                            <a class="page-link d-flex align-items-center gap-1" href="audit-log?page=<%= currentPage + 1 %>&search=<%= search %>&actionFilter=<%= actionFilter %>&startDate=<%= startDate %>&endDate=<%= endDate %>" aria-label="Next">
-                                Sau <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-                <% } %>
+                    </div>
+                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
+                            <select name="pageSize" form="filterForm" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;" onchange="document.getElementById('filterForm').submit();">
+                                <option value="10" <%= pageSize == 10 ? "selected" : "" %>>10</option>
+                                <option value="25" <%= pageSize == 25 ? "selected" : "" %>>25</option>
+                                <option value="100" <%= pageSize == 100 ? "selected" : "" %>>100</option>
+                            </select>
+                            <span class="text-muted small">dòng</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
+                            <!-- Pagination -->
+                            <% if (totalPages > 1) { %>
+                            <nav aria-label="Page navigation" class="m-0">
+                                <ul class="pagination pagination-sm m-0 gap-1">
+                                    <li class="page-item <%= currentPage == 1 ? "disabled" : "" %>">
+                                        <a class="page-link border-0 rounded-2 shadow-none px-2.5 py-1.5" href="audit-log?page=<%= currentPage - 1 %>&pageSize=<%= pageSize %>&search=<%= search %>&actionFilter=<%= actionFilter %>&startDate=<%= startDate %>&endDate=<%= endDate %>" aria-label="Previous">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                    
+                                    <% 
+                                        int startPage = Math.max(1, currentPage - 2);
+                                        int endPage = Math.min(totalPages, currentPage + 2);
+                                        if (currentPage <= 3) {
+                                            endPage = Math.min(totalPages, 5);
+                                        }
+                                        if (currentPage >= totalPages - 2) {
+                                            startPage = Math.max(1, totalPages - 4);
+                                        }
+                                    %>
+                                    
+                                    <% if (startPage > 1) { %>
+                                        <li class="page-item">
+                                            <a class="page-link border-0 rounded-2 shadow-none px-3 py-1.5" href="audit-log?page=1&pageSize=<%= pageSize %>&search=<%= search %>&actionFilter=<%= actionFilter %>&startDate=<%= startDate %>&endDate=<%= endDate %>">1</a>
+                                        </li>
+                                        <% if (startPage > 2) { %>
+                                            <li class="page-item disabled"><span class="page-link border-0 bg-transparent px-2">...</span></li>
+                                        <% } %>
+                                    <% } %>
+
+                                    <% for (int i = startPage; i <= endPage; i++) { %>
+                                        <li class="page-item <%= currentPage == i ? "active" : "" %>">
+                                            <a class="page-link border-0 rounded-2 shadow-none px-3 py-1.5" href="audit-log?page=<%= i %>&pageSize=<%= pageSize %>&search=<%= search %>&actionFilter=<%= actionFilter %>&startDate=<%= startDate %>&endDate=<%= endDate %>"><%= i %></a>
+                                        </li>
+                                    <% } %>
+
+                                    <% if (endPage < totalPages) { %>
+                                        <% if (endPage < totalPages - 1) { %>
+                                            <li class="page-item disabled"><span class="page-link border-0 bg-transparent px-2">...</span></li>
+                                        <% } %>
+                                        <li class="page-item">
+                                            <a class="page-link border-0 rounded-2 shadow-none px-3 py-1.5" href="audit-log?page=<%= totalPages %>&pageSize=<%= pageSize %>&search=<%= search %>&actionFilter=<%= actionFilter %>&startDate=<%= startDate %>&endDate=<%= endDate %>"><%= totalPages %></a>
+                                        </li>
+                                    <% } %>
+                                    
+                                    <li class="page-item <%= currentPage == totalPages ? "disabled" : "" %>">
+                                        <a class="page-link border-0 rounded-2 shadow-none px-2.5 py-1.5" href="audit-log?page=<%= currentPage + 1 %>&pageSize=<%= pageSize %>&search=<%= search %>&actionFilter=<%= actionFilter %>&startDate=<%= startDate %>&endDate=<%= endDate %>" aria-label="Next">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <% } %>
+                        </div>
+                    </div>
             </div>
         </div>
     </div>

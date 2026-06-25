@@ -48,11 +48,11 @@
                 <div class="alert alert-success border-0 shadow-sm mb-4"><i class="bi bi-check-circle-fill me-2"></i>Cập nhật kho thành công.</div>
                 <% } %>
 
-                <div class="card shadow-sm border-0 bg-white">
+                <div class="card shadow-sm border-0 mb-4">
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
-                                <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;">
+                                <thead class="table-light">
                                     <tr>
                                         <th class="ps-4">#</th>
                                         <th>Tên kho</th>
@@ -90,9 +90,9 @@
                                         </td>
                                         <td class="text-center">
                                             <% if (w.isStatus()) { %>
-                                            <span class="badge bg-success bg-opacity-10 text-success px-3 py-1">Hoạt động</span>
+                                            <span class="badge bg-success bg-opacity-10 text-success">Hoạt động</span>
                                             <% } else { %>
-                                            <span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-1">Ngừng hoạt động</span>
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary">Ngừng hoạt động</span>
                                             <% } %>
                                         </td>
                                         <td class="text-center text-muted small"><%= w.getCreatedAt() != null ? w.getCreatedAt().toString().substring(0, 10) : "-" %></td>

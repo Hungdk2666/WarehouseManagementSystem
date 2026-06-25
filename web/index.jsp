@@ -19,8 +19,8 @@
             int wid = user.getWarehouseId();
             myTotalStock   = whDao.getTotalStockQty(wid);
             myProducts     = whDao.countProductsInStock(wid);
-            myPendingImport = whDao.countPendingImportTickets(wid);
-            myPendingExport = whDao.countPendingExportTickets(wid);
+            myPendingImport = whDao.countPendingInTickets(wid);
+            myPendingExport = whDao.countPendingOutTickets(wid);
             myIncoming     = whDao.countIncomingTransfers(wid);
         } else {
             // Global admin/manager — show all warehouses
@@ -137,7 +137,7 @@
                                 for (Warehouse wh : activeWarehouses) {
                                     int whStock  = whDao.getTotalStockQty(wh.getId());
                                     int whSKUs   = whDao.countProductsInStock(wh.getId());
-                                    int whDraft  = whDao.countPendingImportTickets(wh.getId()) + whDao.countPendingExportTickets(wh.getId());
+                                    int whDraft  = whDao.countPendingInTickets(wh.getId()) + whDao.countPendingOutTickets(wh.getId());
                                     int whTrans  = whDao.countIncomingTransfers(wh.getId());
                                     int whStaff  = whDao.countStaff(wh.getId());
                             %>

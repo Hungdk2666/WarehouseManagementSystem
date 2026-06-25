@@ -38,6 +38,7 @@
 
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10">
+                <jsp:include page="/includes/frozen-banner.jsp" />
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <div>
                         <h2 class="fw-bold text-slate-800 mb-1">Phiếu xuất kho</h2>
@@ -99,24 +100,28 @@
                 <% } %>
 
                 <!-- Filters -->
-                <div class="card shadow-sm border-0 mb-4 bg-white">
-                    <div class="card-body p-3">
-                        <div class="row g-2 align-items-end">
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <div class="row g-2">
                             <!-- Search -->
                             <div class="col-md-3">
-                                <label for="searchInput" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-search me-1"></i>Tìm kiếm mã</label>
-                                <input type="text" id="searchInput" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Tìm mã phiếu, mã yêu cầu..." style="box-shadow: none; font-size: 0.85rem;">
+                                <label for="searchInput" class="form-label small fw-semibold">Tìm kiếm mã</label>
+                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Tìm mã phiếu, mã yêu cầu...">
                             </div>
                             <!-- Date Filter -->
-                            <div class="col-md-3">
-                                <label for="dateFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-calendar3 me-1"></i>Ngày tạo</label>
-                                <input type="date" id="dateFilter" class="form-control form-control-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
+                            <div class="col-md-2">
+                                <label for="startDateFilter" class="form-label small fw-semibold">Từ ngày</label>
+                                <input type="date" id="startDateFilter" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="endDateFilter" class="form-label small fw-semibold">Đến ngày</label>
+                                <input type="date" id="endDateFilter" class="form-control form-control-sm">
                             </div>
                             <!-- Status Filter -->
-                            <div class="col-md-3">
-                                <label for="statusFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-tag-fill me-1"></i>Trạng thái</label>
-                                <select id="statusFilter" class="form-select form-select-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
-                                    <option value="">-- Tất cả trạng thái --</option>
+                            <div class="col-md-2">
+                                <label for="statusFilter" class="form-label small fw-semibold">Trạng thái</label>
+                                <select id="statusFilter" class="form-select form-select-sm">
+                                    <option value="">-- Tất cả --</option>
                                     <option value="Bản nháp">Bản nháp</option>
                                     <option value="Đã xác nhận">Đã xác nhận</option>
                                     <option value="Đang vận chuyển">Đang vận chuyển</option>
@@ -124,23 +129,28 @@
                                 </select>
                             </div>
                             <!-- Warehouse Filter -->
-                            <div class="col-md-3">
-                                <label for="warehouseFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-building me-1"></i>Kho xuất</label>
-                                <select id="warehouseFilter" class="form-select form-select-sm shadow-sm rounded-3" style="box-shadow: none; font-size: 0.85rem;">
+                            <div class="col-md-2">
+                                <label for="warehouseFilter" class="form-label small fw-semibold">Kho xuất</label>
+                                <select id="warehouseFilter" class="form-select form-select-sm">
                                     <option value="">-- Tất cả kho --</option>
                                 </select>
                             </div>
                             <!-- Keeper Filter -->
-                            <div class="col-md-3">
-                                <label for="keeperFilter" class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-person-fill me-1"></i>Thủ kho</label>
-                                <input type="text" id="keeperFilter" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Nhập tên thủ kho..." style="box-shadow: none; font-size: 0.85rem;">
+                            <div class="col-md-2">
+                                <label for="keeperFilter" class="form-label small fw-semibold">Thủ kho</label>
+                                <input type="text" id="keeperFilter" class="form-control form-control-sm" placeholder="Nhập tên thủ kho...">
+                            </div>
+                            <!-- Action Buttons -->
+                            <div class="col-md-2 d-flex align-items-end gap-1">
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
+                                <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tickets Directory Table -->
-                <div class="card shadow-sm border-0 bg-white">
+                <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-arrow-up-right me-2"></i>Danh sách phiếu xuất kho</h5>
                         <div class="d-flex align-items-center gap-2">
@@ -157,7 +167,7 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table id="ginTable" class="table table-hover align-middle mb-0 text-center">
-                                <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;">
+                                <thead class="table-light">
                                     <tr>
                                         <th>Mã phiếu</th>
                                         <th>Mã yêu cầu</th>
@@ -209,7 +219,7 @@
                                         <td><span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-building me-1"></i><%= t.getWarehouseName() != null ? t.getWarehouseName() : "-" %></span></td>
                                         <td><%= t.getKeeperFullName() %></td>
                                         <td>
-                                            <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= displayStatus %></span>
+                                            <span class="badge <%= statusBadge %> bg-opacity-10"><%= displayStatus %></span>
                                         </td>
                                         <td class="text-muted small"><%= t.getCreatedAt() %></td>
                                         <td>
@@ -276,7 +286,8 @@
             if (allRows.length === 1 && allRows[0].cells.length === 1) return;
 
             const searchInput = document.getElementById("searchInput");
-            const dateFilter = document.getElementById("dateFilter");
+            const startDateFilter = document.getElementById("startDateFilter");
+            const endDateFilter = document.getElementById("endDateFilter");
             const statusFilter = document.getElementById("statusFilter");
             const warehouseFilter = document.getElementById("warehouseFilter");
             const keeperFilter = document.getElementById("keeperFilter");
@@ -302,7 +313,8 @@
 
             function filterAndPaginate() {
                 const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : "";
-                const dateVal = dateFilter ? dateFilter.value : "";
+                const startDateVal = startDateFilter ? startDateFilter.value : "";
+                const endDateVal = endDateFilter ? endDateFilter.value : "";
                 const statusVal = statusFilter ? statusFilter.value : "";
                 const warehouseVal = warehouseFilter ? warehouseFilter.value.trim() : "";
                 const keeperVal = keeperFilter ? keeperFilter.value.toLowerCase().trim() : "";
@@ -320,7 +332,13 @@
                     const createdAt = cells[7].textContent;
 
                     if (searchVal && !code.includes(searchVal) && !reqCode.includes(searchVal) && !destination.includes(searchVal)) return false;
-                    if (dateVal && !createdAt.startsWith(dateVal)) return false;
+                    
+                    let matchesDate = true;
+                    const createdAtDatePart = createdAt.trim().split(" ")[0];
+                    if (startDateVal && createdAtDatePart < startDateVal) matchesDate = false;
+                    if (endDateVal && createdAtDatePart > endDateVal) matchesDate = false;
+                    if (!matchesDate) return false;
+
                     if (statusVal && status !== statusVal) return false;
                     if (warehouseVal && warehouse !== warehouseVal) return false;
                     if (keeperVal && !keeper.includes(keeperVal)) return false;
@@ -427,11 +445,25 @@
                 filterAndPaginate();
             });
 
-            if (searchInput) searchInput.addEventListener("input", () => { currentPage = 1; filterAndPaginate(); });
-            if (dateFilter) dateFilter.addEventListener("change", () => { currentPage = 1; filterAndPaginate(); });
-            if (statusFilter) statusFilter.addEventListener("change", () => { currentPage = 1; filterAndPaginate(); });
-            if (warehouseFilter) warehouseFilter.addEventListener("change", () => { currentPage = 1; filterAndPaginate(); });
-            if (keeperFilter) keeperFilter.addEventListener("input", () => { currentPage = 1; filterAndPaginate(); });
+            if (document.getElementById("filterBtn")) {
+                document.getElementById("filterBtn").addEventListener("click", () => {
+                    currentPage = 1;
+                    filterAndPaginate();
+                });
+            }
+
+            if (document.getElementById("resetBtn")) {
+                document.getElementById("resetBtn").addEventListener("click", () => {
+                    if (searchInput) searchInput.value = "";
+                    if (startDateFilter) startDateFilter.value = "";
+                    if (endDateFilter) endDateFilter.value = "";
+                    if (statusFilter) statusFilter.value = "";
+                    if (warehouseFilter) warehouseFilter.value = "";
+                    if (keeperFilter) keeperFilter.value = "";
+                    currentPage = 1;
+                    filterAndPaginate();
+                });
+            }
 
             filterAndPaginate();
         }
