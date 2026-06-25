@@ -46,11 +46,11 @@ public class ImportRequestServlet extends HttpServlet {
             action = "list";
 
         if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("REQUEST_VIEW_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n xem yĂªu cáº§u nháº­p.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem yêu cầu nhập.");
             return;
         }
         if (("add".equals(action) || "addReturn".equals(action) || "lookupSerial".equals(action)) && !loggedInUser.hasPermission("REQUEST_ADD_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o yĂªu cáº§u nháº­p.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo yêu cầu nhập.");
             return;
         }
 
@@ -94,7 +94,7 @@ public class ImportRequestServlet extends HttpServlet {
                 java.io.PrintWriter out = response.getWriter();
                 
                 if (serial == null || serial.trim().isEmpty()) {
-                    out.print("{\"success\":false,\"message\":\"Thiáº¿u sá»‘ Serial.\"}");
+                    out.print("{\"success\":false,\"message\":\"Thiếu số Serial.\"}");
                     out.flush();
                     return;
                 }
@@ -139,10 +139,10 @@ public class ImportRequestServlet extends HttpServlet {
                                 try (ResultSet rs2 = ps2.executeQuery()) {
                                     if (rs2.next()) {
                                         String status = rs2.getString("status");
-                                        String msg = "MĂ£ Serial Ä‘ang á»Ÿ tráº¡ng thĂ¡i '" + status + "' (KhĂ´ng thá»ƒ tráº£ láº¡i).";
+                                        String msg = "Mã Serial đang ở trạng thái '" + status + "' (Không thể trả lại).";
                                         out.print("{\"success\":false,\"message\":\"" + msg + "\"}");
                                     } else {
-                                        out.print("{\"success\":false,\"message\":\"MĂ£ Serial khĂ´ng tá»“n táº¡i trĂªn há»‡ thá»‘ng.\"}");
+                                        out.print("{\"success\":false,\"message\":\"Mã Serial không tồn tại trên hệ thống.\"}");
                                     }
                                 }
                             }
@@ -150,7 +150,7 @@ public class ImportRequestServlet extends HttpServlet {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    out.print("{\"success\":false,\"message\":\"Lá»—i truy váº¥n cÆ¡ sá»Ÿ dá»¯ liá»‡u.\"}");
+                    out.print("{\"success\":false,\"message\":\"Lỗi truy vấn cơ sở dữ liệu.\"}");
                 }
                 out.flush();
                 return;
@@ -177,17 +177,17 @@ public class ImportRequestServlet extends HttpServlet {
         }
 
         if (("add".equals(action) || "addReturn".equals(action)) && !loggedInUser.hasPermission("REQUEST_ADD_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o yĂªu cáº§u nháº­p.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo yêu cầu nhập.");
             return;
         }
         if (("approve".equals(action) || "reject".equals(action))
                 && !loggedInUser.hasPermission("REQUEST_APPROVE_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n duyá»‡t yĂªu cáº§u nháº­p.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt yêu cầu nhập.");
             return;
         }
         if (("approveCancel".equals(action) || "rejectCancel".equals(action))
                 && !loggedInUser.hasPermission("REQUEST_APPROVE_CANCEL_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n duyá»‡t há»§y.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt hủy.");
             return;
         }
 
@@ -198,6 +198,15 @@ public class ImportRequestServlet extends HttpServlet {
                 case "add": {
                     int supplierId = Integer.parseInt(httpReq.getParameter("supplier_id"));
                     int warehouseId = parseWarehouseId(httpReq, loggedInUser);
+                    // Block khi kho đang kiểm kê
+                    {
+                        model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(warehouseId);
+                        if (active != null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list"
+                                    + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                            return;
+                        }
+                    }
                     Date expectedDate = Date.valueOf(httpReq.getParameter("expected_date"));
                     String[] productIds = httpReq.getParameterValues("product_id");
                     String[] quantities = httpReq.getParameterValues("quantity");
@@ -245,19 +254,28 @@ public class ImportRequestServlet extends HttpServlet {
                     String returnReason = httpReq.getParameter("return_reason");
                     Date expectedDate = Date.valueOf(httpReq.getParameter("expected_date"));
                     int warehouseId = parseWarehouseId(httpReq, loggedInUser);
+                    // Block khi kho đang kiểm kê
+                    {
+                        model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(warehouseId);
+                        if (active != null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list"
+                                    + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                            return;
+                        }
+                    }
                     String requestedCondition = httpReq.getParameter("requested_condition");
 
-                    String exportTicketIdStr = httpReq.getParameter("export_ticket_id");
-                    if (exportTicketIdStr == null || exportTicketIdStr.trim().isEmpty()) {
-                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=NoExportTicket"); return;
+                    String refTicketIdStr = httpReq.getParameter("ref_ticket_id");
+                    if (refTicketIdStr == null || refTicketIdStr.trim().isEmpty()) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=NoRefTicket"); return;
                     }
-                    int exportTicketId = Integer.parseInt(exportTicketIdStr);
-                    Ticket exportTicket = new TicketService().getById(exportTicketId);
-                    if (exportTicket == null) {
+                    int refTicketId = Integer.parseInt(refTicketIdStr);
+                    Ticket refTicket = new TicketService().getById(refTicketId);
+                    if (refTicket == null) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=InvalidTicket"); return;
                     }
-                    Request exportReq = dao.getById(exportTicket.getRequestId());
-                    if (exportReq == null) {
+                    Request refTicketReq = dao.getById(refTicket.getRequestId());
+                    if (refTicketReq == null) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=InvalidTicketRequest"); return;
                     }
 
@@ -304,9 +322,9 @@ public class ImportRequestServlet extends HttpServlet {
                     req.setType(Request.TYPE_IN);
                     req.setReason(Request.REASON_RETURN);
                     req.setWarehouseId(warehouseId);
-                    req.setPartnerType(exportReq.getPartnerType());
-                    req.setPartnerId(exportReq.getPartnerId());
-                    req.setRefTicketId(exportTicketId);
+                    req.setPartnerType(refTicketReq.getPartnerType());
+                    req.setPartnerId(refTicketReq.getPartnerId());
+                    req.setRefTicketId(refTicketId);
                     req.setReturnReason(returnReason.trim());
                     req.setRequestedCondition(requestedCondition);
                     req.setExpectedSerials(expectedSerialsStr);
@@ -333,7 +351,7 @@ public class ImportRequestServlet extends HttpServlet {
                         break;
                     if (Request.STATUS_PENDING.equals(req.getStatus())) {
                         if (!loggedInUser.hasPermission("REQUEST_CANCEL_IN")) {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n há»§y.");
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy.");
                             return;
                         }
                         dao.cancelRequest(cancelId, loggedInUser.getId());

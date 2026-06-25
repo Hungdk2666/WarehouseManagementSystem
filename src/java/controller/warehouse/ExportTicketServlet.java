@@ -39,10 +39,10 @@ public class ExportTicketServlet extends HttpServlet {
         if (action == null) action = "list";
 
         if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("TICKET_VIEW_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n xem phiáº¿u xuáº¥t."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem phiếu xuất."); return;
         }
         if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o phiáº¿u xuáº¥t."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo phiếu xuất."); return;
         }
 
         TicketService ticketService = new TicketService();
@@ -52,7 +52,7 @@ public class ExportTicketServlet extends HttpServlet {
         switch (action) {
             case "list":
                 httpReq.setAttribute("ticketList", ticketService.getAll(TYPE));
-                // Phiáº¿u OUT-TRANSFER Ä‘ang Ä‘áº¿n kho hiá»‡n táº¡i (FYI only â€” luá»“ng má»›i: táº¡o Ticket IN)
+                // Phiếu OUT-TRANSFER đang đến kho hiện tại (FYI only — luồng mới: tạo Ticket IN)
                 if (loggedInUser.getWarehouseId() != null) {
                     httpReq.setAttribute("incomingTransfers",
                             ticketService.getIncomingTransfersForWarehouse(loggedInUser.getWarehouseId()));
@@ -85,6 +85,15 @@ public class ExportTicketServlet extends HttpServlet {
             }
             case "add": {
                 Integer userWh = loggedInUser.getWarehouseId();
+                // Block khi kho đang có phiếu kiểm kê chạy
+                if (userWh != null) {
+                    model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(userWh);
+                    if (active != null) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"
+                                + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                        return;
+                    }
+                }
                 List<Request> approved = requestService.getPendingOrApproved(Request.TYPE_OUT, userWh);
                 httpReq.setAttribute("reqList", approved);
                 String reqIdParam = httpReq.getParameter("request_id");
@@ -140,13 +149,13 @@ public class ExportTicketServlet extends HttpServlet {
         if (action == null) { response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"); return; }
 
         if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo."); return;
         }
         if ("confirm".equals(action) && !loggedInUser.hasPermission("TICKET_CONFIRM_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n confirm."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xác nhận."); return;
         }
         if ("cancel".equals(action) && !loggedInUser.hasPermission("TICKET_CANCEL_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n há»§y."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy."); return;
         }
 
         TicketService ticketService = new TicketService();
@@ -165,6 +174,15 @@ public class ExportTicketServlet extends HttpServlet {
                     }
                     Integer userWh = loggedInUser.getWarehouseId();
                     int sourceWh = selectedReq.getWarehouseId();
+                    // Block khi kho nguồn đang kiểm kê
+                    {
+                        model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(sourceWh);
+                        if (active != null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"
+                                    + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                            return;
+                        }
+                    }
                     if (userWh != null && userWh != sourceWh) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=WrongWarehouse"); return;
                     }
@@ -207,6 +225,18 @@ public class ExportTicketServlet extends HttpServlet {
                 }
                 case "confirm": {
                     int confirmId = Integer.parseInt(httpReq.getParameter("id"));
+                    // Block khi kho đang kiểm kê
+                    {
+                        Ticket ticketForConfirm = ticketService.getById(confirmId);
+                        if (ticketForConfirm != null) {
+                            model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(ticketForConfirm.getWarehouseId());
+                            if (active != null) {
+                                response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + confirmId
+                                        + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                                return;
+                            }
+                        }
+                    }
                     String[] scanned = httpReq.getParameterValues("scanned_serials");
                     List<String> serials = new ArrayList<>();
                     if (scanned != null) {

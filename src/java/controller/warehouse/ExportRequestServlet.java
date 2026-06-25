@@ -43,10 +43,10 @@ public class ExportRequestServlet extends HttpServlet {
         if (action == null) action = "list";
 
         if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("REQUEST_VIEW_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n xem yĂªu cáº§u xuáº¥t."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem yêu cầu xuất."); return;
         }
         if ("add".equals(action) && !loggedInUser.hasPermission("REQUEST_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o yĂªu cáº§u xuáº¥t."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo yêu cầu xuất."); return;
         }
 
         RequestService dao = new RequestService();
@@ -108,14 +108,14 @@ public class ExportRequestServlet extends HttpServlet {
         if (action == null) { response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"); return; }
 
         if ("add".equals(action) && !loggedInUser.hasPermission("REQUEST_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o yĂªu cáº§u xuáº¥t."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo yêu cầu xuất."); return;
         }
         if (("approve".equals(action) || "reject".equals(action)) && !loggedInUser.hasPermission("REQUEST_APPROVE_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n duyá»‡t."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt."); return;
         }
         if (("approveCancel".equals(action) || "rejectCancel".equals(action))
                 && !loggedInUser.hasPermission("REQUEST_APPROVE_CANCEL_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n duyá»‡t há»§y."); return;
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt hủy."); return;
         }
 
         RequestService dao = new RequestService();
@@ -139,6 +139,15 @@ public class ExportRequestServlet extends HttpServlet {
                         sourceWh = Integer.parseInt(sourceWhStr);
                     } else {
                         sourceWh = loggedInUser.getWarehouseId() != null ? loggedInUser.getWarehouseId() : 1;
+                    }
+                    // Block khi kho nguồn đang kiểm kê
+                    {
+                        model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(sourceWh);
+                        if (active != null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"
+                                    + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                            return;
+                        }
                     }
 
                     String partnerType;
@@ -229,7 +238,7 @@ public class ExportRequestServlet extends HttpServlet {
                     if (req == null) break;
                     if (Request.STATUS_PENDING.equals(req.getStatus())) {
                         if (!loggedInUser.hasPermission("REQUEST_CANCEL_OUT")) {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n há»§y."); return;
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy."); return;
                         }
                         dao.cancelRequest(cancelId, loggedInUser.getId());
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"); return;

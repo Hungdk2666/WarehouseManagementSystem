@@ -40,11 +40,11 @@ public class ImportTicketServlet extends HttpServlet {
             action = "list";
 
         if (("list".equals(action) || "detail".equals(action)) && !loggedInUser.hasPermission("TICKET_VIEW_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n xem phiáº¿u nháº­p.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem phiếu nhập.");
             return;
         }
         if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o phiáº¿u nháº­p.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo phiếu nhập.");
             return;
         }
 
@@ -108,6 +108,15 @@ public class ImportTicketServlet extends HttpServlet {
                 // Lá»c theo kho cá»§a user: staff_hcm chá»‰ tháº¥y yĂªu cáº§u nháº­p cá»§a TPHCM, staff_hn
                 // chá»‰ tháº¥y HN
                 Integer userWh = loggedInUser.getWarehouseId();
+                // Block khi kho đang có phiếu kiểm kê chạy
+                if (userWh != null) {
+                    model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(userWh);
+                    if (active != null) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=list"
+                                + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                        return;
+                    }
+                }
                 List<Request> pendingRequests = requestService.getPendingOrApproved(Request.TYPE_IN, userWh);
                 httpReq.setAttribute("requestList", pendingRequests);
                 String reqIdParam = httpReq.getParameter("request_id");
@@ -140,15 +149,15 @@ public class ImportTicketServlet extends HttpServlet {
         }
 
         if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n táº¡o.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo.");
             return;
         }
         if ("confirm".equals(action) && !loggedInUser.hasPermission("TICKET_CONFIRM_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n confirm.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xác nhận.");
             return;
         }
         if ("cancel".equals(action) && !loggedInUser.hasPermission("TICKET_CANCEL_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n há»§y.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy.");
             return;
         }
 
@@ -165,6 +174,15 @@ public class ImportTicketServlet extends HttpServlet {
                         response.sendRedirect(
                                 httpReq.getContextPath() + "/warehouse/import-ticket?action=add&error=CancelRequested");
                         return;
+                    }
+                    // Block khi kho đang kiểm kê
+                    if (loggedInUser.getWarehouseId() != null) {
+                        model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(loggedInUser.getWarehouseId());
+                        if (active != null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=list"
+                                    + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                            return;
+                        }
                     }
                     if (loggedInUser.getWarehouseId() == null) {
                         response.sendRedirect(
@@ -218,6 +236,18 @@ public class ImportTicketServlet extends HttpServlet {
                 }
                 case "confirm": {
                     int confirmId = Integer.parseInt(httpReq.getParameter("id"));
+                    // Block khi kho đang kiểm kê
+                    {
+                        Ticket ticketForConfirm = ticketService.getById(confirmId);
+                        if (ticketForConfirm != null) {
+                            model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(ticketForConfirm.getWarehouseId());
+                            if (active != null) {
+                                response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=detail&id=" + confirmId
+                                        + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
+                                return;
+                            }
+                        }
+                    }
                     String[] scannedSerials = httpReq.getParameterValues("scanned_serials");
                     List<String> serials = null;
                     if (scannedSerials != null && scannedSerials.length > 0) {
