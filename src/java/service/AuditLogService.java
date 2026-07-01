@@ -15,12 +15,12 @@ public class AuditLogService {
         return dao.getAllUniqueActions();
     }
 
-    public List<AuditLog> getLogs(String arg0, String arg1, String arg2, String arg3, int arg4, int arg5) {
-        return dao.getLogs(arg0, arg1, arg2, arg3, arg4, arg5);
+    public List<AuditLog> getLogs(String search, String[] actionFilters, String startDate, String endDate, int page, int pageSize) {
+        return dao.getLogs(search, actionFilters, startDate, endDate, page, pageSize);
     }
 
-    public int getLogsCount(String arg0, String arg1, String arg2, String arg3) {
-        return dao.getLogsCount(arg0, arg1, arg2, arg3);
+    public int getLogsCount(String search, String[] actionFilters, String startDate, String endDate) {
+        return dao.getLogsCount(search, actionFilters, startDate, endDate);
     }
 
     public void log(Integer arg0, String arg1, String arg2) {

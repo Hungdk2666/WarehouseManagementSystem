@@ -28,20 +28,23 @@ public class AuditLogDAO {
         }
     }
 
-    public List<AuditLog> getLogs(String search, String actionFilter, String startDate, String endDate, int page, int pageSize) {
+    public List<AuditLog> getLogs(String search, String[] actionFilters, String startDate, String endDate, int page, int pageSize) {
         List<AuditLog> list = new ArrayList<>();
+        List<String> validActions = filterNonEmpty(actionFilters);
         StringBuilder sb = new StringBuilder(
             "SELECT l.*, u.username, u.full_name AS user_fullname " +
             "FROM Audit_Logs l " +
             "LEFT JOIN Users u ON l.user_id = u.id " +
             "WHERE 1=1 "
         );
-        
+
         if (search != null && !search.trim().isEmpty()) {
             sb.append("AND (u.username LIKE ? OR u.full_name LIKE ? OR l.details LIKE ?) ");
         }
-        if (actionFilter != null && !actionFilter.trim().isEmpty()) {
-            sb.append("AND l.action = ? ");
+        if (!validActions.isEmpty()) {
+            sb.append("AND l.action IN (");
+            for (int i = 0; i < validActions.size(); i++) sb.append(i == 0 ? "?" : ",?");
+            sb.append(") ");
         }
         if (startDate != null && !startDate.trim().isEmpty()) {
             sb.append("AND l.created_at >= ? ");
@@ -49,12 +52,12 @@ public class AuditLogDAO {
         if (endDate != null && !endDate.trim().isEmpty()) {
             sb.append("AND l.created_at <= ? ");
         }
-        
+
         sb.append("ORDER BY l.created_at DESC LIMIT ? OFFSET ?");
-        
+
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(sb.toString())) {
-            
+
             int paramIndex = 1;
             if (search != null && !search.trim().isEmpty()) {
                 String searchPattern = "%" + search.trim() + "%";
@@ -62,16 +65,14 @@ public class AuditLogDAO {
                 ps.setString(paramIndex++, searchPattern);
                 ps.setString(paramIndex++, searchPattern);
             }
-            if (actionFilter != null && !actionFilter.trim().isEmpty()) {
-                ps.setString(paramIndex++, actionFilter.trim());
-            }
+            for (String a : validActions) ps.setString(paramIndex++, a);
             if (startDate != null && !startDate.trim().isEmpty()) {
                 ps.setString(paramIndex++, startDate.trim() + " 00:00:00");
             }
             if (endDate != null && !endDate.trim().isEmpty()) {
                 ps.setString(paramIndex++, endDate.trim() + " 23:59:59");
             }
-            
+
             ps.setInt(paramIndex++, pageSize);
             ps.setInt(paramIndex++, (page - 1) * pageSize);
             
@@ -94,19 +95,22 @@ public class AuditLogDAO {
         return list;
     }
 
-    public int getLogsCount(String search, String actionFilter, String startDate, String endDate) {
+    public int getLogsCount(String search, String[] actionFilters, String startDate, String endDate) {
+        List<String> validActions = filterNonEmpty(actionFilters);
         StringBuilder sb = new StringBuilder(
             "SELECT COUNT(*) " +
             "FROM Audit_Logs l " +
             "LEFT JOIN Users u ON l.user_id = u.id " +
             "WHERE 1=1 "
         );
-        
+
         if (search != null && !search.trim().isEmpty()) {
             sb.append("AND (u.username LIKE ? OR u.full_name LIKE ? OR l.details LIKE ?) ");
         }
-        if (actionFilter != null && !actionFilter.trim().isEmpty()) {
-            sb.append("AND l.action = ? ");
+        if (!validActions.isEmpty()) {
+            sb.append("AND l.action IN (");
+            for (int i = 0; i < validActions.size(); i++) sb.append(i == 0 ? "?" : ",?");
+            sb.append(") ");
         }
         if (startDate != null && !startDate.trim().isEmpty()) {
             sb.append("AND l.created_at >= ? ");
@@ -114,10 +118,10 @@ public class AuditLogDAO {
         if (endDate != null && !endDate.trim().isEmpty()) {
             sb.append("AND l.created_at <= ? ");
         }
-        
+
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(sb.toString())) {
-            
+
             int paramIndex = 1;
             if (search != null && !search.trim().isEmpty()) {
                 String searchPattern = "%" + search.trim() + "%";
@@ -125,9 +129,7 @@ public class AuditLogDAO {
                 ps.setString(paramIndex++, searchPattern);
                 ps.setString(paramIndex++, searchPattern);
             }
-            if (actionFilter != null && !actionFilter.trim().isEmpty()) {
-                ps.setString(paramIndex++, actionFilter.trim());
-            }
+            for (String a : validActions) ps.setString(paramIndex++, a);
             if (startDate != null && !startDate.trim().isEmpty()) {
                 ps.setString(paramIndex++, startDate.trim() + " 00:00:00");
             }
@@ -144,6 +146,12 @@ public class AuditLogDAO {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    private List<String> filterNonEmpty(String[] arr) {
+        List<String> result = new ArrayList<>();
+        if (arr != null) for (String s : arr) if (s != null && !s.trim().isEmpty()) result.add(s.trim());
+        return result;
     }
 
     public List<String> getAllUniqueActions() {

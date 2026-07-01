@@ -33,7 +33,7 @@ public class AuditLogServlet extends HttpServlet {
         }
 
         String search = request.getParameter("search");
-        String actionFilter = request.getParameter("actionFilter");
+        String[] actionFilters = request.getParameterValues("actionFilter");
         String startDate = request.getParameter("startDate");
         String endDate = request.getParameter("endDate");
         
@@ -58,8 +58,8 @@ public class AuditLogServlet extends HttpServlet {
         }
         
         AuditLogService dao = new AuditLogService();
-        List<AuditLog> list = dao.getLogs(search, actionFilter, startDate, endDate, page, pageSize);
-        int totalLogs = dao.getLogsCount(search, actionFilter, startDate, endDate);
+        List<AuditLog> list = dao.getLogs(search, actionFilters, startDate, endDate, page, pageSize);
+        int totalLogs = dao.getLogsCount(search, actionFilters, startDate, endDate);
         int totalPages = (int) Math.ceil((double) totalLogs / pageSize);
         if (totalPages == 0) {
             totalPages = 1;
@@ -75,7 +75,7 @@ public class AuditLogServlet extends HttpServlet {
         request.setAttribute("pageSize", pageSize);
         
         request.setAttribute("search", search);
-        request.setAttribute("actionFilter", actionFilter);
+        request.setAttribute("actionFilters", actionFilters);
         request.setAttribute("startDate", startDate);
         request.setAttribute("endDate", endDate);
 
