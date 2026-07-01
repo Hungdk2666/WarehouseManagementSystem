@@ -319,14 +319,15 @@ public class TicketDAO {
     // CONFIRM
     // ============================================================
     public boolean confirm(int ticketId, int confirmedBy) {
-        return confirm(ticketId, confirmedBy, null);
+        return confirm(ticketId, confirmedBy, null, null);
     }
 
-    /**
-     * @param serials chỉ áp dụng cho type=OUT: danh sách serial cần xuất.
-     *                Với type=IN: tham số bị bỏ qua, hệ thống tự sinh serial.
-     */
     public boolean confirm(int ticketId, int confirmedBy, List<String> serials) {
+        return confirm(ticketId, confirmedBy, serials, null);
+    }
+
+    public boolean confirm(int ticketId, int confirmedBy, List<String> serials,
+                           java.util.Map<String, java.util.List<String>> manufacturerSerialsBySku) {
         try (Connection conn = DBUtils.getConnection()) {
             conn.setAutoCommit(false);
             try {
@@ -347,7 +348,7 @@ public class TicketDAO {
                 List<TicketDetail> details = getDetailsByTicketId(ticketId, conn);
 
                 boolean ok = ticket.isIn()
-                        ? processConfirmIn(ticket, req, details, confirmedBy, serials, conn)
+                        ? processConfirmIn(ticket, req, details, confirmedBy, serials, manufacturerSerialsBySku, conn)
                         : processConfirmOut(ticket, req, details, confirmedBy, serials, conn);
 
                 if (!ok) {
@@ -373,7 +374,8 @@ public class TicketDAO {
     // IN confirm — sinh serial, cộng tồn, update avg cost
     // ============================================================
     private boolean processConfirmIn(Ticket ticket, Request req, List<TicketDetail> details,
-            int confirmedBy, List<String> serials, Connection conn) throws Exception {
+            int confirmedBy, List<String> serials,
+            java.util.Map<String, java.util.List<String>> manufacturerSerialsBySku, Connection conn) throws Exception {
 
         boolean isReturn = Request.REASON_RETURN.equals(req.getReason());
         boolean isTransfer = Request.REASON_TRANSFER.equals(req.getReason());
@@ -568,10 +570,13 @@ public class TicketDAO {
                 serials.removeAll(productSerials);
 
             } else {
-                // PURCHASE: sinh serial mới
+                // PURCHASE: sinh serial mới + gắn serial NSX nếu có
+                String skuKey = d.getSku() != null ? d.getSku() : ("P" + productId);
+                java.util.List<String> mfrSerials = (manufacturerSerialsBySku != null)
+                        ? manufacturerSerialsBySku.get(skuKey) : null;
                 List<String> newSerials = productItemDAO.addProductItemsAndReturnSerials(
-                        productId, ticket.getId(), recQty, d.getSku() != null ? d.getSku() : ("P" + productId),
-                        ticket.getWarehouseId(), condition, conn);
+                        productId, ticket.getId(), recQty, skuKey,
+                        ticket.getWarehouseId(), condition, mfrSerials, conn);
 
                 String movSql = "INSERT INTO Product_Item_Movements "
                         + "(product_item_id, ticket_id, action, from_warehouse_id, to_warehouse_id, condition_at_time, created_by) "
@@ -615,9 +620,11 @@ public class TicketDAO {
         // Audit + notification
         auditLogDAO.log(confirmedBy, "CONFIRM_TICKET_IN",
                 "Ticket " + ticket.getTicketCode() + " (Request " + req.getRequestCode() + ")");
-        notificationDAO.createNotification(req.getStaffId(),
-                "Phiếu " + ticket.getTicketCode() + " đã được nhập kho",
-                "", "/warehouse/import-ticket?action=detail&id=" + ticket.getId(), conn);
+        if (req.getStaffId() != confirmedBy) {
+            notificationDAO.createNotification(req.getStaffId(),
+                    "Phiếu " + ticket.getTicketCode() + " đã được nhập kho",
+                    "", "/warehouse/import-ticket?action=detail&id=" + ticket.getId(), conn);
+        }
         return true;
     }
 
@@ -783,12 +790,16 @@ public class TicketDAO {
         // Audit + notify
         auditLogDAO.log(confirmedBy, "CONFIRM_TICKET_OUT",
                 "Ticket " + ticket.getTicketCode() + " (Request " + req.getRequestCode() + ")");
-        notificationDAO.createNotification(req.getStaffId(),
-                "Phiếu " + ticket.getTicketCode() + " đã xuất kho",
-                "", "/warehouse/export-ticket?action=detail&id=" + ticket.getId(), conn);
-        notificationDAO.createNotification(ticket.getKeeperId(),
-                "Phiếu xuất " + ticket.getTicketCode() + " đã được duyệt",
-                "", "/warehouse/export-ticket?action=detail&id=" + ticket.getId(), conn);
+        if (req.getStaffId() != confirmedBy) {
+            notificationDAO.createNotification(req.getStaffId(),
+                    "Phiếu " + ticket.getTicketCode() + " đã xuất kho",
+                    "", "/warehouse/export-ticket?action=detail&id=" + ticket.getId(), conn);
+        }
+        if (ticket.getKeeperId() != confirmedBy && ticket.getKeeperId() != req.getStaffId()) {
+            notificationDAO.createNotification(ticket.getKeeperId(),
+                    "Phiếu xuất " + ticket.getTicketCode() + " đã được xác nhận",
+                    "", "/warehouse/export-ticket?action=detail&id=" + ticket.getId(), conn);
+        }
 
         // Auto-create IN-TRANSFER request bên kho đích nếu OUT-TRANSFER
         if (isTransfer) {

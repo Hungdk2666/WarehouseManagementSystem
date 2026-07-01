@@ -3,17 +3,24 @@ package controller.warehouse;
 import service.RequestService;
 import service.TicketService;
 import service.ProductItemService;
+import service.ManufacturerSerialExcelService;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
 import model.ProductItem;
 import model.Request;
 import model.Ticket;
@@ -21,6 +28,7 @@ import model.TicketDetail;
 import model.User;
 
 @WebServlet(name = "ImportTicketServlet", urlPatterns = { "/warehouse/import-ticket", "/warehouse/import" })
+@MultipartConfig(maxFileSize = 5 * 1024 * 1024)
 public class ImportTicketServlet extends HttpServlet {
 
     private static final String TYPE = Ticket.TYPE_IN;
@@ -257,12 +265,102 @@ public class ImportTicketServlet extends HttpServlet {
                                 serials.add(s.trim());
                         }
                     }
-                    ticketService.confirm(confirmId, loggedInUser.getId(), serials);
+                    @SuppressWarnings("unchecked")
+                    Map<String, List<String>> mfrSerials = (Map<String, List<String>>) session.getAttribute("mfrSerials_" + confirmId);
+
+                    // Nếu chưa có Excel serials trong session, kiểm tra xem người dùng có quét mã vạch NSX không
+                    if (mfrSerials == null) {
+                        String[] scanParams = httpReq.getParameterValues("manufacturer_serial_scan");
+                        if (scanParams != null && scanParams.length > 0) {
+                            mfrSerials = new LinkedHashMap<>();
+                            for (String param : scanParams) {
+                                if (param == null || !param.contains("|")) continue;
+                                int sep = param.indexOf('|');
+                                String sku = param.substring(0, sep).trim();
+                                String serial = param.substring(sep + 1).trim();
+                                if (!sku.isEmpty() && !serial.isEmpty()) {
+                                    mfrSerials.computeIfAbsent(sku, k -> new ArrayList<>()).add(serial);
+                                }
+                            }
+                            if (mfrSerials.isEmpty()) mfrSerials = null;
+                        }
+                    }
+
+                    ticketService.confirm(confirmId, loggedInUser.getId(), serials, mfrSerials);
+                    session.removeAttribute("mfrSerials_" + confirmId);
                     break;
                 }
                 case "cancel":
                     ticketService.cancel(Integer.parseInt(httpReq.getParameter("id")));
                     break;
+                case "uploadSerials": {
+                    int ticketId = Integer.parseInt(httpReq.getParameter("id"));
+                    Ticket ticket = ticketService.getById(ticketId);
+                    response.setContentType("application/json;charset=UTF-8");
+                    PrintWriter out = response.getWriter();
+
+                    if (ticket == null || !Ticket.STATUS_DRAFT.equals(ticket.getStatus())) {
+                        out.print("{\"valid\":false,\"errors\":[\"Phiếu không tồn tại hoặc không ở trạng thái DRAFT.\"]}");
+                        return;
+                    }
+                    if (!Request.REASON_PURCHASE.equals(ticket.getRequestReason())) {
+                        out.print("{\"valid\":false,\"errors\":[\"Upload serial NSX chỉ áp dụng cho phiếu nhập mua hàng (PURCHASE).\"]}");
+                        return;
+                    }
+
+                    Part filePart = httpReq.getPart("excelFile");
+                    if (filePart == null || filePart.getSize() == 0) {
+                        out.print("{\"valid\":false,\"errors\":[\"Chưa chọn file.\"]}");
+                        return;
+                    }
+
+                    Map<String, Integer> expectedBySku = new LinkedHashMap<>();
+                    if (ticket.getDetails() != null) {
+                        for (TicketDetail d : ticket.getDetails()) {
+                            expectedBySku.put(d.getSku(), d.getQuantity());
+                        }
+                    }
+
+                    ManufacturerSerialExcelService excelService = new ManufacturerSerialExcelService();
+                    ManufacturerSerialExcelService.ParseResult result;
+                    try (InputStream is = filePart.getInputStream()) {
+                        result = excelService.parseAndValidate(is, expectedBySku);
+                    }
+
+                    if (result.isValid()) {
+                        session.setAttribute("mfrSerials_" + ticketId, result.getSerialsBySku());
+                    }
+
+                    StringBuilder json = new StringBuilder();
+                    json.append("{\"valid\":").append(result.isValid());
+                    json.append(",\"totalSerials\":").append(result.getTotalSerials());
+                    json.append(",\"errors\":[");
+                    for (int i = 0; i < result.getErrors().size(); i++) {
+                        if (i > 0) json.append(",");
+                        json.append("\"").append(result.getErrors().get(i).replace("\"", "\\\"")).append("\"");
+                    }
+                    json.append("],\"serialsBySku\":{");
+                    int skuIdx = 0;
+                    for (Map.Entry<String, List<String>> entry : result.getSerialsBySku().entrySet()) {
+                        if (skuIdx++ > 0) json.append(",");
+                        json.append("\"").append(entry.getKey()).append("\":[");
+                        for (int i = 0; i < entry.getValue().size(); i++) {
+                            if (i > 0) json.append(",");
+                            json.append("\"").append(entry.getValue().get(i).replace("\"", "\\\"")).append("\"");
+                        }
+                        json.append("]");
+                    }
+                    json.append("}}");
+                    out.print(json);
+                    return;
+                }
+                case "clearSerials": {
+                    int ticketId = Integer.parseInt(httpReq.getParameter("id"));
+                    session.removeAttribute("mfrSerials_" + ticketId);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().print("{\"ok\":true}");
+                    return;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

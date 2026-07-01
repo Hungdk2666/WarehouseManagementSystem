@@ -2,6 +2,7 @@ package service;
 
 import dao.TicketDAO;
 import java.util.List;
+import java.util.Map;
 import java.sql.Connection;
 import model.*;
 
@@ -42,6 +43,11 @@ public class TicketService {
 
     public boolean confirm(int arg0, int arg1, List<String> arg2) {
         return dao.confirm(arg0, arg1, arg2);
+    }
+
+    public boolean confirm(int ticketId, int confirmedBy, List<String> serials,
+                           Map<String, List<String>> manufacturerSerialsBySku) {
+        return dao.confirm(ticketId, confirmedBy, serials, manufacturerSerialsBySku);
     }
 
     public List<Ticket> getByRequestId(int arg0) {

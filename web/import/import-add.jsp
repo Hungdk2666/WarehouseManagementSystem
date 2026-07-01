@@ -1,4 +1,4 @@
-<%@page import="model.Request"%>
+﻿<%@page import="model.Request"%>
 <%@page import="model.RequestDetail"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
@@ -77,8 +77,8 @@
                 <% } %>
 
                 <div class="card card-overflow-visible shadow-sm border-0 bg-white mb-4" style="overflow: visible;">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-receipt me-2"></i>Chọn Yêu cầu nhập kho tham chiếu</h5>
+                    <div class="card-header bg-transparent py-3 border-bottom">
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-receipt me-2"></i>Chọn Yêu cầu nhập kho tham chiếu</h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="row align-items-end g-3">
@@ -117,8 +117,8 @@
                     <input type="hidden" name="request_id" value="<%= selectedRequest.getId() %>">
                     
                     <div class="card shadow-sm border-0 bg-white mb-4">
-                        <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                            <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-seam me-2"></i>Chi tiết Phiếu nhập kho</h5>
+                        <div class="card-header bg-transparent py-3 border-bottom">
+                            <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-seam me-2"></i>Chi tiết Phiếu nhập kho</h5>
                         </div>
                         <div class="card-body p-0">
                             <table class="table align-middle text-center mb-0">
@@ -139,6 +139,8 @@
                                     <%
                                         if (selectedRequest.getDetails() != null) {
                                             for (RequestDetail d : selectedRequest.getDetails()) {
+                                                int remaining = d.getQuantity() - d.getProcessedQuantity();
+                                                if (remaining < 0) remaining = 0;
                                     %>
                                     <tr>
                                         <td class="text-start ps-4 fw-semibold">
@@ -147,25 +149,25 @@
                                         </td>
                                         <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= d.getSku() %></span></td>
                                         <td><%= d.getUnit() %></td>
-                                        <td class="text-muted"><%= d.getQuantity() %></td>
+                                        <td class="text-muted"><%= remaining %></td>
                                         <td class="text-muted"><%= String.format("%,.0f", (d.getUnitPrice() != null ? d.getUnitPrice().doubleValue() : 0.0)) %> VND</td>
                                         <td>
-                                            <input type="number" class="form-control form-control-sm text-center qty-input" name="quantity" value="<%= d.getQuantity() %>" min="0" max="<%= d.getQuantity() %>" required style="box-shadow: none;">
+                                            <input type="number" class="form-control form-control-sm text-center qty-input" name="quantity" value="<%= remaining %>" min="0" max="<%= remaining %>" onkeydown="if(!/^[0-9]$/.test(event.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'].includes(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();" required style="box-shadow: none;">
                                         </td>
                                         <td>
-                                            <input type="number" class="form-control form-control-sm text-end price-input" name="unit_price" value="<%= (d.getUnitPrice() != null ? d.getUnitPrice().doubleValue() : 0.0) %>" min="0" required style="box-shadow: none;">
+                                            <input type="number" class="form-control form-control-sm text-end price-input" name="unit_price" value="<%= (d.getUnitPrice() != null ? d.getUnitPrice().stripTrailingZeros().toPlainString() : "0") %>" min="0" step="any" onkeydown="if(!/^[0-9.]$/.test(event.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'].includes(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();" required style="box-shadow: none;">
                                         </td>
                                         <% if (showCondition) { %>
                                         <td>
                                             <select class="form-select form-select-sm" name="item_condition" style="box-shadow: none;">
                                                 <% if (isReturnRequest) { %>
-                                                <option value="USED" selected>Used</option>
-                                                <option value="NEW">New</option>
-                                                <option value="DAMAGED">Damaged (→ Quarantine)</option>
+                                                <option value="USED" selected>Đã qua sử dụng</option>
+                                                <option value="NEW">Mới</option>
+                                                <option value="DAMAGED">Hàng lỗi</option>
                                                 <% } else { %>
-                                                <option value="NEW" selected>New (nguyên vẹn)</option>
-                                                <option value="USED">Used (cũ)</option>
-                                                <option value="DAMAGED">Damaged (hỏng → Quarantine)</option>
+                                                <option value="NEW" selected>Mới (nguyên vẹn)</option>
+                                                <option value="USED">Đã qua sử dụng</option>
+                                                <option value="DAMAGED">Hàng lỗi</option>
                                                 <% } %>
                                             </select>
                                         </td>
@@ -225,7 +227,16 @@
             const qtyInputs = document.querySelectorAll(".qty-input");
             const priceInputs = document.querySelectorAll(".price-input");
             
-            qtyInputs.forEach(input => input.addEventListener("input", recalculateTotals));
+            qtyInputs.forEach(input => input.addEventListener("input", function() {
+                if (this.value !== "") {
+                    let val = parseInt(this.value);
+                    let max = parseInt(this.getAttribute("max"));
+                    if (!isNaN(val) && !isNaN(max) && val > max) {
+                        this.value = max;
+                    }
+                }
+                recalculateTotals();
+            }));
             priceInputs.forEach(input => input.addEventListener("input", recalculateTotals));
             
             recalculateTotals();
