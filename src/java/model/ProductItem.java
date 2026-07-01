@@ -6,6 +6,7 @@ public class ProductItem {
     private int id;
     private int productId;
     private String serialNumber;
+    private String manufacturerSerial;
     private String status;
     private Timestamp createdAt;
     private String itemCondition; // NEW, USED, DAMAGED
@@ -116,5 +117,13 @@ public class ProductItem {
 
     public void setWarehouseName(String warehouseName) {
         this.warehouseName = warehouseName;
+    }
+
+    public String getManufacturerSerial() {
+        return manufacturerSerial;
+    }
+
+    public void setManufacturerSerial(String manufacturerSerial) {
+        this.manufacturerSerial = manufacturerSerial;
     }
 }
