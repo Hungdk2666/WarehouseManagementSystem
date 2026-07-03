@@ -19,6 +19,7 @@ public class ProductItemDAO {
         item.setCreatedAt(rs.getTimestamp("created_at"));
         item.setItemCondition(rs.getString("item_condition"));
         item.setWarehouseId(rs.getInt("warehouse_id"));
+        item.setManufacturerSerial(rs.getString("manufacturer_serial"));
         return item;
     }
 
@@ -29,15 +30,20 @@ public class ProductItemDAO {
      */
     public List<String> addProductItemsAndReturnSerials(
             int productId, int importTicketId, int quantity, String sku, int warehouseId, Connection conn) throws Exception {
-        return addProductItemsAndReturnSerials(productId, importTicketId, quantity, sku, warehouseId, "NEW", conn);
+        return addProductItemsAndReturnSerials(productId, importTicketId, quantity, sku, warehouseId, "NEW", null, conn);
     }
 
     public List<String> addProductItemsAndReturnSerials(
             int productId, int importTicketId, int quantity, String sku, int warehouseId, String itemCondition, Connection conn) throws Exception {
+        return addProductItemsAndReturnSerials(productId, importTicketId, quantity, sku, warehouseId, itemCondition, null, conn);
+    }
+
+    public List<String> addProductItemsAndReturnSerials(
+            int productId, int importTicketId, int quantity, String sku, int warehouseId,
+            String itemCondition, List<String> manufacturerSerials, Connection conn) throws Exception {
 
         String skuClean = sku.replaceAll("[^a-zA-Z0-9-]", "");
         String condition = (itemCondition != null) ? itemCondition : "NEW";
-        // DAMAGED items go to QUARANTINE, all others go to IN_STOCK
         String status = "DAMAGED".equals(condition) ? "QUARANTINE" : "IN_STOCK";
 
         int currentMaxIndex = 0;
@@ -47,16 +53,22 @@ public class ProductItemDAO {
         }
 
         List<String> serials = new ArrayList<>();
-        String insertSql = "INSERT INTO Product_Items (product_id, serial_number, status, item_condition, warehouse_id) VALUES (?, ?, ?, ?, ?)";
+        String insertSql = "INSERT INTO Product_Items (product_id, serial_number, manufacturer_serial, status, item_condition, warehouse_id) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
             for (int i = 0; i < quantity; i++) {
                 int nextIndex = currentMaxIndex + i + 1;
                 String serial = String.format("%s-%03d", skuClean, nextIndex);
+                String mfrSerial = (manufacturerSerials != null && i < manufacturerSerials.size()) ? manufacturerSerials.get(i) : null;
                 ps.setInt(1, productId);
                 ps.setString(2, serial);
-                ps.setString(3, status);
-                ps.setString(4, condition);
-                ps.setInt(5, warehouseId);
+                if (mfrSerial != null) {
+                    ps.setString(3, mfrSerial);
+                } else {
+                    ps.setNull(3, java.sql.Types.VARCHAR);
+                }
+                ps.setString(4, status);
+                ps.setString(5, condition);
+                ps.setInt(6, warehouseId);
                 ps.executeUpdate();
                 serials.add(serial);
             }

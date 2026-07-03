@@ -130,9 +130,9 @@ public class ProductDAO {
 
         if (lowStockOnly) {
             if (warehouseId != null) {
-                query.append(" AND COALESCE(iv.in_stock_qty, 0) <= p.min_stock");
+                query.append(" AND COALESCE(iv.in_stock_qty, 0) < p.min_stock");
             } else {
-                query.append(" AND COALESCE((SELECT SUM(in_stock_qty) FROM Inventory_Available WHERE product_id = p.id), 0) <= p.min_stock");
+                query.append(" AND COALESCE((SELECT SUM(in_stock_qty) FROM Inventory_Available WHERE product_id = p.id), 0) < p.min_stock");
             }
         }
 
