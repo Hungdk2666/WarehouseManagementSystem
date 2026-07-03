@@ -284,7 +284,7 @@ public class TicketDAO {
 
                 auditLogDAO.log(ticket.getKeeperId(),
                         ticket.isIn() ? "CREATE_TICKET_IN" : "CREATE_TICKET_OUT",
-                        "Ticket " + code);
+                        "Phiếu " + code);
                 conn.commit();
                 return true;
             } catch (Exception ex) {
@@ -341,6 +341,19 @@ public class TicketDAO {
                 // Load parent request (lock too)
                 Request req = lockRequestForUpdate(ticket.getRequestId(), conn);
                 if (req == null) {
+                    conn.rollback();
+                    return false;
+                }
+
+                // Request phải đang APPROVED hoặc PARTIALLY_COMPLETED
+                if (!Request.STATUS_APPROVED.equals(req.getStatus())
+                        && !Request.STATUS_PARTIALLY_COMPLETED.equals(req.getStatus())) {
+                    conn.rollback();
+                    return false;
+                }
+
+                // Chặn confirm khi kho đang kiểm kê
+                if (new StocktakeDAO().isWarehouseFrozen(ticket.getWarehouseId())) {
                     conn.rollback();
                     return false;
                 }
@@ -619,7 +632,7 @@ public class TicketDAO {
 
         // Audit + notification
         auditLogDAO.log(confirmedBy, "CONFIRM_TICKET_IN",
-                "Ticket " + ticket.getTicketCode() + " (Request " + req.getRequestCode() + ")");
+                "Phiếu " + ticket.getTicketCode() + " (Yêu cầu " + req.getRequestCode() + ")");
         if (req.getStaffId() != confirmedBy) {
             notificationDAO.createNotification(req.getStaffId(),
                     "Phiếu " + ticket.getTicketCode() + " đã được nhập kho",
@@ -634,6 +647,13 @@ public class TicketDAO {
     // ============================================================
     private boolean processConfirmOut(Ticket ticket, Request req, List<TicketDetail> details,
             int confirmedBy, List<String> serials, Connection conn) throws Exception {
+
+        // Defensive guard: DISPOSAL đã chuyển sang module /warehouse/disposal.
+        // Chặn tuyệt đối bất kỳ ticket cũ nào không được confirm qua luồng xuất kho thường
+        // (luồng cũ rút hàng tốt thay vì hàng QUARANTINE → bug tồn kho).
+        if (Request.REASON_DISPOSAL.equals(req.getReason())) {
+            return false;
+        }
 
         boolean isTransfer = Request.REASON_TRANSFER.equals(req.getReason());
 
@@ -780,6 +800,32 @@ public class TicketDAO {
             }
         }
 
+        // Low-stock check: cảnh báo nếu tồn kho xuống dưới min_stock
+        for (TicketDetail d : details) {
+            int productId = d.getProductId();
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT i.quantity, p.min_stock, p.product_name, p.sku "
+                    + "FROM Inventories i JOIN Products p ON p.id = i.product_id "
+                    + "WHERE i.product_id = ? AND i.warehouse_id = ?")) {
+                ps.setInt(1, productId);
+                ps.setInt(2, ticket.getWarehouseId());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        int qty = rs.getInt("quantity");
+                        int minStock = rs.getInt("min_stock");
+                        if (qty < minStock) {
+                            String pName = rs.getString("product_name");
+                            String pSku = rs.getString("sku");
+                            notificationDAO.createNotificationForWarehouse(ticket.getWarehouseId(),
+                                    "Cảnh báo tồn kho thấp",
+                                    pName + " (" + pSku + ") còn " + qty + "/" + minStock,
+                                    "/warehouse/product?action=details&id=" + productId, conn);
+                        }
+                    }
+                }
+            }
+        }
+
         // Ticket status
         String finalStatus = isTransfer ? Ticket.STATUS_IN_TRANSIT : Ticket.STATUS_CONFIRMED;
         updateTicketStatus(ticket.getId(), finalStatus, confirmedBy, conn);
@@ -789,7 +835,7 @@ public class TicketDAO {
 
         // Audit + notify
         auditLogDAO.log(confirmedBy, "CONFIRM_TICKET_OUT",
-                "Ticket " + ticket.getTicketCode() + " (Request " + req.getRequestCode() + ")");
+                "Phiếu " + ticket.getTicketCode() + " (Yêu cầu " + req.getRequestCode() + ")");
         if (req.getStaffId() != confirmedBy) {
             notificationDAO.createNotification(req.getStaffId(),
                     "Phiếu " + ticket.getTicketCode() + " đã xuất kho",

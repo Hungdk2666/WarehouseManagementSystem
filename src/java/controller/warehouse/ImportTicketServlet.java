@@ -178,9 +178,10 @@ public class ImportTicketServlet extends HttpServlet {
                     int reqId = Integer.parseInt(httpReq.getParameter("request_id"));
                     Request req = requestService.getById(reqId);
                     if (req == null || req.getCancelRequestedAt() != null
-                            || Request.STATUS_CANCELLED.equals(req.getStatus())) {
+                            || !(Request.STATUS_APPROVED.equals(req.getStatus())
+                                || Request.STATUS_PARTIALLY_COMPLETED.equals(req.getStatus()))) {
                         response.sendRedirect(
-                                httpReq.getContextPath() + "/warehouse/import-ticket?action=add&error=CancelRequested");
+                                httpReq.getContextPath() + "/warehouse/import-ticket?action=add&error=RequestNotApproved");
                         return;
                     }
                     // Block khi kho đang kiểm kê
@@ -219,10 +220,16 @@ public class ImportTicketServlet extends HttpServlet {
                         int qty = Integer.parseInt(quantities[i]);
                         if (qty <= 0)
                             continue;
+                        java.math.BigDecimal price = new java.math.BigDecimal(unitPrices[i]);
+                        if (price.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                            response.sendRedirect(httpReq.getContextPath()
+                                    + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=InvalidPrice");
+                            return;
+                        }
                         TicketDetail d = new TicketDetail();
                         d.setProductId(Integer.parseInt(productIds[i]));
                         d.setQuantity(qty);
-                        d.setUnitCost(new java.math.BigDecimal(unitPrices[i]));
+                        d.setUnitCost(price);
                         details.add(d);
                     }
                     if (details.isEmpty()) {
