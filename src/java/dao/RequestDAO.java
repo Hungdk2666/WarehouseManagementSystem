@@ -224,7 +224,7 @@ public class RequestDAO {
 
                 // Audit + notification
                 String actionLabel = req.isIn() ? "CREATE_REQUEST_IN" : "CREATE_REQUEST_OUT";
-                auditLogDAO.log(req.getStaffId(), actionLabel, "Request " + req.getRequestCode());
+                auditLogDAO.log(req.getStaffId(), actionLabel, "Yêu cầu " + req.getRequestCode());
 
                 // Notify role 2 (Business Admin) — người duyệt
                 String title = req.isIn() ? "Yêu cầu nhập kho mới" : "Yêu cầu xuất kho mới";
@@ -255,7 +255,13 @@ public class RequestDAO {
                 Request req = getById(id);
                 if (req == null) { conn.rollback(); return false; }
 
-                String sql = "UPDATE Requests SET status = ?, approved_by = ?, approved_at = NOW() WHERE id = ?";
+                // Chỉ cho phép duyệt/từ chối khi request đang PENDING
+                if (!Request.STATUS_PENDING.equals(req.getStatus())) {
+                    conn.rollback();
+                    return false;
+                }
+
+                String sql = "UPDATE Requests SET status = ?, approved_by = ?, approved_at = NOW() WHERE id = ? AND status = 'PENDING'";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setString(1, status);
                     ps.setInt(2, approvedBy);
@@ -263,8 +269,10 @@ public class RequestDAO {
                     if (ps.executeUpdate() == 0) { conn.rollback(); return false; }
                 }
 
+                String statusVi = "APPROVED".equals(status) ? "Đã duyệt"
+                        : "REJECTED".equals(status) ? "Từ chối" : status;
                 auditLogDAO.log(approvedBy, "APPROVE_REQUEST_" + req.getType(),
-                        "Request " + req.getRequestCode() + " → " + status);
+                        "Yêu cầu " + req.getRequestCode() + " → " + statusVi);
 
                 String link = req.isIn() ? "/warehouse/import-request?action=detail&id=" + id
                                          : "/warehouse/export-request?action=detail&id=" + id;
@@ -303,7 +311,7 @@ public class RequestDAO {
             ps.setInt(1, userId);
             ps.setInt(2, id);
             boolean ok = ps.executeUpdate() > 0;
-            if (ok) auditLogDAO.log(userId, "CANCEL_REQUEST", "Request id=" + id);
+            if (ok) auditLogDAO.log(userId, "CANCEL_REQUEST", "Yêu cầu id=" + id);
             return ok;
         } catch (Exception e) { e.printStackTrace(); return false; }
     }
@@ -321,7 +329,7 @@ public class RequestDAO {
                     ps.setInt(3, id);
                     if (ps.executeUpdate() == 0) { conn.rollback(); return false; }
                 }
-                auditLogDAO.log(userId, "REQUEST_CANCEL_REQUEST", "Request " + req.getRequestCode() + ": " + reason);
+                auditLogDAO.log(userId, "REQUEST_CANCEL_REQUEST", "Yêu cầu " + req.getRequestCode() + ": " + reason);
                 String link = req.isIn() ? "/warehouse/import-request?action=detail&id=" + id
                                          : "/warehouse/export-request?action=detail&id=" + id;
                 notificationDAO.createNotificationForRole(2,
@@ -346,7 +354,7 @@ public class RequestDAO {
                     ps.setInt(2, id);
                     if (ps.executeUpdate() == 0) { conn.rollback(); return false; }
                 }
-                auditLogDAO.log(userId, "APPROVE_CANCEL_REQUEST", "Request " + req.getRequestCode());
+                auditLogDAO.log(userId, "APPROVE_CANCEL_REQUEST", "Yêu cầu " + req.getRequestCode());
                 String link = req.isIn() ? "/warehouse/import-request?action=detail&id=" + id
                                          : "/warehouse/export-request?action=detail&id=" + id;
                 notificationDAO.createNotification(req.getStaffId(),
@@ -369,7 +377,7 @@ public class RequestDAO {
                     ps.setInt(1, id);
                     if (ps.executeUpdate() == 0) { conn.rollback(); return false; }
                 }
-                auditLogDAO.log(null, "REJECT_CANCEL_REQUEST", "Request " + req.getRequestCode());
+                auditLogDAO.log(null, "REJECT_CANCEL_REQUEST", "Yêu cầu " + req.getRequestCode());
                 String link = req.isIn() ? "/warehouse/import-request?action=detail&id=" + id
                                          : "/warehouse/export-request?action=detail&id=" + id;
                 if (req.getCancelRequestedBy() != null) {
