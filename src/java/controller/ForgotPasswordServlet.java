@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import service.UserService;
 import model.User;
+import utils.SecurityUtils;
 
 @WebServlet(name = "ForgotPasswordServlet", urlPatterns = {"/forgot-password"})
 public class ForgotPasswordServlet extends HttpServlet {
@@ -25,9 +26,9 @@ public class ForgotPasswordServlet extends HttpServlet {
         String email = request.getParameter("email");
         UserService userService = new UserService();
         User user = userService.getUserByEmail(email);
-        
+
         if (user != null) {
-            String resetCode = String.valueOf((int) (Math.random() * 900000) + 100000); // 6-digit code
+            String resetCode = SecurityUtils.generateOTP();
             userService.setResetCode(user.getId(), resetCode);
             HttpSession session = request.getSession();
             session.setAttribute("resetEmail", user.getEmail());

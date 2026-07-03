@@ -3,6 +3,7 @@ package dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import model.User;
@@ -16,6 +17,22 @@ public class UserDAO {
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, username);
             ps.setString(2, hashedPassword);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs, conn);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public User getUserByUsername(String username) {
+        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE u.username = ?";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return mapResultSetToUser(rs, conn);
@@ -60,13 +77,12 @@ public class UserDAO {
     }
 
     public boolean updatePassword(int userId, String newHashedPassword) {
-        String query = "UPDATE Users SET password = ?, reset_code = NULL WHERE id = ?";
+        String query = "UPDATE Users SET password = ?, reset_code = NULL, reset_code_expires_at = NULL, reset_attempts = 0 WHERE id = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, newHashedPassword);
             ps.setInt(2, userId);
-            int rowsAffected = ps.executeUpdate();
-            return rowsAffected > 0;
+            return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -176,12 +192,29 @@ public class UserDAO {
         return false;
     }
 
-    public boolean setResetCode(int userId, String code) {
-        String query = "UPDATE Users SET reset_code = ? WHERE id = ?";
+    public int countActiveUsersByRoleId(int roleId) {
+        String query = "SELECT COUNT(*) FROM Users WHERE role_id = ? AND status = true";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, roleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public boolean setResetCode(int userId, String code, Timestamp expiresAt) {
+        String query = "UPDATE Users SET reset_code = ?, reset_code_expires_at = ?, reset_attempts = 0 WHERE id = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, code);
-            ps.setInt(2, userId);
+            ps.setTimestamp(2, expiresAt);
+            ps.setInt(3, userId);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -189,8 +222,17 @@ public class UserDAO {
         return false;
     }
 
+    public boolean setResetCode(int userId, String code) {
+        return setResetCode(userId, code, new Timestamp(System.currentTimeMillis() + 10 * 60 * 1000));
+    }
+
     public User verifyResetCode(String email, String code) {
-        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE u.email = ? AND u.reset_code = ?";
+        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u "
+                + "LEFT JOIN Roles r ON u.role_id = r.id "
+                + "LEFT JOIN Warehouses w ON u.warehouse_id = w.id "
+                + "WHERE u.email = ? AND u.reset_code = ? "
+                + "AND u.reset_code_expires_at > NOW() "
+                + "AND u.reset_attempts < 5";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, email);
@@ -204,6 +246,28 @@ public class UserDAO {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public void incrementResetAttempts(String email) {
+        String query = "UPDATE Users SET reset_attempts = reset_attempts + 1 WHERE email = ?";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, email);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void clearResetCode(int userId) {
+        String query = "UPDATE Users SET reset_code = NULL, reset_code_expires_at = NULL, reset_attempts = 0 WHERE id = ?";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, userId);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private List<String> getPermissionNamesByRoleId(int roleId, Connection conn) throws Exception {
@@ -241,12 +305,10 @@ public class UserDAO {
         try {
             u.setRoleName(rs.getString("role_name"));
         } catch (Exception e) {
-            // Ignore if role_name is not present
         }
         try {
             u.setWarehouseName(rs.getString("warehouse_name"));
         } catch (Exception e) {
-            // Ignore if warehouse_name is not present
         }
         u.setPermissions(getPermissionNamesByRoleId(u.getRoleId(), conn));
         return u;

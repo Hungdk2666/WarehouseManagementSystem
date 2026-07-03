@@ -22,15 +22,19 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         String user = request.getParameter("username");
         String pass = request.getParameter("password");
-        
+
         UserService userService = new UserService();
         User loggedInUser = userService.login(user, pass);
-        
+
         if (loggedInUser != null) {
-            HttpSession session = request.getSession();
+            HttpSession oldSession = request.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
+            HttpSession session = request.getSession(true);
             session.setAttribute("user", loggedInUser);
             response.sendRedirect("index.jsp");
         } else {

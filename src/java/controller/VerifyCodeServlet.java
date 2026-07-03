@@ -1,4 +1,3 @@
-
 package controller;
 
 import java.io.IOException;
@@ -25,16 +24,20 @@ public class VerifyCodeServlet extends HttpServlet {
             throws ServletException, IOException {
         String email = request.getParameter("email");
         String code = request.getParameter("code");
-        
+
         UserService userService = new UserService();
         User user = userService.verifyResetCode(email, code);
-        
+
         if (user != null) {
-            HttpSession session = request.getSession();
+            HttpSession oldSession = request.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
+            HttpSession session = request.getSession(true);
             session.setAttribute("resetUserId", user.getId());
             response.sendRedirect("reset_password.jsp");
         } else {
-            request.setAttribute("error", "Invalid email or reset code. Please ask Admin for the correct code.");
+            request.setAttribute("error", "Invalid or expired reset code. The code expires after 10 minutes and you have 5 attempts.");
             request.getRequestDispatcher("verify_code.jsp").forward(request, response);
         }
     }

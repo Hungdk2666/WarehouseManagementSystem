@@ -7,8 +7,10 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import service.AuditLogService;
 import service.UserService;
 import model.User;
+import utils.SecurityUtils;
 
 @WebServlet(name = "ChangePasswordServlet", urlPatterns = {"/change-password"})
 public class ChangePasswordServlet extends HttpServlet {
@@ -29,34 +31,42 @@ public class ChangePasswordServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
-        
+
         if (loggedInUser == null) {
             response.sendRedirect("login");
             return;
         }
-        
+
         String oldPassword = request.getParameter("oldPassword");
         String newPassword = request.getParameter("newPassword");
         String confirmPassword = request.getParameter("confirmPassword");
-        
+
         UserService userService = new UserService();
         User verifyUser = userService.login(loggedInUser.getUsername(), oldPassword);
-        
+
         if (verifyUser == null) {
             request.setAttribute("error", "Incorrect old password!");
             request.getRequestDispatcher("change_password.jsp").forward(request, response);
             return;
         }
-        
+
         if (!newPassword.equals(confirmPassword)) {
             request.setAttribute("error", "New passwords do not match!");
             request.getRequestDispatcher("change_password.jsp").forward(request, response);
             return;
         }
-        
+
+        String strengthError = SecurityUtils.validatePasswordStrength(newPassword);
+        if (strengthError != null) {
+            request.setAttribute("error", strengthError);
+            request.getRequestDispatcher("change_password.jsp").forward(request, response);
+            return;
+        }
+
         boolean success = userService.updatePassword(loggedInUser.getId(), newPassword);
-        
+
         if (success) {
+            new AuditLogService().log(loggedInUser.getId(), "CHANGE_PASSWORD", "User changed their own password");
             request.setAttribute("message", "Password changed successfully!");
             request.getRequestDispatcher("change_password.jsp").forward(request, response);
         } else {
