@@ -1,4 +1,4 @@
-<%@page import="model.User"%>
+﻿<%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
@@ -28,12 +28,10 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
-                <div class="row justify-content-center">
-                    <div class="col-md-6">
-                        <div class="card shadow-sm border-0 bg-white">
-                             <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-plus-circle-fill me-2"></i>Tạo điểm đến mới</h4>
-                            </div>
+                <div class="card form-card-narrow">
+                     <div class="card-header bg-white py-3">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-plus-circle-fill me-2 text-primary"></i>Tạo điểm đến mới</span>
+                    </div>
                             <div class="card-body p-4">
                                 <form action="destination?action=add" method="POST">
                                     <div class="mb-3">
@@ -59,16 +57,12 @@
                                             <option value="false">Không hoạt động</option>
                                         </select>
                                     </div>
-                                    <div class="d-grid mb-3 mt-4">
-                                        <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-check-circle me-1"></i> Tạo điểm đến</button>
-                                    </div>
-                                    <div class="text-center">
-                                        <a href="destination?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Hủy</a>
+                                    <div class="form-actions">
+                                        <a href="destination?action=list" class="btn btn-outline-secondary">Hủy</a>
+                                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Tạo điểm đến</button>
                                     </div>
                                 </form>
                             </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

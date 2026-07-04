@@ -42,18 +42,18 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Tạo Phiếu nhập kho</h2>
-                        <p class="text-muted small mb-0">Ghi nhận hàng hóa thực tế nhập kho theo Yêu cầu nhập đã duyệt</p>
+                        <h2 class="page-title">Tạo Phiếu nhập kho</h2>
+                        <p class="page-subtitle">Ghi nhận hàng hóa thực tế nhập kho theo Yêu cầu nhập đã duyệt</p>
                     </div>
-                    <a href="import-ticket?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <a href="import-ticket?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-arrow-left"></i> Hủy
                     </a>
                 </div>
 
                 <%-- Banner kho đang làm việc --%>
-                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-3 py-2 px-3 mb-4" style="background: #e8f4fd;">
+                <div class="d-flex align-items-center gap-3 py-2 px-3 mb-4 rounded-3 bg-info bg-opacity-10">
                     <i class="bi bi-building-fill fs-5 text-info"></i>
                     <div class="small">
                         <span class="text-muted">Kho nhận hàng:</span>
@@ -65,7 +65,7 @@
                 </div>
 
                 <% if (error != null) { %>
-                <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4">
+                <div class="alert alert-danger rounded-3 mb-4">
                     <% if ("NoItemsReceived".equals(error)) { %>
                         <i class="bi bi-exclamation-triangle-fill me-2"></i> Bạn phải nhận ít nhất 1 sản phẩm (số lượng > 0) để lưu Phiếu nhập kho.
                     <% } else if ("RequiresWarehouseAssignment".equals(error)) { %>
@@ -76,9 +76,9 @@
                 </div>
                 <% } %>
 
-                <div class="card card-overflow-visible shadow-sm border-0 bg-white mb-4" style="overflow: visible;">
+                <div class="card card-overflow-visible bg-white mb-4" style="overflow: visible;">
                     <div class="card-header bg-transparent py-3 border-bottom">
-                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-receipt me-2"></i>Chọn Yêu cầu nhập kho tham chiếu</h5>
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-receipt me-2 text-primary"></i>Chọn Yêu cầu nhập kho tham chiếu</h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="row align-items-end g-3">
@@ -116,9 +116,9 @@
                 <form action="import-ticket?action=add" method="POST" id="grnForm">
                     <input type="hidden" name="request_id" value="<%= selectedRequest.getId() %>">
                     
-                    <div class="card shadow-sm border-0 bg-white mb-4">
+                    <div class="card bg-white mb-4">
                         <div class="card-header bg-transparent py-3 border-bottom">
-                            <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-seam me-2"></i>Chi tiết Phiếu nhập kho</h5>
+                            <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-seam me-2 text-primary"></i>Chi tiết Phiếu nhập kho</h5>
                         </div>
                         <div class="card-body p-0">
                             <table class="table align-middle text-center mb-0">

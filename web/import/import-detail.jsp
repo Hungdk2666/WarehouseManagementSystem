@@ -32,7 +32,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-layout-1">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -41,22 +41,22 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header detail-page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Chi tiết Phiếu nhập kho</h2>
-                        <p class="text-muted small mb-0">Xem danh sách sản phẩm và xác nhận nhập kho cho Phiếu nhập kho #<%= ticket.getTicketCode() %></p>
+                        <h2 class="page-title">Chi tiết Phiếu nhập kho</h2>
+                        <p class="page-subtitle">Xem danh sách sản phẩm và xác nhận nhập kho cho Phiếu nhập kho #<%= ticket.getTicketCode() %></p>
                     </div>
-                    <a href="import-ticket?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <a href="import-ticket?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-arrow-left"></i> Quay lại danh sách
                     </a>
                 </div>
 
-                <div class="card shadow-sm border-0 bg-white mb-4">
+                <div class="card detail-section-card bg-white">
                     <div class="card-header bg-transparent py-3 border-bottom">
-                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2"></i>Thông tin Phiếu nhập kho</h5>
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin phiếu nhập kho</h5>
                     </div>
                     <div class="card-body p-4">
-                        <div class="row g-3">
+                        <div class="detail-info-grid">
                             <div class="col-md-4">
                                 <label class="text-muted small d-block">Mã Phiếu nhập kho</label>
                                 <span class="fw-bold text-slate-800">#<%= ticket.getTicketCode() %></span>
@@ -68,13 +68,13 @@
                             <div class="col-md-4">
                                 <label class="text-muted small d-block">Trạng thái</label>
                                 <%
-                                    String statusBadge = "bg-secondary text-secondary";
+                                    String statusChipCls = "chip-muted";
                                     String displayTStatus = ticket.getStatus();
-                                    if ("DRAFT".equals(ticket.getStatus())) { statusBadge = "bg-warning text-warning"; displayTStatus = "BẢN NHÁP"; }
-                                    else if ("CONFIRMED".equals(ticket.getStatus())) { statusBadge = "bg-success text-success"; displayTStatus = "ĐÃ XÁC NHẬN"; }
-                                    else if ("CANCELLED".equals(ticket.getStatus())) { statusBadge = "bg-secondary text-secondary"; displayTStatus = "ĐÃ HỦY"; }
+                                    if ("DRAFT".equals(ticket.getStatus())) { statusChipCls = "chip-warning"; displayTStatus = "BẢN NHÁP"; }
+                                    else if ("CONFIRMED".equals(ticket.getStatus())) { statusChipCls = "chip-success"; displayTStatus = "ĐÃ XÁC NHẬN"; }
+                                    else if ("CANCELLED".equals(ticket.getStatus())) { statusChipCls = "chip-muted"; displayTStatus = "ĐÃ HỦY"; }
                                 %>
-                                <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= displayTStatus %></span>
+                                <span class="status-chip <%= statusChipCls %>"><%= displayTStatus %></span>
                             </div>
                             
                             <div class="col-md-4 border-top pt-2">
@@ -100,11 +100,12 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 bg-white mb-4">
+                <div class="card detail-section-card bg-white">
                     <div class="card-header bg-transparent py-3 border-bottom">
-                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-check me-2"></i>Sản phẩm thực nhận</h5>
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-check me-2 text-primary"></i>Sản phẩm thực nhận</h5>
                     </div>
                     <div class="card-body p-0">
+                        <div class="table-responsive">
                         <table class="table align-middle text-center mb-0">
                             <thead class="table-light">
                                 <tr>
@@ -136,12 +137,12 @@
                                     <td>
                                         <%
                                             String cond = ticket.getRequestedCondition();
-                                            String condBadge = "bg-success text-success";
+                                            String condChipCls = "chip-success";
                                             String displayCond = "MỚI";
-                                            if ("DAMAGED".equals(cond)) { condBadge = "bg-danger text-danger"; displayCond = "LỖI"; }
-                                            else if ("USED".equals(cond)) { condBadge = "bg-warning text-warning"; displayCond = "ĐÃ DÙNG"; }
+                                            if ("DAMAGED".equals(cond)) { condChipCls = "chip-danger"; displayCond = "LỖI"; }
+                                            else if ("USED".equals(cond)) { condChipCls = "chip-warning"; displayCond = "ĐÃ DÙNG"; }
                                         %>
-                                        <span class="badge <%= condBadge %> bg-opacity-10"><%= displayCond %></span>
+                                        <span class="status-chip <%= condChipCls %>"><%= displayCond %></span>
                                     </td>
                                     <td><%= String.format("%,.0f", d.getUnitCost() != null ? d.getUnitCost().doubleValue() : 0.0) %> VND</td>
                                     <td class="fw-bold"><%= String.format("%,.0f", itemCost) %> VND</td>
@@ -156,10 +157,11 @@
                                 </tr>
                             </tbody>
                         </table>
+                        </div>
                     </div>
                     
                     <% if ("DRAFT".equals(ticket.getStatus()) && (canConfirm || canCancel)) { %>
-                    <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0">
+                    <div class="card-footer detail-actions">
                         <% if (canCancel) { %>
                         <form action="import-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy phiếu nhập kho này?');">
                             <input type="hidden" name="id" value="<%= ticket.getId() %>">
@@ -177,101 +179,130 @@
                     <% } %>
 
                     <% if ("DRAFT".equals(ticket.getStatus()) && canConfirm && "PURCHASE".equals(ticket.getRequestReason())) { %>
-                    <div class="card shadow-sm border-0 bg-white mb-4 mt-4" id="mfr-serial-card">
+                    <div class="card bg-white mb-4 mt-4" id="mfr-serial-card">
                         <div class="card-header bg-warning bg-opacity-10 py-3 border-0 d-flex align-items-center justify-content-between">
-                            <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-upc-scan me-2"></i>Nhập Serial nhà sản xuất (tùy chọn)</h5>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <input type="radio" class="btn-check" name="mfr-method" id="mfr-method-excel" value="excel" autocomplete="off" checked>
-                                <label class="btn btn-outline-warning" for="mfr-method-excel">
-                                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Upload Excel
-                                </label>
-                                <input type="radio" class="btn-check" name="mfr-method" id="mfr-method-scan" value="scan" autocomplete="off">
-                                <label class="btn btn-outline-warning" for="mfr-method-scan">
-                                    <i class="bi bi-barcode me-1"></i>Quét mã vạch
-                                </label>
+                            <div>
+                                <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-upc-scan me-2"></i>Nhập Serial nhà sản xuất <span class="fw-normal">(tùy chọn)</span></h5>
+                                <p class="mb-0 mt-1 text-muted small">Có thể dùng một hoặc cả hai phương thức cùng lúc — kết quả được gộp khi xác nhận.</p>
                             </div>
+                            <span class="badge bg-warning text-dark px-3 py-2 fs-6" id="mfr-total-badge">0 serial đã nhập</span>
                         </div>
 
                         <%-- ===== PHƯƠNG PHÁP 1: UPLOAD EXCEL ===== --%>
-                        <div class="card-body p-4" id="mfr-excel-panel">
-                            <p class="text-muted small mb-3">Upload file Excel với 2 cột: <code>sku</code> và <code>manufacturer_serial</code>. Số lượng serial mỗi SKU phải khớp với SL thực tế nhận.</p>
-                            <div class="d-flex align-items-center gap-3 mb-3">
-                                <input type="file" id="mfrExcelFile" accept=".xlsx,.xls" class="form-control" style="max-width: 380px;">
-                                <button type="button" id="uploadMfrBtn" class="btn btn-warning px-4" onclick="uploadMfrExcel()">
-                                    <i class="bi bi-upload me-1"></i> Upload &amp; Validate
-                                </button>
-                                <button type="button" id="clearMfrBtn" class="btn btn-outline-secondary px-3 d-none" onclick="clearMfrSerials()">
-                                    <i class="bi bi-x-circle me-1"></i> Xóa
-                                </button>
-                            </div>
-                            <div id="mfr-upload-result"></div>
-                            <div id="mfr-preview" class="d-none mt-3">
-                                <h6 class="fw-bold text-success mb-2"><i class="bi bi-check-circle-fill me-1"></i> Serial NSX đã nhận dạng</h6>
-                                <div id="mfr-preview-content" style="max-height: 300px; overflow-y: auto;"></div>
+                        <div class="border-bottom">
+                            <button class="btn w-100 text-start px-4 py-3 d-flex align-items-center gap-2"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#mfr-excel-collapse" aria-expanded="true">
+                                <i class="bi bi-file-earmark-spreadsheet fs-5 text-success"></i>
+                                <span class="fw-semibold text-slate-800">Phương thức 1: Upload file Excel</span>
+                                <span class="text-muted small ms-1">— nhà sản xuất cung cấp danh sách serial</span>
+                                <span class="badge bg-success ms-auto" id="excel-count-badge" style="display:none;">0 serial</span>
+                                <i class="bi bi-chevron-down ms-2 text-muted collapse-icon"></i>
+                            </button>
+                            <div class="collapse show" id="mfr-excel-collapse">
+                                <div class="card-body p-4 pt-2" id="mfr-excel-panel">
+                                    <p class="text-muted small mb-3">Upload file Excel với 2 cột: <code>sku</code> và <code>manufacturer_serial</code>. Số lượng serial mỗi SKU phải khớp với SL thực tế nhận.</p>
+                                    <div class="d-flex align-items-center gap-3 mb-3">
+                                        <input type="file" id="mfrExcelFile" accept=".xlsx,.xls" class="form-control" style="max-width: 380px;">
+                                        <button type="button" id="uploadMfrBtn" class="btn btn-success px-4" onclick="uploadMfrExcel()">
+                                            <i class="bi bi-upload me-1"></i> Upload &amp; Validate
+                                        </button>
+                                        <button type="button" id="clearMfrBtn" class="btn btn-outline-secondary px-3 d-none" onclick="clearMfrSerials()">
+                                            <i class="bi bi-x-circle me-1"></i> Xóa
+                                        </button>
+                                    </div>
+                                    <div id="mfr-upload-result"></div>
+                                    <div id="mfr-preview" class="d-none mt-3">
+                                        <h6 class="fw-bold text-success mb-2"><i class="bi bi-check-circle-fill me-1"></i> Serial NSX đã nhận dạng từ Excel</h6>
+                                        <div id="mfr-preview-content" style="max-height: 300px; overflow-y: auto;"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <%-- ===== PHƯƠNG PHÁP 2: QUÉT MÃ VẠCH NSX ===== --%>
-                        <div class="card-body p-4 d-none" id="mfr-scan-panel">
-                            <div class="mb-3">
-                                <label for="mfr-scan-input" class="form-label fw-semibold text-slate-700">Quét mã Serial nhà sản xuất (Sử dụng máy quét hoặc nhập tay):</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-upc-scan"></i></span>
-                                    <input type="text" id="mfr-scan-input"
-                                           class="form-control form-control-lg border-warning"
-                                           placeholder="Để con trỏ tại đây và quét mã vạch..."
-                                           autocomplete="off">
-                                    <select id="mfr-scan-sku-select" class="form-select" style="max-width: 180px;" title="Chọn SKU">
+                        <div>
+                            <button class="btn w-100 text-start px-4 py-3 d-flex align-items-center gap-2"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#mfr-scan-collapse" aria-expanded="false">
+                                <i class="bi bi-barcode fs-5 text-warning"></i>
+                                <span class="fw-semibold text-slate-800">Phương thức 2: Quét mã vạch / Nhập tay</span>
+                                <span class="text-muted small ms-1">— quét từng sản phẩm khi không có file Excel</span>
+                                <span class="badge bg-warning text-dark ms-auto d-none" id="scan-count-badge">0 serial</span>
+                                <i class="bi bi-chevron-down ms-2 text-muted collapse-icon"></i>
+                            </button>
+                            <div class="collapse" id="mfr-scan-collapse">
+                                <div class="card-body p-4 pt-2" id="mfr-scan-panel">
+                                    <div class="mb-3">
+                                        <label for="mfr-scan-input" class="form-label fw-semibold text-slate-700">Quét mã Serial nhà sản xuất (Sử dụng máy quét hoặc nhập tay):</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light text-muted"><i class="bi bi-upc-scan"></i></span>
+                                            <input type="text" id="mfr-scan-input"
+                                                   class="form-control form-control-lg border-warning"
+                                                   placeholder="Để con trỏ tại đây và quét mã vạch..."
+                                                   autocomplete="off">
+                                            <select id="mfr-scan-sku-select" class="form-select" style="max-width: 180px;" title="Chọn SKU">
+                                                <% if (ticket.getDetails() != null) {
+                                                       for (TicketDetail d : ticket.getDetails()) { %>
+                                                <option value="<%= d.getSku() %>" data-product-id="<%= d.getProductId() %>" data-required="<%= d.getQuantity() %>">
+                                                    <%= d.getSku() %>
+                                                </option>
+                                                <% } } %>
+                                            </select>
+                                            <button type="button" class="btn btn-warning" onclick="addMfrScanSerial()">
+                                                <i class="bi bi-plus-lg"></i> Thêm
+                                            </button>
+                                        </div>
+                                        <div id="mfr-scan-alert" class="alert d-none mt-2 px-3 py-2" role="alert"></div>
+                                    </div>
+
+                                    <hr class="my-4">
+
+                                    <h6 class="fw-bold text-slate-800 mb-3"><i class="bi bi-list-task me-1"></i>Tiến độ nhập serial NSX:</h6>
+                                    <div class="row g-3" id="mfr-scan-progress-panels">
                                         <% if (ticket.getDetails() != null) {
                                                for (TicketDetail d : ticket.getDetails()) { %>
-                                        <option value="<%= d.getSku() %>" data-product-id="<%= d.getProductId() %>" data-required="<%= d.getQuantity() %>">
-                                            <%= d.getSku() %>
-                                        </option>
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3 bg-light" id="mfr-panel-<%= d.getProductId() %>">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="fw-semibold text-slate-800 small text-truncate" style="max-width: 70%;" title="<%= d.getProductName() %>"><%= d.getProductName() %></span>
+                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary"><%= d.getSku() %></span>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center border-top pt-2">
+                                                    <span class="text-muted small">Cần nhập: <strong><%= d.getQuantity() %></strong></span>
+                                                    <span class="small font-monospace fw-bold mfr-progress-text"
+                                                          id="mfr-progress-<%= d.getProductId() %>"
+                                                          data-sku="<%= d.getSku() %>"
+                                                          data-required="<%= d.getQuantity() %>">
+                                                        Đã nhập: <span class="mfr-scanned-count text-danger">0</span>/<%= d.getQuantity() %>
+                                                    </span>
+                                                </div>
+                                                <div class="scanned-serials-list mt-2 border-top pt-2" style="max-height: 120px; overflow-y: auto;">
+                                                    <ul class="list-group list-group-flush small" id="mfr-list-<%= d.getProductId() %>">
+                                                        <li class="list-group-item bg-transparent text-muted text-center py-1 mfr-no-serial-msg">Chưa có serial NSX nào được nhập</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
                                         <% } } %>
-                                    </select>
-                                    <button type="button" class="btn btn-warning" onclick="addMfrScanSerial()">
-                                        <i class="bi bi-plus-lg"></i> Thêm
-                                    </button>
-                                </div>
-                                <div id="mfr-scan-alert" class="alert d-none mt-2 px-3 py-2" role="alert"></div>
-                            </div>
-
-                            <hr class="my-4">
-
-                            <h6 class="fw-bold text-slate-800 mb-3"><i class="bi bi-list-task me-1"></i>Tiến độ nhập serial NSX:</h6>
-                            <div class="row g-3" id="mfr-scan-progress-panels">
-                                <% if (ticket.getDetails() != null) {
-                                       for (TicketDetail d : ticket.getDetails()) { %>
-                                <div class="col-md-6">
-                                    <div class="border rounded p-3 bg-light" id="mfr-panel-<%= d.getProductId() %>">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="fw-semibold text-slate-800 small text-truncate" style="max-width: 70%;" title="<%= d.getProductName() %>"><%= d.getProductName() %></span>
-                                            <span class="badge bg-secondary bg-opacity-10 text-secondary"><%= d.getSku() %></span>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-center border-top pt-2">
-                                            <span class="text-muted small">Cần nhập: <strong><%= d.getQuantity() %></strong></span>
-                                            <span class="small font-monospace fw-bold mfr-progress-text"
-                                                  id="mfr-progress-<%= d.getProductId() %>"
-                                                  data-sku="<%= d.getSku() %>"
-                                                  data-required="<%= d.getQuantity() %>">
-                                                Đã nhập: <span class="mfr-scanned-count text-danger">0</span>/<%= d.getQuantity() %>
-                                            </span>
-                                        </div>
-                                        <div class="scanned-serials-list mt-2 border-top pt-2" style="max-height: 120px; overflow-y: auto;">
-                                            <ul class="list-group list-group-flush small" id="mfr-list-<%= d.getProductId() %>">
-                                                <li class="list-group-item bg-transparent text-muted text-center py-1 mfr-no-serial-msg">Chưa có serial NSX nào được nhập</li>
-                                            </ul>
-                                        </div>
                                     </div>
                                 </div>
-                                <% } } %>
                             </div>
                         </div>
                     </div>
 
-
-
                     <script>
+                    // =============================================
+                    // TỔNG SỐ SERIAL (gộp cả Excel + Quét)
+                    // =============================================
+                    let mfrExcelTotal = 0;
+                    let mfrScanTotal = 0;
+
+                    function updateMfrTotalBadge() {
+                        const total = mfrExcelTotal + mfrScanTotal;
+                        const badge = document.getElementById('mfr-total-badge');
+                        badge.textContent = total + ' serial đã nhập';
+                        badge.className = total > 0 ? 'badge bg-success text-white px-3 py-2 fs-6' : 'badge bg-warning text-dark px-3 py-2 fs-6';
+                    }
+
                     // =============================================
                     // PHƯƠNG PHÁP 1: UPLOAD EXCEL
                     // =============================================
@@ -299,9 +330,14 @@
                             document.getElementById('uploadMfrBtn').innerHTML = '<i class="bi bi-upload me-1"></i> Upload &amp; Validate';
 
                             if (data.valid) {
+                                mfrExcelTotal = data.totalSerials;
                                 showMfrAlert('Upload thành công! ' + data.totalSerials + ' serial NSX đã được nhận dạng.', 'success');
                                 renderMfrPreview(data.serialsBySku);
                                 document.getElementById('clearMfrBtn').classList.remove('d-none');
+                                const excelBadge = document.getElementById('excel-count-badge');
+                                excelBadge.textContent = data.totalSerials + ' serial';
+                                excelBadge.style.display = '';
+                                updateMfrTotalBadge();
                             } else {
                                 let errHtml = '<strong>Có lỗi trong file Excel:</strong><ul class="mb-0 mt-1">';
                                 data.errors.forEach(function(e) { errHtml += '<li>' + e + '</li>'; });
@@ -320,10 +356,14 @@
                     function clearMfrSerials() {
                         fetch('import-ticket?action=clearSerials&id=<%= ticket.getId() %>', { method: 'POST' })
                         .then(function() {
+                            mfrExcelTotal = 0;
                             document.getElementById('mfr-preview').classList.add('d-none');
                             document.getElementById('mfr-upload-result').innerHTML = '';
                             document.getElementById('clearMfrBtn').classList.add('d-none');
                             document.getElementById('mfrExcelFile').value = '';
+                            const excelBadge = document.getElementById('excel-count-badge');
+                            excelBadge.style.display = 'none';
+                            updateMfrTotalBadge();
                         });
                     }
 
@@ -350,7 +390,6 @@
                     // =============================================
                     // PHƯƠNG PHÁP 2: QUÉT MÃ VẠCH NSX
                     // =============================================
-                    // Lưu trữ serial đã quét: { productId: [serial1, serial2,...] }
                     const mfrScannedSerials = {};
                     const mfrAllScanned = new Set();
 
@@ -405,13 +444,12 @@
                             return;
                         }
 
-                        // Thêm serial
                         mfrScannedSerials[productId].push(serial);
                         mfrAllScanned.add(serial);
+                        mfrScanTotal++;
                         playMfrBeep(true);
                         showMfrScanAlert('Đã nhập serial NSX: <strong>' + serial + '</strong> cho SKU ' + skuSelect.value, 'success');
 
-                        // Cập nhật UI list
                         const listEl = document.getElementById('mfr-list-' + productId);
                         const noMsg = listEl.querySelector('.mfr-no-serial-msg');
                         if (noMsg) noMsg.remove();
@@ -424,18 +462,18 @@
                                        '<i class="bi bi-trash"></i></button>';
                         listEl.appendChild(li);
 
-                        // Thêm hidden input vào form confirm (hidden-serials-container nằm trong form)
                         const hiddenContainer = document.getElementById('hidden-serials-container');
                         const hInput = document.createElement('input');
                         hInput.type = 'hidden';
                         hInput.name = 'manufacturer_serial_scan';
-                        hInput.value = skuSelect.value + '|' + serial; // format: "SKU|serial"
+                        hInput.value = skuSelect.value + '|' + serial;
                         hInput.id = 'mfr-hidden-' + serial.replace(/[^a-zA-Z0-9]/g, '-');
                         hiddenContainer.appendChild(hInput);
 
                         updateMfrProgress(productId);
+                        updateScanBadge();
+                        updateMfrTotalBadge();
 
-                        // Tự động chuyển sang SKU tiếp theo nếu SKU hiện tại đã đủ
                         if (mfrScannedSerials[productId].length >= required) {
                             const opts = skuSelect.options;
                             for (let i = 0; i < opts.length; i++) {
@@ -455,6 +493,7 @@
                         if (idx > -1) {
                             mfrScannedSerials[productId].splice(idx, 1);
                             mfrAllScanned.delete(serial);
+                            mfrScanTotal = Math.max(0, mfrScanTotal - 1);
                             const li = document.getElementById('mfr-li-' + serial.replace(/[^a-zA-Z0-9]/g, '-'));
                             if (li) li.remove();
                             const hi = document.getElementById('mfr-hidden-' + serial.replace(/[^a-zA-Z0-9]/g, '-'));
@@ -464,9 +503,21 @@
                                 listEl.innerHTML = '<li class="list-group-item bg-transparent text-muted text-center py-1 mfr-no-serial-msg">Chưa có serial NSX nào</li>';
                             }
                             updateMfrProgress(productId);
+                            updateScanBadge();
+                            updateMfrTotalBadge();
                             showMfrScanAlert('Đã xóa serial: ' + serial, 'success');
                         }
                     };
+
+                    function updateScanBadge() {
+                        const badge = document.getElementById('scan-count-badge');
+                        if (mfrScanTotal > 0) {
+                            badge.textContent = mfrScanTotal + ' serial';
+                            badge.classList.remove('d-none');
+                        } else {
+                            badge.classList.add('d-none');
+                        }
+                    }
 
                     function updateMfrProgress(productId) {
                         const el = document.getElementById('mfr-progress-' + productId);
@@ -478,24 +529,17 @@
                         panel.className = 'border rounded p-3 bg-light' + (current >= required ? ' border-success' : '');
                     }
 
-                    // Xử lý chuyển đổi giữa Excel và Quét mã vạch
-                    document.querySelectorAll('input[name="mfr-method"]').forEach(function(radio) {
-                        radio.addEventListener('change', function() {
-                            const isExcel = this.value === 'excel';
-                            document.getElementById('mfr-excel-panel').classList.toggle('d-none', !isExcel);
-                            document.getElementById('mfr-scan-panel').classList.toggle('d-none', isExcel);
-                            if (!isExcel) {
-                                setTimeout(() => document.getElementById('mfr-scan-input').focus(), 100);
-                            }
-                        });
-                    });
-
                     // Xử lý Enter trên ô quét
                     document.getElementById('mfr-scan-input').addEventListener('keypress', function(e) {
                         if (e.key === 'Enter') {
                             e.preventDefault();
                             addMfrScanSerial();
                         }
+                    });
+
+                    // Focus vào ô quét khi mở panel quét
+                    document.getElementById('mfr-scan-collapse').addEventListener('shown.bs.collapse', function() {
+                        document.getElementById('mfr-scan-input').focus();
                     });
                     </script>
                     <% } %>
@@ -505,7 +549,7 @@
                     List<ProductItem> importedSerials = (List<ProductItem>) request.getAttribute("importedSerials");
                     if (importedSerials != null && !importedSerials.isEmpty()) {
                 %>
-                <div class="card shadow-sm border-0 bg-white mb-4">
+                <div class="card bg-white mb-4">
                     <div class="card-header bg-light py-3 border-0 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-success"><i class="bi bi-qr-code-scan me-2"></i>Mã vạch & Số Serial đã tạo</h5>
                         <button class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" onclick="printBarcodes()">
@@ -591,7 +635,7 @@
 
                 <% if ("DRAFT".equals(ticket.getStatus()) && canConfirm && "RETURN".equals(ticket.getRequestReason())) { %>
                 <!-- Scanning Interface Panel -->
-                <div class="card shadow-sm border-0 bg-white mb-4">
+                <div class="card bg-white mb-4">
                     <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
                         <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-barcode me-2"></i>Thực hiện quét mã vạch (Barcode/Serial)</h5>
                     </div>

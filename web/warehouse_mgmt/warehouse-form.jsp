@@ -1,4 +1,4 @@
-<%@page import="model.Warehouse"%>
+﻿<%@page import="model.Warehouse"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
@@ -35,28 +35,28 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1"><%= isEdit ? "Chỉnh sửa kho" : "Thêm kho mới" %></h2>
-                        <p class="text-muted small mb-0">
+                        <h2 class="page-title"><%= isEdit ? "Chỉnh sửa kho" : "Thêm kho mới" %></h2>
+                        <p class="page-subtitle">
                             <a href="<%= request.getContextPath() %>/warehouse/warehouse" class="text-decoration-none text-muted">Quản lý kho</a>
                             <i class="bi bi-chevron-right mx-1 small"></i>
                             <%= isEdit ? "Chỉnh sửa" : "Thêm mới" %>
                         </p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/warehouse/warehouse" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="<%= request.getContextPath() %>/warehouse/warehouse" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
                 </div>
 
-                <div class="row justify-content-center">
-                    <div class="col-lg-6 col-md-8">
-                        <div class="card shadow-sm border-0 bg-white">
-                            <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                                <h5 class="mb-0 fw-bold text-primary">
-                                    <i class="bi bi-<%= isEdit ? "pencil-square" : "plus-circle" %> me-2"></i>
+                <div class="card form-card-narrow">
+                            <div class="card-header bg-white py-3">
+                                <span class="fw-bold text-slate-800">
+                                    <i class="bi bi-<%= isEdit ? "pencil-square" : "plus-circle" %> me-2 text-primary"></i>
                                     <%= isEdit ? "Thông tin kho" : "Nhập thông tin kho mới" %>
-                                </h5>
+                                </span>
                             </div>
                             <div class="card-body p-4">
 
@@ -109,29 +109,22 @@
                                         <label class="form-label fw-semibold">Trạng thái</label>
                                         <div class="p-2 rounded border bg-light d-flex align-items-center gap-2">
                                             <% if (warehouse.isStatus()) { %>
-                                            <span class="badge bg-success">Hoạt động</span>
+                                            <span class="status-chip chip-success">Hoạt động</span>
                                             <span class="text-muted small">Để thay đổi trạng thái, dùng nút Ngừng/Kích hoạt trên trang danh sách.</span>
                                             <% } else { %>
-                                            <span class="badge bg-secondary">Ngừng hoạt động</span>
+                                            <span class="status-chip chip-muted">Ngừng hoạt động</span>
                                             <span class="text-muted small">Để thay đổi trạng thái, dùng nút Ngừng/Kích hoạt trên trang danh sách.</span>
                                             <% } %>
                                         </div>
                                     </div>
                                     <% } %>
 
-                                    <div class="d-flex justify-content-end gap-2 pt-2">
-                                        <a href="<%= request.getContextPath() %>/warehouse/warehouse" class="btn btn-outline-secondary px-4">
-                                            <i class="bi bi-x-circle me-1"></i> Hủy
-                                        </a>
-                                        <button type="submit" class="btn btn-primary px-4">
-                                            <i class="bi bi-check-circle-fill me-1"></i>
-                                            <%= isEdit ? "Lưu thay đổi" : "Thêm kho" %>
-                                        </button>
+                                    <div class="form-actions">
+                                        <a href="<%= request.getContextPath() %>/warehouse/warehouse" class="btn btn-outline-secondary">Hủy</a>
+                                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i><%= isEdit ? "Lưu thay đổi" : "Thêm kho" %></button>
                                     </div>
                                 </form>
                             </div>
-                        </div>
-                    </div>
                 </div>
 
             </div>

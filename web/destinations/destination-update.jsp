@@ -34,12 +34,10 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
-                <div class="row justify-content-center">
-                    <div class="col-md-6">
-                        <div class="card shadow-sm border-0 bg-white">
-                             <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-warning-emphasis"><i class="bi bi-pencil-square me-2"></i>Chỉnh sửa điểm đến</h4>
-                            </div>
+                <div class="card form-card-narrow">
+                     <div class="card-header bg-white py-3">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-pencil-square me-2 text-primary"></i>Chỉnh sửa điểm đến</span>
+                    </div>
                             <div class="card-body p-4">
                                 <form action="destination?action=update" method="POST">
                                     <input type="hidden" name="id" value="<%= destination.getId() %>">
@@ -59,16 +57,12 @@
                                         <label for="address" class="form-label fw-semibold text-muted">Địa chỉ</label>
                                         <textarea class="form-control" id="address" name="address" rows="2"><%= destination.getAddress() != null ? destination.getAddress() : "" %></textarea>
                                     </div>
-                                    <div class="d-grid mb-3 mt-4">
-                                        <button type="submit" class="btn btn-warning text-dark fw-semibold"><i class="bi bi-check-circle-fill me-1"></i> Lưu thay đổi</button>
-                                    </div>
-                                    <div class="text-center">
-                                        <a href="destination?action=list" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle me-1"></i> Hủy</a>
+                                    <div class="form-actions">
+                                        <a href="destination?action=list" class="btn btn-outline-secondary">Hủy</a>
+                                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Lưu thay đổi</button>
                                     </div>
                                 </form>
                             </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

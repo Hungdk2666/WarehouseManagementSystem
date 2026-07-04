@@ -37,72 +37,80 @@
             <div class="col-md-9 col-lg-10">
                 <jsp:include page="/includes/frozen-banner.jsp" />
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Phiếu nhập kho</h2>
-                        <p class="text-muted small mb-0">Ghi nhận và xác nhận hàng hóa thực tế nhập kho</p>
+                        <h2 class="page-title">Phiếu nhập kho</h2>
+                        <p class="page-subtitle">Ghi nhận và xác nhận hàng hóa thực tế nhập kho</p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
-                </div>
-
-                <div class="card shadow-sm border-0 bg-white mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-arrow-in-down me-2"></i>Sổ đăng ký Phiếu nhập kho</h5>
+                    <div class="d-flex gap-2">
                         <% if (canAdd) { %>
-                        <a href="import-ticket?action=add" class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+                        <a href="import-ticket?action=add" class="btn btn-primary d-inline-flex align-items-center gap-1">
                             <i class="bi bi-plus-circle-fill"></i> Tạo Phiếu nhập kho
                         </a>
                         <% } %>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="px-3 pt-3 pb-2">
-                            <div class="row g-2">
-                                <!-- Search Bar -->
-                                <div class="col-md-3">
-                                    <label for="importSearch" class="form-label small fw-semibold">Tìm kiếm</label>
-                                    <input type="text" id="importSearch" class="form-control form-control-sm" placeholder="Phiếu nhập, yêu cầu, thủ kho...">
-                                </div>
-                                <!-- Date Filter -->
-                                <div class="col-md-2">
-                                    <label for="startDateFilter" class="form-label small fw-semibold">Từ ngày</label>
-                                    <input type="date" id="startDateFilter" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-md-2">
-                                    <label for="endDateFilter" class="form-label small fw-semibold">Đến ngày</label>
-                                    <input type="date" id="endDateFilter" class="form-control form-control-sm">
-                                </div>
-                                <!-- Status Filter -->
-                                <div class="col-md-2">
-                                    <label for="statusFilter" class="form-label small fw-semibold">Trạng thái</label>
-                                    <select id="statusFilter" class="form-select form-select-sm">
-                                        <option value="">-- Tất cả --</option>
-                                        <option value="BẢN NHÁP">BẢN NHÁP</option>
-                                        <option value="ĐÃ XÁC NHẬN">ĐÃ XÁC NHẬN</option>
-                                        <option value="ĐÃ HỦY">ĐÃ HỦY</option>
-                                    </select>
-                                </div>
-                                <!-- Warehouse Filter -->
-                                <div class="col-md-2">
-                                    <label for="warehouseFilter" class="form-label small fw-semibold">Kho nhập</label>
-                                    <select id="warehouseFilter" class="form-select form-select-sm">
-                                        <option value="">-- Tất cả kho --</option>
-                                    </select>
-                                </div>
-                                <!-- Keeper Filter -->
-                                <div class="col-md-2">
-                                    <label for="keeperFilter" class="form-label small fw-semibold">Thủ kho</label>
-                                    <input type="text" id="keeperFilter" list="keeperDatalist" class="form-control form-control-sm" placeholder="Nhập hoặc chọn...">
-                                    <datalist id="keeperDatalist"></datalist>
-                                </div>
-                                <!-- Action Buttons -->
-                                <div class="col-md-2 d-flex align-items-end gap-1">
-                                    <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
-                                    <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
+                </div>
+
+                <!-- Filters -->
+                <div class="card mb-3" style="position: relative; z-index: 20;">
+                    <div class="card-body py-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-3">
+                                <label for="importSearch" class="form-label small fw-semibold mb-1">Tìm kiếm</label>
+                                <input type="text" id="importSearch" class="form-control form-control-sm" placeholder="Mã phiếu, yêu cầu, thủ kho...">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="startDateFilter" class="form-label small fw-semibold mb-1">Từ ngày</label>
+                                <input type="date" id="startDateFilter" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="endDateFilter" class="form-label small fw-semibold mb-1">Đến ngày</label>
+                                <input type="date" id="endDateFilter" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label small fw-semibold mb-1">Trạng thái</label>
+                                <div class="dropdown">
+                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal"
+                                            data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem;">
+                                        <span id="statusLabel">-- Tất cả --</span>
+                                    </button>
+                                    <ul class="dropdown-menu p-2 shadow-sm" id="statusDropdownMenu" style="min-width:170px;">
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="BẢN NHÁP"> Bản nháp</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="ĐÃ XÁC NHẬN"> Đã xác nhận</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="ĐÃ HỦY"> Đã hủy</label></li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><button type="button" id="clearStatusBtn" class="btn btn-link btn-sm w-100 text-muted text-decoration-none py-1" style="font-size:0.8rem;"><i class="bi bi-x-circle me-1"></i>Xóa chọn</button></li>
+                                    </ul>
                                 </div>
                             </div>
+                            <div class="col-6 col-md-2">
+                                <label for="warehouseFilter" class="form-label small fw-semibold mb-1">Kho nhập</label>
+                                <select id="warehouseFilter" class="form-select form-select-sm">
+                                    <option value="">-- Tất cả kho --</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="keeperFilter" class="form-label small fw-semibold mb-1">Thủ kho</label>
+                                <input type="text" id="keeperFilter" list="keeperDatalist" class="form-control form-control-sm" placeholder="Nhập hoặc chọn...">
+                                <datalist id="keeperDatalist"></datalist>
+                            </div>
+                            <div class="col-6 col-md-auto ms-md-auto d-flex gap-2">
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm px-3">
+                                    <i class="bi bi-funnel-fill me-1"></i>Lọc
+                                </button>
+                                <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm px-3" title="Đặt lại bộ lọc">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
+                                </button>
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-box-arrow-in-down me-2 text-primary"></i>Sổ đăng ký Phiếu nhập kho</span>
+                    </div>
+                    <div class="card-body p-0">
                         <div class="table-responsive">
                             <table id="grnTable" class="table table-hover align-middle text-center mb-0">
                                 <thead class="table-light">
@@ -116,23 +124,23 @@
                                         <th>Ngày tạo</th>
                                         <th>Xác nhận bởi</th>
                                         <th>Thời gian xác nhận</th>
-                                        <th>Hành động</th>
+                                        <th>Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <%
                                         if (ticketList != null && !ticketList.isEmpty()) {
                                             for (Ticket t : ticketList) {
-                                                String statusBadge = "bg-secondary text-secondary";
-                                                if ("DRAFT".equals(t.getStatus())) statusBadge = "bg-warning text-warning";
-                                                else if ("CONFIRMED".equals(t.getStatus())) statusBadge = "bg-success text-success";
-                                                else if ("CANCELLED".equals(t.getStatus())) statusBadge = "bg-secondary text-secondary";
+                                                String statusBadge = "chip-muted";
+                                                if ("DRAFT".equals(t.getStatus())) statusBadge = "chip-muted";
+                                                else if ("CONFIRMED".equals(t.getStatus())) statusBadge = "chip-success";
+                                                else if ("CANCELLED".equals(t.getStatus())) statusBadge = "chip-muted";
                                     %>
                                     <tr>
                                         <td class="fw-bold text-slate-800">#<%= t.getTicketCode() %></td>
-                                        <td class="fw-bold text-primary">#<%= t.getRequestCode() %></td>
+                                        <td class="fw-bold text-slate-800">#<%= t.getRequestCode() %></td>
                                         <td class="text-start ps-3 fw-semibold"><%= t.getPartnerName() != null ? t.getPartnerName() : "-" %></td>
-                                        <td><span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-building me-1"></i><%= t.getWarehouseName() != null ? t.getWarehouseName() : "-" %></span></td>
+                                        <td><span class="badge bg-light text-primary"><i class="bi bi-building me-1"></i><%= t.getWarehouseName() != null ? t.getWarehouseName() : "-" %></span></td>
                                         <td>
                                             <%
                                                 String displayTStatus = t.getStatus();
@@ -140,7 +148,7 @@
                                                 else if ("DRAFT".equals(t.getStatus())) displayTStatus = "BẢN NHÁP";
                                                 else if ("CANCELLED".equals(t.getStatus())) displayTStatus = "ĐÃ HỦY";
                                             %>
-                                            <span class="badge <%= statusBadge %> bg-opacity-10"><%= displayTStatus %></span>
+                                            <span class="status-chip <%= statusBadge %>"><%= displayTStatus %></span>
                                         </td>
                                         <td><%= t.getKeeperFullName() %></td>
                                         <td class="text-muted small"><%= t.getCreatedAt() %></td>
@@ -148,13 +156,13 @@
                                         <td class="text-muted small"><%= t.getConfirmedAt() != null ? t.getConfirmedAt() : "-" %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <a href="import-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                    <i class="bi bi-eye"></i> Chi tiết
+                                                <a href="import-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết" aria-label="Xem chi tiết phiếu nhập">
+                                                    <i class="bi bi-eye" aria-hidden="true"></i>
                                                 </a>
                                                 <% if (canConfirm && "DRAFT".equals(t.getStatus())) { %>
-                                                <form action="import-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Xác nhận Phiếu nhập kho này sẽ cập nhật số lượng sản phẩm, giá vốn bình quân động và đăng ký giao dịch sổ cái kho. Tiến hành?');">
+                                                <form action="import-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Xác nhận phiếu nhập kho này sẽ cập nhật số lượng tồn kho, giá vốn trung bình và ghi nhận vào sổ kho. Tiến hành?');">
                                                     <input type="hidden" name="id" value="<%= t.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1 py-1 px-2.5">
+                                                    <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1">
                                                         <i class="bi bi-check-circle"></i> Xác nhận
                                                     </button>
                                                 </form>
@@ -162,7 +170,7 @@
                                                 <% if (canCancel && "DRAFT".equals(t.getStatus())) { %>
                                                 <form action="import-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy Phiếu nhập kho này?');">
                                                     <input type="hidden" name="id" value="<%= t.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 py-1 px-2.5">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1">
                                                         <i class="bi bi-slash-circle"></i> Hủy
                                                     </button>
                                                 </form>
@@ -175,9 +183,11 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="10" class="text-center text-muted py-5">
-                                            <i class="bi bi-box-arrow-in-down text-muted display-4 d-block mb-3"></i>
-                                            Không tìm thấy Phiếu nhập kho nào.
+                                        <td colspan="10" class="p-0">
+                                            <div class="empty-state">
+                                                <i class="bi bi-inbox"></i>
+                                                <p>Không tìm thấy Phiếu nhập kho nào.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                     <% } %>
@@ -228,10 +238,38 @@
             const searchInput = document.getElementById(searchInputId);
             const startDateFilter = document.getElementById(startDateFilterId);
             const endDateFilter = document.getElementById(endDateFilterId);
-            const statusFilter = document.getElementById(statusFilterId);
+            if (startDateFilter && endDateFilter) {
+                startDateFilter.addEventListener("change", () => {
+                    endDateFilter.min = startDateFilter.value;
+                    if (endDateFilter.value && endDateFilter.value < startDateFilter.value) endDateFilter.value = startDateFilter.value;
+                });
+                endDateFilter.addEventListener("change", () => {
+                    startDateFilter.max = endDateFilter.value;
+                    if (startDateFilter.value && startDateFilter.value > endDateFilter.value) startDateFilter.value = endDateFilter.value;
+                });
+            }
             const warehouseFilter = document.getElementById(warehouseFilterId);
             const keeperFilter = document.getElementById(keeperFilterId);
             if (!container || !select) return;
+
+            // Multi-select trạng thái
+            function getSelectedStatuses() {
+                return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(cb => cb.value);
+            }
+            function updateStatusLabel() {
+                const checked = document.querySelectorAll('#statusDropdownMenu .status-cb:checked');
+                const label = document.getElementById('statusLabel');
+                if (checked.length === 0) label.textContent = '-- Tất cả --';
+                else if (checked.length === 1) label.textContent = checked[0].closest('label').textContent.trim();
+                else label.textContent = checked.length + ' đã chọn';
+            }
+            document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.addEventListener('change', updateStatusLabel));
+            document.getElementById('clearStatusBtn').addEventListener('click', e => {
+                e.stopPropagation();
+                document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.checked = false);
+                updateStatusLabel();
+            });
+            new bootstrap.Dropdown(document.getElementById('statusDropdownBtn'), { popperConfig: { strategy: 'fixed' } });
 
             let currentPage = 1;
             let pageSize = parseInt(select.value) || 10;
@@ -274,7 +312,7 @@
                 const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : "";
                 const selectedStartDate = startDateFilter ? startDateFilter.value : "";
                 const selectedEndDate = endDateFilter ? endDateFilter.value : "";
-                const selectedStatus = statusFilter ? statusFilter.value : "";
+                const selectedStatuses = getSelectedStatuses();
                 const selectedWarehouse = warehouseFilter ? warehouseFilter.value.trim() : "";
                 const selectedKeeper = keeperFilter ? keeperFilter.value.trim() : "";
 
@@ -299,7 +337,7 @@
                     if (selectedEndDate !== "" && createdAtDatePart > selectedEndDate) matchesDate = false;
 
                     const status = row.cells[4].textContent.trim();
-                    const matchesStatus = selectedStatus === "" || status === selectedStatus;
+                    const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(status);
 
                     const matchesWarehouse = selectedWarehouse === "" || warehouse === selectedWarehouse;
 
@@ -414,9 +452,10 @@
 
             document.getElementById("resetBtn").addEventListener("click", function() {
                 if (searchInput) searchInput.value = "";
-                if (startDateFilter) startDateFilter.value = "";
-                if (endDateFilter) endDateFilter.value = "";
-                if (statusFilter) statusFilter.value = "";
+                if (startDateFilter) { startDateFilter.value = ""; startDateFilter.max = ""; }
+                if (endDateFilter) { endDateFilter.value = ""; endDateFilter.min = ""; }
+                document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.checked = false);
+                updateStatusLabel();
                 if (warehouseFilter) warehouseFilter.value = "";
                 if (keeperFilter) keeperFilter.value = "";
                 currentPage = 1;

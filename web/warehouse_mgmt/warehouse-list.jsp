@@ -1,4 +1,4 @@
-<%@page import="model.Warehouse"%>
+﻿<%@page import="model.Warehouse"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -30,16 +30,18 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Quản lý Kho hàng</h2>
-                        <p class="text-muted small mb-0">Danh sách các kho trong hệ thống</p>
+                        <h2 class="page-title">Quản lý Kho hàng</h2>
+                        <p class="page-subtitle">Danh sách các kho trong hệ thống</p>
                     </div>
-                    <% if (canAdd) { %>
-                    <a href="<%= request.getContextPath() %>/warehouse/warehouse?action=add" class="btn btn-primary d-inline-flex align-items-center gap-2">
-                        <i class="bi bi-plus-circle-fill"></i> Thêm kho mới
-                    </a>
-                    <% } %>
+                    <div class="d-flex gap-2">
+                        <% if (canAdd) { %>
+                        <a href="<%= request.getContextPath() %>/warehouse/warehouse?action=add" class="btn btn-primary d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-plus-circle-fill"></i> Thêm kho mới
+                        </a>
+                        <% } %>
+                    </div>
                 </div>
 
                 <% if ("added".equals(success)) { %>
@@ -48,13 +50,13 @@
                 <div class="alert alert-success border-0 shadow-sm mb-4"><i class="bi bi-check-circle-fill me-2"></i>Cập nhật kho thành công.</div>
                 <% } %>
 
-                <div class="card shadow-sm border-0 mb-4">
+                <div class="card mb-4">
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="ps-4">#</th>
+                                        <th class="text-center">#</th>
                                         <th>Tên kho</th>
                                         <th>Địa chỉ</th>
                                         <th class="text-center">Nhân viên</th>
@@ -71,16 +73,16 @@
                                                 int staffCount = dao.countStaff(w.getId());
                                     %>
                                     <tr>
-                                        <td class="ps-4 text-muted">#<%= w.getId() %></td>
+                                        <td class="text-center text-muted">#<%= w.getId() %></td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary"
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-light text-primary"
                                                      style="width:36px;height:36px;font-size:1rem;">
                                                     <i class="bi bi-building"></i>
                                                 </div>
                                                 <span class="fw-semibold text-slate-800"><%= w.getWarehouseName() %></span>
                                                 <% if (loggedInUser.getWarehouseId() != null && loggedInUser.getWarehouseId() == w.getId()) { %>
-                                                <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.7rem;">Kho của bạn</span>
+                                                <span class="badge bg-light text-primary" style="font-size:0.7rem;">Kho của bạn</span>
                                                 <% } %>
                                             </div>
                                         </td>
@@ -90,9 +92,9 @@
                                         </td>
                                         <td class="text-center">
                                             <% if (w.isStatus()) { %>
-                                            <span class="badge bg-success bg-opacity-10 text-success">Hoạt động</span>
+                                            <span class="status-chip chip-success">Hoạt động</span>
                                             <% } else { %>
-                                            <span class="badge bg-secondary bg-opacity-10 text-secondary">Ngừng hoạt động</span>
+                                            <span class="status-chip chip-muted">Ngừng hoạt động</span>
                                             <% } %>
                                         </td>
                                         <td class="text-center text-muted small"><%= w.getCreatedAt() != null ? w.getCreatedAt().toString().substring(0, 10) : "-" %></td>
@@ -100,14 +102,14 @@
                                         <td class="text-center">
                                             <div class="d-flex justify-content-center gap-1">
                                                 <a href="<%= request.getContextPath() %>/warehouse/warehouse?action=edit&id=<%= w.getId() %>"
-                                                   class="btn btn-sm btn-outline-primary py-1 px-2">
-                                                    <i class="bi bi-pencil"></i>
+                                                   class="btn btn-table btn-outline-primary" title="Chỉnh sửa">
+                                                    <i class="bi bi-pencil-square"></i>
                                                 </a>
                                                 <form action="<%= request.getContextPath() %>/warehouse/warehouse?action=toggle" method="POST" class="m-0"
                                                       onsubmit="return confirm('<%= w.isStatus() ? "Ngừng hoạt động kho này?" : "Kích hoạt lại kho này?" %>');">
                                                     <input type="hidden" name="id" value="<%= w.getId() %>">
-                                                    <button type="submit" class="btn btn-sm <%= w.isStatus() ? "btn-outline-warning" : "btn-outline-success" %> py-1 px-2">
-                                                        <i class="bi bi-<%= w.isStatus() ? "pause-circle" : "play-circle" %>"></i>
+                                                    <button type="submit" class="btn btn-table <%= w.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= w.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>">
+                                                        <i class="bi bi-power"></i>
                                                     </button>
                                                 </form>
                                             </div>
@@ -119,9 +121,11 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="7" class="text-center py-5 text-muted">
-                                            <i class="bi bi-building d-block mb-2 fs-3 opacity-25"></i>
-                                            Chưa có kho nào trong hệ thống.
+                                        <td colspan="7" class="p-0">
+                                            <div class="empty-state">
+                                                <i class="bi bi-inbox"></i>
+                                                <p>Chưa có kho nào trong hệ thống.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                     <% } %>

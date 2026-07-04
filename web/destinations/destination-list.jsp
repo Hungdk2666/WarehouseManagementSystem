@@ -1,4 +1,4 @@
-<%@page import="model.InternalDestination"%>
+﻿<%@page import="model.InternalDestination"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -32,35 +32,37 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Điểm đến nội bộ</h2>
-                        <p class="text-muted small mb-0">Quản lý các điểm nhận hàng chuyển kho (Cửa hàng, Trung tâm bảo hành, v.v.)</p>
+                        <h2 class="page-title">Điểm đến nội bộ</h2>
+                        <p class="page-subtitle">Quản lý các điểm nhận hàng chuyển kho (Cửa hàng, Trung tâm bảo hành, v.v.)</p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Search Panel -->
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-body">
+                <div class="card mb-3">
+                    <div class="card-body py-3">
                         <div class="row g-2">
                             <div class="col-md-4">
-                                <label class="form-label small fw-semibold">Tìm kiếm</label>
+                                <label class="form-label small fw-semibold mb-1">Tìm kiếm</label>
                                 <input type="text" id="destinationSearchInput" class="form-control form-control-sm" placeholder="Tìm kiếm theo tên, loại, địa chỉ...">
                             </div>
                             <div class="col-md-2 d-flex align-items-end gap-1">
-                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm px-3"><i class="bi bi-funnel-fill"></i> Lọc</button>
                                 <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-geo-alt-fill me-2"></i>Danh sách điểm đến</h5>
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-geo-alt-fill me-2 text-primary"></i>Danh sách điểm đến</span>
                         <% if (loggedInUser.hasPermission("DESTINATION_ADD")) { %>
                         <a class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" href="destination?action=add">
                             <i class="bi bi-plus-circle-fill"></i> Thêm điểm đến
@@ -69,15 +71,15 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table id="destinationTable" class="table table-hover align-middle text-center mb-0">
+                            <table id="destinationTable" class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Mã ID</th>
+                                        <th class="text-center">Mã ID</th>
                                         <th>Tên điểm đến</th>
                                         <th>Loại điểm đến</th>
                                         <th>Địa chỉ</th>
-                                        <th>Trạng thái</th>
-                                        <th>Hành động</th>
+                                        <th class="text-center">Trạng thái</th>
+                                        <th class="text-center">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -86,36 +88,36 @@
                                             for (InternalDestination d : destinationList) {
                                     %>
                                     <tr>
-                                        <td class="fw-semibold text-muted">#<%= d.getId() %></td>
-                                        <td class="fw-bold text-slate-800 text-start ps-4"><%= d.getDestinationName() %></td>
+                                        <td class="fw-semibold text-muted text-center">#<%= d.getId() %></td>
+                                        <td class="fw-bold text-slate-800"><%= d.getDestinationName() %></td>
                                         <td>
                                             <% if ("STORE".equals(d.getDestinationType())) { %>
-                                                <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-shop me-1"></i> Cửa hàng</span>
+                                                <span class="badge bg-light text-primary"><i class="bi bi-shop me-1"></i> Cửa hàng</span>
                                             <% } else if ("WARRANTY_CENTER".equals(d.getDestinationType())) { %>
                                                 <span class="badge bg-info bg-opacity-10 text-info"><i class="bi bi-wrench-adjustable-circle me-1"></i> Bảo hành</span>
                                             <% } else { %>
                                                 <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-geo me-1"></i> Khác</span>
                                             <% } %>
                                         </td>
-                                        <td class="text-muted text-start text-truncate" style="max-width: 250px;"><%= d.getAddress() != null ? d.getAddress() : "" %></td>
-                                        <td>
+                                        <td class="text-muted text-truncate" style="max-width: 250px;"><%= d.getAddress() != null ? d.getAddress() : "" %></td>
+                                        <td class="text-center">
                                             <% if (d.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                <span class="status-chip chip-success">Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Không hoạt động</span>
+                                                <span class="status-chip chip-muted">Không hoạt động</span>
                                             <% } %>
                                         </td>
-                                        <td>
+                                        <td class="text-center">
                                             <div class="d-flex align-items-center justify-content-center gap-1">
                                                  <% if (loggedInUser.hasPermission("DESTINATION_EDIT")) { %>
-                                                 <a href="destination?action=update&id=<%= d.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Chỉnh sửa">
+                                                 <a href="destination?action=update&id=<%= d.getId() %>" class="btn btn-table btn-outline-primary" title="Chỉnh sửa">
                                                      <i class="bi bi-pencil-square"></i> Sửa
                                                  </a>
                                                  <% } %>
                                                 <% if (loggedInUser.hasPermission("DESTINATION_TOGGLE")) { %>
                                                 <form action="destination?action=toggle" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= d.getId() %>">
-                                                    <button type="submit" class="btn btn-sm <%= d.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= d.isStatus() ? "Vô hiệu hóa điểm đến" : "Kích hoạt điểm đến" %>">
+                                                    <button type="submit" class="btn btn-table <%= d.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= d.isStatus() ? "Vô hiệu hóa điểm đến" : "Kích hoạt điểm đến" %>">
                                                         <i class="bi bi-power"></i> <%= d.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
                                                     </button>
                                                 </form>
@@ -128,9 +130,11 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-5">
-                                            <i class="bi bi-geo-alt text-muted display-4 d-block mb-3"></i>
-                                            Không có điểm đến nội bộ nào được đăng ký trong cơ sở dữ liệu.
+                                        <td colspan="6" class="p-0">
+                                            <div class="empty-state">
+                                                <i class="bi bi-inbox"></i>
+                                                <p>Không có điểm đến nội bộ nào được đăng ký trong cơ sở dữ liệu.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                     <% } %>
