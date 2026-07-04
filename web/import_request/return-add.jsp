@@ -1,4 +1,4 @@
-<%@page import="model.User"%>
+﻿<%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
@@ -27,12 +27,12 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
  
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Tạo Yêu cầu trả hàng (RMA)</h2>
-                        <p class="text-muted small mb-0">Tạo yêu cầu nhập lại hàng trả từ khách hàng bằng mã Serial</p>
+                        <h2 class="page-title">Tạo Yêu cầu trả hàng (RMA)</h2>
+                        <p class="page-subtitle">Tạo yêu cầu nhập lại hàng trả từ khách hàng bằng mã Serial</p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-arrow-left"></i> Hủy
                     </a>
                 </div>
@@ -44,8 +44,8 @@
                             <input type="hidden" name="ref_ticket_id" id="refTicketId" value="">
 
                             <!-- Customer Info (Dynamically populated & shown) -->
-                            <div class="card shadow-sm border-0 bg-white mb-4 d-none" id="customerInfoCard">
-                                <div class="card-header bg-success bg-opacity-10 py-3 border-0">
+                            <div class="card bg-white mb-4 d-none" id="customerInfoCard">
+                                <div class="card-header bg-light py-3 border-0">
                                     <h5 class="mb-0 fw-bold text-success"><i class="bi bi-person-check-fill me-2"></i>Thông tin đối chiếu đơn xuất gốc</h5>
                                 </div>
                                 <div class="card-body p-4">
@@ -63,7 +63,7 @@
                             </div>
 
                             <!-- Form settings -->
-                            <div class="card card-overflow-visible shadow-sm border-0 bg-white mb-4" style="overflow: visible;">
+                            <div class="card card-overflow-visible bg-white mb-4" style="overflow: visible;">
                                 <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
                                     <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-info-circle-fill me-2"></i>Cấu hình Yêu cầu trả</h5>
                                 </div>
@@ -109,8 +109,8 @@
                                         <div class="col-md-6">
                                             <label for="requestedCondition" class="form-label">Tình trạng hàng trả về <span class="text-danger">*</span></label>
                                             <select class="form-select" id="requestedCondition" name="requested_condition" required>
-                                                <option value="NEW">Hàng mới (NEW)</option>
-                                                <option value="DAMAGED">Hàng hỏng (DAMAGED)</option>
+                                                <option value="NEW">Hàng mới</option>
+                                                <option value="DAMAGED">Hàng lỗi</option>
                                             </select>
                                         </div>
                                     </div>
@@ -118,7 +118,7 @@
                             </div>
  
                             <!-- Serial Input & Table -->
-                            <div class="card card-overflow-visible shadow-sm border-0 bg-white mb-4" style="overflow: visible;">
+                            <div class="card card-overflow-visible bg-white mb-4" style="overflow: visible;">
                                 <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
                                     <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-qr-code-scan me-2"></i>Quét/Nhập mã Serial sản phẩm</h5>
                                 </div>
@@ -153,7 +153,7 @@
                                             </thead>
                                             <tbody id="itemsBody">
                                                 <tr id="emptyRow">
-                                                    <td colspan="7" class="text-muted py-4">Chưa có sản phẩm nào được nhập. Hãy điền số Serial ở trên để bắt đầu.</td>
+                                                    <td colspan="7" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa có sản phẩm nào được nhập. Hãy điền số Serial ở trên để bắt đầu.</p></div></td>
                                                 </tr>
                                             </tbody>
                                         </table>

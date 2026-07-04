@@ -39,6 +39,7 @@
             + (warehouseId != null ? "&warehouseId=" + warehouseId : "")
             + "&startDate=" + URLEncoder.encode(startDate, "UTF-8")
             + "&endDate=" + URLEncoder.encode(endDate, "UTF-8");
+    String paginationParams = "&pageSize=" + pageSize + filterParams;
 %>
 <!DOCTYPE html>
 <html>
@@ -58,19 +59,19 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Lịch sử xuất nhập kho</h2>
-                        <p class="text-muted small mb-0">Theo dõi toàn bộ giao dịch nhập, xuất, chuyển kho và truy vết lịch sử hàng hóa</p>
+                        <h2 class="page-title">Lịch sử xuất nhập kho</h2>
+                        <p class="page-subtitle">Theo dõi toàn bộ giao dịch nhập, xuất, chuyển kho và truy vết lịch sử hàng hóa</p>
                     </div>
                     <a href="<%= request.getContextPath() %>/warehouse/inventory-history?action=export<%= filterParams %>"
-                       class="btn btn-success d-inline-flex align-items-center gap-1">
+                       class="btn btn-success btn-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-file-earmark-excel"></i> Xuất Excel
                     </a>
                 </div>
 
                 <!-- Filters -->
-                <div class="card shadow-sm border-0 mb-3" style="position: relative; z-index: 20;">
+                <div class="card mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <form id="filterForm" action="inventory-history" method="GET" class="row g-2 align-items-end">
                             <div class="col-12 col-md-3">
@@ -134,8 +135,8 @@
                     }
                 %>
                 <div class="row g-2 mb-3">
-                    <div class="col">
-                        <div class="card border-0 shadow-sm text-center py-2">
+                    <div class="col-auto">
+                        <div class="card text-center px-4 py-2">
                             <div class="small text-muted">Tổng GD</div>
                             <div class="fw-bold text-slate-800"><%= totalCount %></div>
                         </div>
@@ -144,7 +145,7 @@
                 <% } %>
 
                 <!-- Table -->
-                <div class="card shadow-sm border-0 bg-white">
+                <div class="card bg-white">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                         <span class="fw-bold text-slate-800">
                             <i class="bi bi-clock-history me-2 text-primary"></i>Lịch sử giao dịch (<%= totalCount %> bản ghi)
@@ -218,9 +219,8 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="10" class="text-center py-5 text-muted">
-                                            <i class="bi bi-clock-history fs-1 d-block mb-3 text-muted" style="opacity: 0.5;"></i>
-                                            Không tìm thấy giao dịch nào phù hợp với bộ lọc.
+                                        <td colspan="10" class="p-0">
+                                            <div class="empty-state"><i class="bi bi-clock-history"></i><p>Không tìm thấy giao dịch nào phù hợp với bộ lọc.</p></div>
                                         </td>
                                     </tr>
                                     <%
@@ -230,50 +230,66 @@
                             </table>
                         </div>
                     </div>
-                    <% if (totalPages > 1) { %>
+                    <% if (totalCount > 0) {
+                        int startRecord = (currentPage - 1) * pageSize + 1;
+                        int endRecord = Math.min(currentPage * pageSize, totalCount);
+                    %>
                     <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
-                        <span class="text-muted small">Trang <%= currentPage %> / <%= totalPages %> &mdash; Tổng <%= totalCount %> bản ghi</span>
-                        <nav>
-                            <ul class="pagination pagination-sm m-0 gap-1">
-                                <li class="page-item <%= currentPage == 1 ? "disabled" : "" %>">
-                                    <a class="page-link border-0 rounded-2 shadow-none px-2" href="inventory-history?page=<%= currentPage - 1 %><%= filterParams %>">
-                                        <i class="bi bi-chevron-left"></i>
-                                    </a>
-                                </li>
-                                <%
-                                    int startP = Math.max(1, currentPage - 2);
-                                    int endP = Math.min(totalPages, currentPage + 2);
-                                    if (currentPage <= 3) endP = Math.min(totalPages, 5);
-                                    if (currentPage >= totalPages - 2) startP = Math.max(1, totalPages - 4);
-                                %>
-                                <% if (startP > 1) { %>
-                                <li class="page-item">
-                                    <a class="page-link border-0 rounded-2 shadow-none px-3" href="inventory-history?page=1<%= filterParams %>">1</a>
-                                </li>
-                                <% if (startP > 2) { %>
-                                <li class="page-item disabled"><span class="page-link border-0 bg-transparent px-2">...</span></li>
-                                <% } %>
-                                <% } %>
-                                <% for (int i = startP; i <= endP; i++) { %>
-                                <li class="page-item <%= currentPage == i ? "active" : "" %>">
-                                    <a class="page-link border-0 rounded-2 shadow-none px-3" href="inventory-history?page=<%= i %><%= filterParams %>"><%= i %></a>
-                                </li>
-                                <% } %>
-                                <% if (endP < totalPages) { %>
-                                <% if (endP < totalPages - 1) { %>
-                                <li class="page-item disabled"><span class="page-link border-0 bg-transparent px-2">...</span></li>
-                                <% } %>
-                                <li class="page-item">
-                                    <a class="page-link border-0 rounded-2 shadow-none px-3" href="inventory-history?page=<%= totalPages %><%= filterParams %>"><%= totalPages %></a>
-                                </li>
-                                <% } %>
-                                <li class="page-item <%= currentPage == totalPages ? "disabled" : "" %>">
-                                    <a class="page-link border-0 rounded-2 shadow-none px-2" href="inventory-history?page=<%= currentPage + 1 %><%= filterParams %>">
-                                        <i class="bi bi-chevron-right"></i>
-                                    </a>
-                                </li>
-                            </ul>
-                        </nav>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
+                            <select name="pageSize" form="filterForm" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;" onchange="document.getElementById('filterForm').submit();">
+                                <option value="10" <%= pageSize == 10 ? "selected" : "" %>>10</option>
+                                <option value="25" <%= pageSize == 25 ? "selected" : "" %>>25</option>
+                                <option value="100" <%= pageSize == 100 ? "selected" : "" %>>100</option>
+                            </select>
+                            <span class="text-muted small">dòng</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
+                            <span class="text-muted small">Hiển thị <%= startRecord %>–<%= endRecord %> / <%= totalCount %> bản ghi</span>
+                            <% if (totalPages > 1) { %>
+                            <nav aria-label="Page navigation" class="m-0">
+                                <ul class="pagination pagination-sm m-0 gap-1">
+                                    <li class="page-item <%= currentPage == 1 ? "disabled" : "" %>">
+                                        <a class="page-link border-0 rounded-2 shadow-none px-2.5 py-1.5" href="inventory-history?page=<%= currentPage - 1 %><%= paginationParams %>" aria-label="Previous">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                    <%
+                                        int startP = Math.max(1, currentPage - 2);
+                                        int endP = Math.min(totalPages, currentPage + 2);
+                                        if (currentPage <= 3) endP = Math.min(totalPages, 5);
+                                        if (currentPage >= totalPages - 2) startP = Math.max(1, totalPages - 4);
+                                    %>
+                                    <% if (startP > 1) { %>
+                                    <li class="page-item">
+                                        <a class="page-link border-0 rounded-2 shadow-none px-3 py-1.5" href="inventory-history?page=1<%= paginationParams %>">1</a>
+                                    </li>
+                                    <% if (startP > 2) { %>
+                                    <li class="page-item disabled"><span class="page-link border-0 bg-transparent px-2">...</span></li>
+                                    <% } %>
+                                    <% } %>
+                                    <% for (int i = startP; i <= endP; i++) { %>
+                                    <li class="page-item <%= currentPage == i ? "active" : "" %>">
+                                        <a class="page-link border-0 rounded-2 shadow-none px-3 py-1.5" href="inventory-history?page=<%= i %><%= paginationParams %>"><%= i %></a>
+                                    </li>
+                                    <% } %>
+                                    <% if (endP < totalPages) { %>
+                                    <% if (endP < totalPages - 1) { %>
+                                    <li class="page-item disabled"><span class="page-link border-0 bg-transparent px-2">...</span></li>
+                                    <% } %>
+                                    <li class="page-item">
+                                        <a class="page-link border-0 rounded-2 shadow-none px-3 py-1.5" href="inventory-history?page=<%= totalPages %><%= paginationParams %>"><%= totalPages %></a>
+                                    </li>
+                                    <% } %>
+                                    <li class="page-item <%= currentPage == totalPages ? "disabled" : "" %>">
+                                        <a class="page-link border-0 rounded-2 shadow-none px-2.5 py-1.5" href="inventory-history?page=<%= currentPage + 1 %><%= paginationParams %>" aria-label="Next">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <% } %>
+                        </div>
                     </div>
                     <% } %>
                 </div>

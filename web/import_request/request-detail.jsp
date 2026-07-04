@@ -1,4 +1,4 @@
-<%@page import="model.Request"%>
+﻿<%@page import="model.Request"%>
 <%@page import="model.RequestDetail"%>
 <%@page import="model.Ticket"%>
 <%@page import="java.util.List"%>
@@ -43,7 +43,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-layout-1">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -52,17 +52,19 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header detail-page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Chi tiết Yêu cầu nhập kho</h2>
-                        <p class="text-muted small mb-0">
+                        <h2 class="page-title">Chi tiết Yêu cầu nhập kho</h2>
+                        <p class="page-subtitle">
                             #<%= req.getRequestCode() %>
-                            <% if (isReturn) { %><span class="badge bg-warning text-warning bg-opacity-10 ms-2">TRẢ HÀNG</span><% } %>
+                            <% if (isReturn) { %><span class="status-chip chip-warning ms-2">TRẢ HÀNG</span><% } %>
                         </p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
+                    <div>
+                        <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
                 </div>
 
                 <% if (req.getCancelRequestedAt() != null && "APPROVED".equals(req.getStatus())) { %>
@@ -90,121 +92,117 @@
                 <% } %>
 
                 <!-- Metadata -->
-                <div class="card shadow-sm border-0 bg-white mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-info-circle-fill me-2"></i>Thông tin Yêu cầu nhập kho</h5>
+                <div class="card detail-section-card">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin yêu cầu nhập kho</span>
                     </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="text-muted small d-block">Mã yêu cầu nhập kho</label>
-                                <span class="fw-bold">#<%= req.getRequestCode() %></span>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="text-muted small d-block">Loại</label>
-                                <span class="fw-semibold">
-                                    <%= isReturn ? "TRẢ HÀNG" : (isTransfer ? "CHUYỂN KHO" : "MUA HÀNG") %>
-                                </span>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="text-muted small d-block">Ngày nhận hàng dự kiến</label>
-                                <span class="fw-semibold"><%= req.getExpectedDate() %></span>
-                            </div>
+                    <div class="card-body py-2 px-4 detail-info-grid">
+                        <div class="detail-row">
+                            <div class="detail-label">Mã yêu cầu nhập kho</div>
+                            <div class="detail-value fw-bold">#<%= req.getRequestCode() %></div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Loại</div>
+                            <div class="detail-value"><%= isReturn ? "TRẢ HÀNG" : (isTransfer ? "CHUYỂN KHO" : "MUA HÀNG") %></div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Ngày nhận hàng dự kiến</div>
+                            <div class="detail-value"><%= req.getExpectedDate() %></div>
+                        </div>
 
-                            <% if (isPurchase) { %>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Nhà cung cấp</label>
-                                <span class="fw-semibold"><%= req.getPartnerName() != null ? req.getPartnerName() : "-" %></span>
+                        <% if (isPurchase) { %>
+                        <div class="detail-row">
+                            <div class="detail-label">Nhà cung cấp</div>
+                            <div class="detail-value"><%= req.getPartnerName() != null ? req.getPartnerName() : "-" %></div>
+                        </div>
+                        <% } else if (isTransfer) { %>
+                        <div class="detail-row">
+                            <div class="detail-label">Kho nguồn (xuất từ)</div>
+                            <div class="detail-value"><i class="bi bi-building me-1 text-primary"></i><%= req.getPartnerName() != null ? req.getPartnerName() : "-" %></div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Phiếu xuất tham chiếu</div>
+                            <div class="detail-value">
+                                <% if (req.getRefTicketId() != null) { %>
+                                <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=detail&id=<%= req.getRefTicketId() %>">#<%= req.getRefTicketId() %></a>
+                                <% } else { %>-<% } %>
                             </div>
-                            <% } else if (isTransfer) { %>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Kho nguồn (xuất từ)</label>
-                                <span class="fw-semibold text-info">
-                                    <i class="bi bi-building me-1"></i><%= req.getPartnerName() != null ? req.getPartnerName() : "-" %>
-                                </span>
+                        </div>
+                        <% } else if (isReturn) { %>
+                        <div class="detail-row">
+                            <div class="detail-label">Phiếu xuất tham chiếu</div>
+                            <div class="detail-value">
+                                <% if (req.getRefTicketId() != null) { %>
+                                <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=detail&id=<%= req.getRefTicketId() %>">#<%= req.getRefTicketId() %></a>
+                                <% } else { %>-<% } %>
                             </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Phiếu xuất tham chiếu</label>
-                                <span class="fw-semibold">
-                                    <% if (req.getRefTicketId() != null) { %>
-                                    <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=detail&id=<%= req.getRefTicketId() %>">#<%= req.getRefTicketId() %></a>
-                                    <% } else { %>-<% } %>
-                                </span>
-                            </div>
-                            <% } else if (isReturn) { %>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Phiếu xuất tham chiếu</label>
-                                <span class="fw-semibold">
-                                    <% if (req.getRefTicketId() != null) { %>
-                                    <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=detail&id=<%= req.getRefTicketId() %>">#<%= req.getRefTicketId() %></a>
-                                    <% } else { %>-<% } %>
-                                </span>
-                            </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Lý do trả hàng</label>
-                                <span class="fw-semibold"><%= req.getReturnReason() != null ? req.getReturnReason() : "-" %></span>
-                            </div>
-                            <div class="col-md-12 border-top pt-2">
-                                <label class="text-muted small d-block">Các mã Serial dự kiến nhận lại</label>
-                                <span class="fw-semibold text-slate-800"><%= req.getExpectedSerials() != null ? req.getExpectedSerials().replace(",", ", ") : "-" %></span>
-                            </div>
-                            <% } %>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Lý do trả hàng</div>
+                            <div class="detail-value"><%= req.getReturnReason() != null ? req.getReturnReason() : "-" %></div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Serial dự kiến nhận lại</div>
+                            <div class="detail-value"><%= req.getExpectedSerials() != null ? req.getExpectedSerials().replace(",", ", ") : "-" %></div>
+                        </div>
+                        <% } %>
 
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Người tạo</label>
-                                <span><%= req.getStaffFullName() %></span>
-                            </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Ngày tạo</label>
-                                <span><%= req.getCreatedAt() %></span>
-                            </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Trạng thái</label>
+                        <div class="detail-row">
+                            <div class="detail-label">Người tạo</div>
+                            <div class="detail-value"><%= req.getStaffFullName() %></div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Ngày tạo</div>
+                            <div class="detail-value"><%= req.getCreatedAt() %></div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Trạng thái</div>
+                            <div class="detail-value">
                                 <%
-                                    String statusBadge = "bg-secondary text-secondary";
+                                    String statusBadge = "chip-muted";
                                     String displayStatus = req.getStatus();
                                     if ("PENDING".equals(req.getStatus())) {
-                                        statusBadge = "bg-warning text-warning";
+                                        statusBadge = "chip-warning";
                                         displayStatus = "Chờ duyệt";
                                     } else if ("APPROVED".equals(req.getStatus())) {
                                         if (req.getCancelRequestedAt() != null) {
-                                            statusBadge = "bg-warning text-warning";
+                                            statusBadge = "chip-warning";
                                             displayStatus = "Chờ hủy";
                                         } else {
-                                            statusBadge = "bg-info text-info";
+                                            statusBadge = "chip-success";
                                             displayStatus = "Đã duyệt";
                                         }
                                     } else if ("REJECTED".equals(req.getStatus())) {
-                                        statusBadge = "bg-danger text-danger";
+                                        statusBadge = "chip-danger";
                                         displayStatus = "Từ chối";
                                     } else if ("COMPLETED".equals(req.getStatus())) {
-                                        statusBadge = "bg-success text-success";
+                                        statusBadge = "chip-primary";
                                         displayStatus = "Hoàn thành";
                                     } else if ("CANCELLED".equals(req.getStatus())) {
-                                        statusBadge = "bg-secondary text-secondary";
+                                        statusBadge = "chip-muted";
                                         displayStatus = "Đã hủy";
                                     }
                                 %>
-                                <span class="badge <%= statusBadge %> bg-opacity-10 px-2 py-1"><%= displayStatus %></span>
+                                <span class="status-chip <%= statusBadge %>"><%= displayStatus %></span>
                             </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Duyệt/Từ chối bởi</label>
-                                <span class="fw-semibold"><%= req.getApprovedBy() != null ? req.getApprovedByFullName() : "-" %></span>
-                            </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Thời gian duyệt</label>
-                                <span><%= req.getApprovedAt() != null ? req.getApprovedAt() : "-" %></span>
-                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Duyệt/Từ chối bởi</div>
+                            <div class="detail-value"><%= req.getApprovedBy() != null ? req.getApprovedByFullName() : "-" %></div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Thời gian duyệt</div>
+                            <div class="detail-value"><%= req.getApprovedAt() != null ? req.getApprovedAt() : "-" %></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tabs: Items + Tickets -->
-                <div class="card shadow-sm border-0 bg-white mb-4">
+                <div class="card detail-section-card">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
                         <ul class="nav nav-tabs border-bottom-0" id="reqTabs" role="tablist">
                             <li class="nav-item">
-                                <button class="nav-link active fw-bold text-primary" data-bs-toggle="tab" data-bs-target="#items-pane" type="button">
+                                <button class="nav-link active fw-bold text-slate-800" data-bs-toggle="tab" data-bs-target="#items-pane" type="button">
                                     <i class="bi bi-list-check me-2"></i>Sản phẩm yêu cầu
                                 </button>
                             </li>
@@ -219,7 +217,7 @@
                         <div class="tab-content">
                             <div class="tab-pane fade show active" id="items-pane">
                                 <div class="table-responsive">
-                                    <table class="table align-middle text-center mb-0">
+                                    <table class="table table-hover align-middle text-center mb-0">
                                         <thead class="table-light">
                                             <tr>
                                                 <th>#</th>
@@ -277,7 +275,7 @@
                             </div>
                             <div class="tab-pane fade" id="tickets-pane">
                                 <div class="table-responsive">
-                                    <table class="table align-middle text-center mb-0">
+                                    <table class="table table-hover align-middle text-center mb-0">
                                         <thead class="table-light">
                                             <tr>
                                                 <th>Mã phiếu</th>
@@ -293,8 +291,8 @@
                                             <%
                                                 if (ticketList != null && !ticketList.isEmpty()) {
                                                     for (Ticket t : ticketList) {
-                                                        String tBadge = "CONFIRMED".equals(t.getStatus()) ? "bg-success text-success" :
-                                                                        "DRAFT".equals(t.getStatus()) ? "bg-warning text-warning" : "bg-secondary text-secondary";
+                                                        String tBadge = "CONFIRMED".equals(t.getStatus()) ? "chip-success" :
+                                                                        "DRAFT".equals(t.getStatus()) ? "chip-muted" : "chip-muted";
                                             %>
                                             <tr>
                                                 <td class="fw-bold">#<%= t.getTicketCode() %></td>
@@ -304,14 +302,14 @@
                                                         if ("CONFIRMED".equals(t.getStatus())) displayTStatus = "ĐÃ XÁC NHẬN";
                                                         else if ("DRAFT".equals(t.getStatus())) displayTStatus = "BẢN NHÁP";
                                                     %>
-                                                    <span class="badge <%= tBadge %> bg-opacity-10"><%= displayTStatus %></span>
+                                                    <span class="status-chip <%= tBadge %>"><%= displayTStatus %></span>
                                                 </td>
                                                 <td><%= t.getWarehouseName() != null ? t.getWarehouseName() : "-" %></td>
                                                 <td><%= t.getKeeperFullName() %></td>
                                                 <td class="text-muted small"><%= t.getCreatedAt() %></td>
                                                 <td><%= t.getConfirmedByFullName() != null ? t.getConfirmedByFullName() : "-" %></td>
                                                 <td>
-                                                    <a href="<%= request.getContextPath() %>/warehouse/import-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-sm btn-outline-primary py-1 px-2" title="Chi tiết">
+                                                    <a href="<%= request.getContextPath() %>/warehouse/import-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
                                                 </td>
@@ -320,7 +318,7 @@
                                                     }
                                                 } else {
                                             %>
-                                            <tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-box-arrow-in-down display-4 d-block mb-3"></i>Không có phiếu nhập nào.</td></tr>
+                                            <tr><td colspan="7" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Không có phiếu nhập nào.</p></div></td></tr>
                                             <% } %>
                                         </tbody>
                                     </table>
@@ -332,12 +330,12 @@
                     <%
                         boolean hasFooterActions =
                             ("PENDING".equals(req.getStatus()) && (canApprove || canCancel)) ||
-                            ("APPROVED".equals(req.getStatus()) && (
-                                (req.getCancelRequestedAt() == null && canRequestCancel && canRequestCancelAction) ||
+                            (("APPROVED".equals(req.getStatus()) || "PARTIALLY_COMPLETED".equals(req.getStatus())) && (
+                                (req.getCancelRequestedAt() == null && (canRequestCancel && canRequestCancelAction || loggedInUser.hasPermission("TICKET_ADD_IN"))) ||
                                 (req.getCancelRequestedAt() != null && canApproveCancel)));
                         if (hasFooterActions) {
                     %>
-                    <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0">
+                    <div class="card-footer detail-actions">
                         <% if ("PENDING".equals(req.getStatus())) { %>
                             <% if (canCancel) { %>
                             <form action="<%= request.getContextPath() %>/warehouse/import-request?action=cancel" method="POST" class="d-inline" onsubmit="return confirm('Hủy Yêu cầu nhập kho này?')">
@@ -355,11 +353,18 @@
                                 <button type="submit" class="btn btn-success px-4"><i class="bi bi-check-circle-fill me-1"></i> Duyệt</button>
                             </form>
                             <% } %>
-                        <% } else if ("APPROVED".equals(req.getStatus())) { %>
-                            <% if (req.getCancelRequestedAt() == null && canRequestCancel && canRequestCancelAction) { %>
-                            <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#requestCancelModal">
-                                <i class="bi bi-exclamation-octagon me-1"></i> Đề xuất hủy
-                            </button>
+                        <% } else if ("APPROVED".equals(req.getStatus()) || "PARTIALLY_COMPLETED".equals(req.getStatus())) { %>
+                            <% if (req.getCancelRequestedAt() == null) { %>
+                                <% if (canRequestCancel && canRequestCancelAction) { %>
+                                <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#requestCancelModal">
+                                    <i class="bi bi-exclamation-octagon me-1"></i> Đề xuất hủy
+                                </button>
+                                <% } %>
+                                <% if (loggedInUser.hasPermission("TICKET_ADD_IN")) { %>
+                                <a href="<%= request.getContextPath() %>/warehouse/import-ticket?action=add&request_id=<%= req.getId() %>" class="btn btn-primary px-4">
+                                    <i class="bi bi-plus-circle-fill me-1"></i> Tạo phiếu nhập
+                                </a>
+                                <% } %>
                             <% } else if (req.getCancelRequestedAt() != null && canApproveCancel) { %>
                             <form action="<%= request.getContextPath() %>/warehouse/import-request?action=rejectCancel" method="POST" class="d-inline">
                                 <input type="hidden" name="id" value="<%= req.getId() %>">

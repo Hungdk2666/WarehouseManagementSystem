@@ -73,7 +73,7 @@ public class ExportRequestServlet extends HttpServlet {
                 httpReq.setAttribute("destinationList", new InternalDestinationService().getAllDestinations());
                 httpReq.setAttribute("productList",    pService.getAllProducts());
                 httpReq.setAttribute("warehouseList",  warehouses);
-                httpReq.setAttribute("customerList",   new CustomerService().getAllCustomers());
+                httpReq.setAttribute("customerList",   new CustomerService().getActiveCustomers());
                 // Map kho -> map product -> available qty (NEW/USED)
                 Map<Integer, Map<Integer, Integer>> stockMapNew = new HashMap<>();
                 Map<Integer, Map<Integer, Integer>> stockMapUsed = new HashMap<>();
@@ -129,6 +129,11 @@ public class ExportRequestServlet extends HttpServlet {
                     if (reasonStr == null || reasonStr.trim().isEmpty()) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoReason"); return;
                     }
+                    // DISPOSAL đã chuyển sang module riêng /warehouse/disposal
+                    if ("DISPOSAL".equals(reasonStr)) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/disposal?action=add");
+                        return;
+                    }
                     if (requestedCondition == null || requestedCondition.trim().isEmpty()) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoCondition"); return;
                     }
@@ -138,7 +143,10 @@ public class ExportRequestServlet extends HttpServlet {
                     if (sourceWhStr != null && !sourceWhStr.trim().isEmpty()) {
                         sourceWh = Integer.parseInt(sourceWhStr);
                     } else {
-                        sourceWh = loggedInUser.getWarehouseId() != null ? loggedInUser.getWarehouseId() : 1;
+                        if (loggedInUser.getWarehouseId() == null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoWarehouse"); return;
+                        }
+                        sourceWh = loggedInUser.getWarehouseId();
                     }
                     // Block khi kho nguồn đang kiểm kê
                     {
@@ -178,9 +186,6 @@ public class ExportRequestServlet extends HttpServlet {
                             shippingAddress = httpReq.getParameter("shipping_address");
                             break;
                         }
-                        case "DISPOSAL":
-                            partnerType = Request.PARTNER_NONE;
-                            break;
                         default: { // DISPLAY, WARRANTY, OTHER
                             String destIdStr = httpReq.getParameter("destination_id");
                             if (destIdStr == null || destIdStr.trim().isEmpty()) {

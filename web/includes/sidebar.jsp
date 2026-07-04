@@ -6,8 +6,56 @@
     if (requestURI == null) {
         requestURI = request.getRequestURI();
     }
+    boolean isInventoryHistoryPage = requestURI.contains("inventory-history") || requestURI.contains("/inventory/history");
 %>
 <style>
+    .sidebar-column {
+        position: sticky;
+        top: 5rem;
+        align-self: flex-start;
+        height: calc(100vh - 6rem);
+        min-height: 0;
+        overflow: visible;
+    }
+    .sidebar-sticky {
+        position: relative;
+        top: auto;
+        box-sizing: border-box;
+        height: 100%;
+        max-height: none;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: var(--slate-300) var(--slate-50);
+        border: 1px solid var(--slate-200) !important;
+        border-radius: 12px !important;
+        background: #fff !important;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+        padding: 0.75rem !important;
+    }
+    .list-group-custom .list-group-item:not(.active) {
+        background: transparent !important;
+    }
+    .sidebar-sticky::-webkit-scrollbar {
+        width: 10px;
+    }
+    .sidebar-sticky::-webkit-scrollbar-track {
+        background: var(--slate-50);
+        border-radius: 999px;
+    }
+    .sidebar-sticky::-webkit-scrollbar-thumb {
+        background: var(--slate-300);
+        border: 3px solid var(--slate-50);
+        border-radius: 999px;
+        background-clip: padding-box;
+    }
+    .sidebar-sticky::-webkit-scrollbar-thumb:hover {
+        background: var(--slate-400);
+        background-clip: padding-box;
+    }
     .list-group-custom .sidebar-header {
         background-color: transparent !important;
         transform: none !important;
@@ -27,20 +75,19 @@
         transform: rotate(90deg);
     }
     .list-group-custom .collapse {
-        transition: max-height 0.25s ease-out, opacity 0.2s ease-in-out;
-        max-height: 0;
+        display: none !important;
+        max-height: none;
+        overflow: visible;
         opacity: 0;
-        overflow: hidden;
-        display: block !important;
     }
     .list-group-custom .collapse.show {
-        max-height: 1000px;
+        display: block !important;
+        max-height: none;
         opacity: 1;
-    }
-</style>
+    }</style>
 
-<div class="col-md-3 col-lg-2 mb-4">
-    <div class="list-group list-group-custom shadow-sm bg-white p-2 rounded-3 border">
+<div class="col-md-3 col-lg-2 mb-4 sidebar-column">
+    <div class="list-group list-group-custom p-2 sidebar-sticky">
         
         <!-- Navigation Section -->
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
@@ -132,7 +179,7 @@
         <% } %>
 
         <!-- Inventory Section -->
-        <% if (loggedInUserSidebar != null && loggedInUserSidebar.hasPermission("INVENTORY_VIEW")) { %>
+        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("INVENTORY_VIEW") || loggedInUserSidebar.hasPermission("STOCK_LEDGER_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header"
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
              data-custom-toggle="collapse" data-custom-target="#collapseInventory" aria-expanded="false">
@@ -140,9 +187,16 @@
             <i class="bi bi-chevron-right chevron-icon"></i>
         </div>
         <div class="collapse" id="collapseInventory">
-            <a href="<%= request.getContextPath() %>/warehouse/inventory" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/inventory") ? "active" : "" %>">
+            <% if (loggedInUserSidebar.hasPermission("INVENTORY_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/inventory" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/inventory") && !isInventoryHistoryPage ? "active" : "" %>">
                 <i class="bi bi-clipboard-data me-2"></i> Số liệu tồn kho
             </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("STOCK_LEDGER_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/inventory-history" class="list-group-item list-group-item-action d-flex align-items-center <%= isInventoryHistoryPage ? "active" : "" %>">
+                <i class="bi bi-clock-history me-2"></i> Lịch sử xuất nhập kho
+            </a>
+            <% } %>
         </div>
         <% } %>
 
@@ -161,6 +215,29 @@
             <% if (loggedInUserSidebar.hasPermission("STOCKTAKE_CONFIG")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=config" class="list-group-item list-group-item-action d-flex align-items-center <%= "config".equals(request.getParameter("action")) ? "active" : "" %>">
                 <i class="bi bi-sliders me-2"></i> Ngưỡng duyệt 2 cấp
+            </a>
+            <% } %>
+        </div>
+        <% } %>
+
+        <!-- Disposal Section -->
+        <% if (loggedInUserSidebar != null && loggedInUserSidebar.hasPermission("DISPOSAL_VIEW")) { %>
+        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header"
+             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
+             data-custom-toggle="collapse" data-custom-target="#collapseDisposal" aria-expanded="false">
+            <span><i class="bi bi-trash3-fill me-2"></i> Thanh lý sản phẩm hỏng</span>
+            <i class="bi bi-chevron-right chevron-icon"></i>
+        </div>
+        <div class="collapse" id="collapseDisposal">
+            <a href="<%= request.getContextPath() %>/warehouse/disposal?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/disposal") && !"config".equals(request.getParameter("action")) && !"dashboard".equals(request.getParameter("action")) ? "active" : "" %>">
+                <i class="bi bi-list-check me-2"></i> Phiếu thanh lý
+            </a>
+            <a href="<%= request.getContextPath() %>/warehouse/disposal?action=dashboard" class="list-group-item list-group-item-action d-flex align-items-center <%= "dashboard".equals(request.getParameter("action")) ? "active" : "" %>">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+            <% if (loggedInUserSidebar.hasPermission("DISPOSAL_CONFIG")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/disposal?action=config" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/disposal") && "config".equals(request.getParameter("action")) ? "active" : "" %>">
+                <i class="bi bi-sliders me-2"></i> Ngưỡng duyệt L2
             </a>
             <% } %>
         </div>
@@ -248,6 +325,20 @@
                     header.setAttribute('aria-expanded', 'true');
                 }
             }
+            const sidebarViewport = document.querySelector('.sidebar-sticky');
+            if (sidebarViewport) {
+                requestAnimationFrame(function() {
+                    const linkTop = activeLink.offsetTop;
+                    const linkBottom = linkTop + activeLink.offsetHeight;
+                    const viewTop = sidebarViewport.scrollTop;
+                    const viewBottom = viewTop + sidebarViewport.clientHeight;
+                    if (linkTop < viewTop) {
+                        sidebarViewport.scrollTop = Math.max(0, linkTop - 12);
+                    } else if (linkBottom > viewBottom) {
+                        sidebarViewport.scrollTop = linkBottom - sidebarViewport.clientHeight + 12;
+                    }
+                });
+            }
         } else {
             // Default expand Navigation if no active link
             const firstCollapse = document.getElementById('collapseNavigation');
@@ -261,3 +352,4 @@
         }
     });
 </script>
+

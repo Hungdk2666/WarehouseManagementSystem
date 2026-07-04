@@ -76,7 +76,7 @@ public class ImportRequestServlet extends HttpServlet {
                 break;
             }
             case "add": {
-                httpReq.setAttribute("supplierList", new SupplierService().getAllSuppliers());
+                httpReq.setAttribute("supplierList", new SupplierService().getActiveSuppliers());
                 httpReq.setAttribute("productList", new ProductService().getAllProducts());
                 httpReq.setAttribute("warehouseList", new WarehouseService().getAllActiveWarehouses());
                 httpReq.getRequestDispatcher("/import_request/request-add.jsp").forward(httpReq, response);
@@ -224,10 +224,16 @@ public class ImportRequestServlet extends HttpServlet {
                         int qty = Integer.parseInt(quantities[i]);
                         if (qty <= 0)
                             continue;
+                        java.math.BigDecimal price = new java.math.BigDecimal(unitPrices[i]);
+                        if (price.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                            response.sendRedirect(
+                                    httpReq.getContextPath() + "/warehouse/import-request?action=add&error=InvalidPrice");
+                            return;
+                        }
                         RequestDetail d = new RequestDetail();
                         d.setProductId(Integer.parseInt(productIds[i]));
                         d.setQuantity(qty);
-                        d.setUnitPrice(new java.math.BigDecimal(unitPrices[i]));
+                        d.setUnitPrice(price);
                         details.add(d);
                     }
                     if (details.isEmpty()) {
@@ -403,6 +409,7 @@ public class ImportRequestServlet extends HttpServlet {
             } catch (NumberFormatException ignored) {
             }
         }
-        return user.getWarehouseId() != null ? user.getWarehouseId() : 1;
+        if (user.getWarehouseId() != null) return user.getWarehouseId();
+        throw new IllegalStateException("Chưa chọn kho nhận hàng");
     }
 }

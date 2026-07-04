@@ -41,14 +41,16 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Cập nhật thông tin sản phẩm</h2>
-                        <p class="text-muted small mb-0">Chỉnh sửa thông tin chi tiết hoặc thông số kỹ thuật cho <%= product.getProductName() %></p>
+                        <h2 class="page-title">Cập nhật thông tin sản phẩm</h2>
+                        <p class="page-subtitle">Chỉnh sửa thông tin chi tiết hoặc thông số kỹ thuật cho <%= product.getProductName() %></p>
                     </div>
-                    <a href="product?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Quay lại danh mục
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="product?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-arrow-left"></i> Quay lại danh mục
+                        </a>
+                    </div>
                 </div>
 
                 <% if (error != null) { %>
@@ -59,7 +61,7 @@
                 </div>
                 <% } %>
 
-                <div class="card shadow-sm border-0 bg-white p-4">
+                <div class="card form-card p-4">
                     <form action="product?action=update" method="POST" class="row g-3">
                         <input type="hidden" name="id" value="<%= product.getId() %>">
                         
@@ -80,7 +82,7 @@
 
                         <div class="col-md-6">
                             <label for="minStock" class="form-label">Mức tồn kho tối thiểu (Ngưỡng an toàn) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="minStock" name="min_stock" min="1" value="<%= product.getMinStock() %>" required>
+                            <input type="number" class="form-control" id="minStock" name="min_stock" min="1" value="<%= product.getMinStock() %>" onkeydown="if(!/^[0-9]$/.test(event.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'].includes(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();" required>
                         </div>
 
                         <div class="col-md-6">
@@ -124,7 +126,7 @@
                                     <i class="bi bi-plus-lg"></i> Thêm dòng thông số
                                 </button>
                             </div>
-                            <div class="table-responsive border rounded bg-white p-3 shadow-sm">
+                            <div class="table-responsive border rounded bg-white p-3">
                                 <table class="table table-hover align-middle mb-0" id="specsTable" style="font-size: 0.9rem;">
                                     <thead>
                                         <tr class="table-light">
@@ -143,9 +145,11 @@
                             </div>
                         </div>
 
-                        <div class="col-12 d-flex justify-content-end gap-2 mt-4">
-                            <a href="product?action=list" class="btn btn-secondary px-4"><i class="bi bi-x-circle me-1"></i> Hủy</a>
-                            <button type="submit" class="btn btn-warning text-dark px-4"><i class="bi bi-check-circle-fill me-1"></i> Lưu thay đổi</button>
+                        <div class="col-12">
+                            <div class="form-actions">
+                                <a href="product?action=list" class="btn btn-outline-secondary">Hủy</a>
+                                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Lưu thay đổi</button>
+                            </div>
                         </div>
                     </form>
                 </div>

@@ -41,10 +41,10 @@ public class InventoryServlet extends HttpServlet {
 
     private void handleList(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        // Warehouse Staff bị giới hạn ở kho của mình. Manager/Admin xem được mọi kho.
         Integer userWh = user.getWarehouseId();
         Integer filterWh = parseIntegerOrNull(req.getParameter("warehouse_id"));
-        if (userWh != null) filterWh = userWh;   // ép theo kho user
+        boolean canViewAll = user.hasPermission("INVENTORY_VIEW_ALL");
+        if (userWh != null && !canViewAll) filterWh = userWh;  // chỉ ép kho nếu không có quyền xem tất cả
 
         Integer categoryId = parseIntegerOrNull(req.getParameter("category_id"));
         Integer brandId = parseIntegerOrNull(req.getParameter("brand_id"));
@@ -63,7 +63,7 @@ public class InventoryServlet extends HttpServlet {
         req.setAttribute("filterKeyword", keyword);
         req.setAttribute("filterLow", onlyLow);
         req.setAttribute("filterDamaged", onlyDamaged);
-        req.setAttribute("userBoundToWarehouse", userWh != null);
+        req.setAttribute("userBoundToWarehouse", userWh != null && !canViewAll);
 
         req.getRequestDispatcher("/inventory/list.jsp").forward(req, resp);
     }
@@ -74,8 +74,9 @@ public class InventoryServlet extends HttpServlet {
             int warehouseId = Integer.parseInt(req.getParameter("warehouse_id"));
             int productId = Integer.parseInt(req.getParameter("product_id"));
 
-            // Warehouse Staff chỉ xem được kho của mình
-            if (user.getWarehouseId() != null && warehouseId != user.getWarehouseId()) {
+            // Warehouse Staff chỉ xem được kho của mình, trừ khi có INVENTORY_VIEW_ALL
+            if (user.getWarehouseId() != null && !user.hasPermission("INVENTORY_VIEW_ALL")
+                    && warehouseId != user.getWarehouseId()) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xem tồn kho khác kho của bạn.");
                 return;
             }

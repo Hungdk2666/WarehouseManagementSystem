@@ -1,4 +1,4 @@
-<%@page import="model.Product"%>
+﻿<%@page import="model.Product"%>
 <%@page import="model.Category"%>
 <%@page import="model.Brand"%>
 <%@page import="java.util.List"%>
@@ -57,32 +57,34 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Danh mục sản phẩm</h2>
-                        <p class="text-muted small mb-0">Theo dõi tồn kho khả dụng và thông số kỹ thuật chi tiết của các sản phẩm</p>
+                        <h2 class="page-title">Danh mục sản phẩm</h2>
+                        <p class="page-subtitle">Theo dõi tồn kho khả dụng và thông số kỹ thuật chi tiết của các sản phẩm</p>
                     </div>
-                    <% if (canAdd) { %>
-                    <a href="product?action=add" class="btn btn-primary d-inline-flex align-items-center gap-1.5 shadow-sm">
-                        <i class="bi bi-plus-circle-fill"></i> Thêm sản phẩm mới
-                    </a>
-                    <% } %>
+                    <div class="d-flex gap-2">
+                        <% if (canAdd) { %>
+                        <a href="product?action=add" class="btn btn-primary d-inline-flex align-items-center gap-1.5">
+                            <i class="bi bi-plus-circle-fill"></i> Thêm sản phẩm mới
+                        </a>
+                        <% } %>
+                    </div>
                 </div>
 
                 <!-- Searching & Filtering Panel -->
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-body">
+                <div class="card mb-3">
+                    <div class="card-body py-3">
                     <form action="product" method="GET" class="row g-2">
                         <input type="hidden" name="action" value="list">
                         
                         <div class="<%= loggedInUser.getWarehouseId() == null ? "col-md-3" : "col-md-4" %>">
-                            <label for="search" class="form-label small fw-semibold">Tìm kiếm</label>
+                            <label for="search" class="form-label small fw-semibold mb-1">Tìm kiếm</label>
                             <input type="text" class="form-control form-control-sm" id="search" name="search" value="<%= searchVal != null ? searchVal : "" %>" placeholder="Nhập mã SKU hoặc tên...">
                         </div>
 
                         <% if (loggedInUser.getWarehouseId() == null) { %>
                         <div class="col-md-2">
-                            <label for="warehouseId" class="form-label small fw-semibold">Lọc theo Kho</label>
+                            <label for="warehouseId" class="form-label small fw-semibold mb-1">Lọc theo Kho</label>
                             <select class="form-select form-select-sm" id="warehouseId" name="warehouseId">
                                 <option value="">Tất cả kho</option>
                                 <%
@@ -100,7 +102,7 @@
                         <% } %>
 
                         <div class="col-md-2">
-                            <label for="categoryId" class="form-label small fw-semibold">Danh mục</label>
+                            <label for="categoryId" class="form-label small fw-semibold mb-1">Danh mục</label>
                             <select class="form-select form-select-sm" id="categoryId" name="categoryId">
                                 <option value="">Tất cả</option>
                                 <%
@@ -117,7 +119,7 @@
                         </div>
 
                         <div class="col-md-2">
-                            <label for="brandId" class="form-label small fw-semibold">Thương hiệu</label>
+                            <label for="brandId" class="form-label small fw-semibold mb-1">Thương hiệu</label>
                             <select class="form-select form-select-sm" id="brandId" name="brandId">
                                 <option value="">Tất cả</option>
                                 <%
@@ -134,7 +136,7 @@
                         </div>
 
                         <div class="col-md-3 d-flex align-items-end gap-1">
-                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Lọc</button>
+                            <button type="submit" class="btn btn-primary btn-sm px-3"><i class="bi bi-funnel-fill me-1"></i>Lọc</button>
                             <a href="product?action=list" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></a>
                             <a href="<%= request.getContextPath() %>/warehouse/inventory" class="btn btn-outline-info btn-sm" title="Tồn kho riêng"><i class="bi bi-clipboard-data"></i> Tồn kho</a>
                         </div>
@@ -143,24 +145,24 @@
                 </div>
 
                 <!-- Product List Card -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-seam-fill me-2"></i>Danh sách sản phẩm</h5>
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-box-seam-fill me-2 text-primary"></i>Danh sách sản phẩm</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table id="productTable" class="table table-hover align-middle text-center mb-0">
+                            <table id="productTable" class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="text-nowrap">SKU</th>
-                                        <th class="text-start ps-3 text-nowrap" style="width: 30%; min-width: 220px;">Tên sản phẩm</th>
+                                        <th class="text-nowrap ps-3">SKU</th>
+                                        <th class="text-nowrap" style="width: 30%; min-width: 220px;">Tên sản phẩm</th>
                                         <th class="text-nowrap">Danh mục</th>
                                         <th class="text-nowrap">Thương hiệu</th>
                                         <th class="text-nowrap">Đơn vị</th>
-                                        <th class="text-nowrap">Mức tồn tối thiểu</th>
-                                        <th class="text-nowrap">Giá vốn trung bình</th>
+                                        <th class="text-nowrap text-center">Mức tồn tối thiểu</th>
+                                        <th class="text-nowrap text-end">Giá vốn trung bình</th>
                                         <th class="text-nowrap">Trạng thái</th>
-                                        <th class="text-nowrap">Thao tác</th>
+                                        <th class="text-nowrap text-center">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -169,36 +171,36 @@
                                             for (Product p : productList) {
                                     %>
                                     <tr>
-                                        <td class="fw-bold text-primary text-nowrap"><%= p.getSku() %></td>
-                                        <td class="fw-bold text-slate-800 text-start ps-3"><%= p.getProductName() %></td>
-                                        <td class="text-nowrap"><span class="badge bg-light text-dark"><%= p.getCategoryName() != null ? p.getCategoryName() : "Chưa phân loại" %></span></td>
-                                        <td class="text-nowrap"><span class="badge bg-light text-dark"><%= p.getBrandName() != null ? p.getBrandName() : "Chưa phân loại" %></span></td>
+                                        <td class="fw-bold text-slate-800 text-nowrap ps-3"><%= p.getSku() %></td>
+                                        <td class="fw-bold text-slate-800"><%= p.getProductName() %></td>
+                                        <td class="text-nowrap"><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= p.getCategoryName() != null ? p.getCategoryName() : "Chưa phân loại" %></span></td>
+                                        <td class="text-nowrap"><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= p.getBrandName() != null ? p.getBrandName() : "Chưa phân loại" %></span></td>
                                         <td class="text-muted text-nowrap"><%= p.getUnit() %></td>
-                                        <td class="text-nowrap text-muted small">
+                                        <td class="text-nowrap text-muted small text-center">
                                             <i class="bi bi-shield-check"></i> <%= p.getMinStock() %> <%= p.getUnit() %>
                                         </td>
-                                        <td class="fw-bold text-success-emphasis text-nowrap"><%= String.format("%,.0f đ", p.getAverageCost()) %></td>
+                                        <td class="fw-bold text-slate-800 text-nowrap text-end"><%= String.format("%,.0f đ", p.getAverageCost()) %></td>
                                         <td class="text-nowrap">
                                             <% if (p.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                <span class="status-chip chip-success">Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-danger bg-opacity-10 text-danger"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
+                                                <span class="status-chip chip-muted">Ngừng hoạt động</span>
                                             <% } %>
                                         </td>
-                                        <td class="text-nowrap">
+                                        <td class="text-nowrap text-center">
                                             <div class="d-flex align-items-center justify-content-center gap-1.5">
-                                                <a href="product?action=details&id=<%= p.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center p-2" title="Chi tiết" data-bs-toggle="tooltip">
-                                                    <i class="bi bi-eye-fill"></i>
+                                                <a href="product?action=details&id=<%= p.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết" data-bs-toggle="tooltip">
+                                                    <i class="bi bi-eye"></i>
                                                 </a>
                                                 <% if (canEdit) { %>
-                                                <a href="product?action=update&id=<%= p.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center justify-content-center p-2" title="Sửa" data-bs-toggle="tooltip">
+                                                <a href="product?action=update&id=<%= p.getId() %>" class="btn btn-table btn-outline-primary" title="Sửa" data-bs-toggle="tooltip">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </a>
                                                 <% } %>
                                                 <% if (canToggle) { %>
                                                 <form action="product?action=toggle" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= p.getId() %>">
-                                                    <button type="submit" class="btn btn-sm <%= p.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center justify-content-center p-2" title="<%= p.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>" data-bs-toggle="tooltip">
+                                                    <button type="submit" class="btn btn-table <%= p.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= p.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>" data-bs-toggle="tooltip">
                                                         <i class="bi bi-power"></i>
                                                     </button>
                                                 </form>
@@ -211,9 +213,11 @@
                                          } else {
                                      %>
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted py-5">
-                                            <i class="bi bi-box text-muted display-4 d-block mb-3"></i>
-                                            Không tìm thấy sản phẩm nào khớp với bộ lọc trong cơ sở dữ liệu.
+                                        <td colspan="9" class="p-0">
+                                            <div class="empty-state">
+                                                <i class="bi bi-inbox"></i>
+                                                <p>Không tìm thấy sản phẩm nào khớp với bộ lọc trong cơ sở dữ liệu.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                     <% } %>

@@ -3,11 +3,14 @@
 <%
     User loggedUser = (User) session.getAttribute("user");
 %>
-<nav class="navbar navbar-expand-lg navbar-dark navbar-custom py-3">
-    <div class="container">
+<nav class="navbar navbar-expand-lg navbar-light navbar-custom py-2">
+    <div class="container-fluid px-4">
         <a class="navbar-brand d-flex align-items-center" href="<%= request.getContextPath() %>/index.jsp">
             <i class="bi bi-box-seam-fill text-primary me-2 fs-4"></i>
-            <span>Trang chủ WMS</span>
+            <span class="d-flex flex-column lh-sm">
+                <span>WMS</span>
+                <small class="text-muted fw-semibold" style="font-size: 0.68rem;">Warehouse Management</small>
+            </span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -40,19 +43,24 @@
                 <% } %>
                 <% if (loggedUser != null && loggedUser.getWarehouseId() != null) { %>
                 <li class="nav-item">
-                    <span class="badge bg-primary text-white d-flex align-items-center gap-1 px-3 py-2" style="font-size: 0.8rem; border-radius: 20px;">
+                    <span class="badge bg-primary bg-opacity-10 text-primary d-flex align-items-center gap-1 px-3 py-2" style="font-size: 0.8rem; border-radius: 20px; font-weight: 600;">
                         <i class="bi bi-building-fill"></i>
                         <%= loggedUser.getWarehouseName() != null ? loggedUser.getWarehouseName() : "Kho #" + loggedUser.getWarehouseId() %>
                     </span>
                 </li>
                 <% } %>
                 <li class="nav-item">
-                    <a class="nav-link px-3" href="<%= request.getContextPath() %>/profile">
-                        <i class="bi bi-person-circle me-1"></i> Cá nhân
+                    <a class="nav-link profile-identity px-2" href="<%= request.getContextPath() %>/profile" aria-label="Mở trang cá nhân">
+                        <span class="profile-avatar" aria-hidden="true"><i class="bi bi-person-fill"></i></span>
+                        <span class="profile-copy">
+                            <span class="profile-name"><%= loggedUser.getFullName() != null && !loggedUser.getFullName().trim().isEmpty() ? loggedUser.getFullName() : loggedUser.getUsername() %></span>
+                            <span class="profile-role"><i class="bi bi-shield-check"></i><%= loggedUser.getRoleName() != null && !loggedUser.getRoleName().trim().isEmpty() ? loggedUser.getRoleName() : "Nhân viên" %></span>
+                        </span>
+                        <i class="bi bi-chevron-down profile-chevron" aria-hidden="true"></i>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="btn btn-outline-danger btn-sm px-3" href="<%= request.getContextPath() %>/logout">
+                    <a class="btn btn-outline-secondary btn-sm px-3" href="<%= request.getContextPath() %>/logout">
                         <i class="bi bi-box-arrow-right me-1"></i> Đăng xuất
                     </a>
                 </li>
@@ -126,6 +134,18 @@
         display: inline-block;
         flex-shrink: 0;
     }
+
+    /* Header account identity */
+    .profile-identity{display:inline-flex!important;align-items:center;gap:.58rem;min-height:2.65rem;padding:.25rem .55rem!important;border:1px solid transparent;color:var(--slate-700)!important;background:transparent;white-space:nowrap}
+    .profile-identity:hover,.profile-identity:focus{border-color:var(--slate-200);background:var(--slate-50)!important;color:var(--slate-900)!important}
+    .profile-avatar{width:2.15rem;height:2.15rem;display:inline-flex;flex:0 0 2.15rem;align-items:center;justify-content:center;border:1px solid rgba(37,99,235,.18);border-radius:50%;color:var(--primary);background:var(--primary-soft);font-size:1rem}
+    .profile-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:.08rem;line-height:1.12}
+    .profile-name{max-width:13rem;overflow:hidden;color:var(--slate-800);font-size:.84rem;font-weight:900;text-overflow:ellipsis}
+    .profile-role{display:inline-flex;align-items:center;gap:.28rem;max-width:13rem;overflow:hidden;color:var(--slate-500);font-size:.68rem;font-weight:800;text-overflow:ellipsis}
+    .profile-role i{color:var(--accent);font-size:.7rem}
+    .profile-chevron{margin-left:.08rem;color:var(--slate-400);font-size:.7rem;transition:transform .18s ease}
+    .profile-identity:hover .profile-chevron,.profile-identity:focus .profile-chevron{color:var(--primary);transform:translateY(1px)}
+    @media (max-width:767.98px){.profile-identity{width:100%;justify-content:flex-start;padding:.55rem .7rem!important}.profile-name,.profile-role{max-width:calc(100vw - 7rem)}.profile-chevron{margin-left:auto}}
 </style>
 
 <!-- JS for Live Notification Polling -->
@@ -243,3 +263,5 @@
     })();
 </script>
 <% } %>
+
+

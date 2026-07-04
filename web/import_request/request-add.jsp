@@ -1,5 +1,6 @@
-<%@page import="model.Supplier"%>
+﻿<%@page import="model.Supplier"%>
 <%@page import="model.Product"%>
+<%@page import="model.Warehouse"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -11,6 +12,8 @@
     }
     List<Supplier> supplierList = (List<Supplier>) request.getAttribute("supplierList");
     List<Product> productList = (List<Product>) request.getAttribute("productList");
+    List<Warehouse> warehouseList = (List<Warehouse>) request.getAttribute("warehouseList");
+    Integer userWh = loggedInUser.getWarehouseId();
 %>
 <!DOCTYPE html>
 <html>
@@ -32,12 +35,12 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
  
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Tạo Yêu cầu nhập kho</h2>
-                        <p class="text-muted small mb-0">Tạo mới yêu cầu nhập hàng từ nhà cung cấp</p>
+                        <h2 class="page-title">Tạo Yêu cầu nhập kho</h2>
+                        <p class="page-subtitle">Tạo mới yêu cầu nhập hàng từ nhà cung cấp</p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-arrow-left"></i> Hủy
                     </a>
                 </div>
@@ -45,16 +48,16 @@
                 <div class="row">
                     <div class="col-12">
                         <form action="<%= request.getContextPath() %>/warehouse/import-request?action=add" method="POST" id="reqForm">
-                            <div class="card card-overflow-visible shadow-sm border-0 bg-white mb-4" style="overflow: visible;">
-                                <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                                    <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-info-circle-fill me-2"></i>Thông tin Yêu cầu nhập kho</h5>
+                            <div class="card card-overflow-visible bg-white mb-4" style="overflow: visible;">
+                                <div class="card-header bg-transparent py-3 border-bottom">
+                                    <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin Yêu cầu nhập kho</h5>
                                 </div>
                                 <div class="card-body p-4">
                                     <% if (request.getAttribute("error") != null) { %>
                                     <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i><%= request.getAttribute("error") %></div>
                                     <% } %>
                                     <div class="row g-3">
-                                        <div class="col-md-6">
+                                        <div class="col-md-4">
                                             <label for="supplierId" class="form-label">Nhà cung cấp <span class="text-danger">*</span></label>
                                             <select class="form-select" id="supplierId" name="supplier_id" required>
                                                 <option value=""></option>
@@ -63,7 +66,21 @@
                                                 <% } } } %>
                                             </select>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-4">
+                                            <label for="warehouseId" class="form-label">Kho nhận hàng <span class="text-danger">*</span></label>
+                                            <% if (userWh != null) { %>
+                                                <input type="hidden" name="warehouse_id" value="<%= userWh %>">
+                                                <input type="text" class="form-control" value="<%= warehouseList != null ? warehouseList.stream().filter(w -> w.getId() == userWh).map(w -> w.getWarehouseName()).findFirst().orElse("Kho #" + userWh) : "Kho #" + userWh %>" readonly>
+                                            <% } else { %>
+                                                <select class="form-select" id="warehouseId" name="warehouse_id" required>
+                                                    <option value="">-- Chọn kho --</option>
+                                                    <% if (warehouseList != null) { for (Warehouse w : warehouseList) { %>
+                                                    <option value="<%= w.getId() %>"><%= w.getWarehouseName() %></option>
+                                                    <% } } %>
+                                                </select>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-4">
                                             <label for="expectedDate" class="form-label">Ngày nhận hàng dự kiến <span class="text-danger">*</span></label>
                                             <input type="date" class="form-control" id="expectedDate" name="expected_date" required>
                                         </div>
@@ -71,9 +88,9 @@
                                 </div>
                             </div>
  
-                            <div class="card card-overflow-visible shadow-sm border-0 bg-white mb-4" style="overflow: visible;">
-                                <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                                    <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-list-stars me-2"></i>Sản phẩm cần nhập</h5>
+                            <div class="card card-overflow-visible bg-white mb-4" style="overflow: visible;">
+                                <div class="card-header bg-transparent py-3 border-bottom">
+                                    <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-stars me-2 text-primary"></i>Sản phẩm cần nhập</h5>
                                 </div>
                                 <div class="card-body p-4">
                                     <div class="row g-2 align-items-end mb-4 border-bottom pb-4">
@@ -82,7 +99,7 @@
                                             <select class="form-select" id="productSelect">
                                                 <option value=""></option>
                                                 <% if (productList != null) { for (Product p : productList) { if (p.isStatus()) { %>
-                                                <option value="<%= p.getId() %>" data-sku="<%= p.getSku() %>" data-unit="<%= p.getUnit() %>" data-cost="<%= p.getAverageCost() %>">
+                                                <option value="<%= p.getId() %>" data-sku="<%= p.getSku() %>" data-unit="<%= p.getUnit() %>" data-cost="<%= new java.math.BigDecimal(String.valueOf(p.getAverageCost())).toPlainString() %>">
                                                     <%= p.getProductName() %> (SKU: <%= p.getSku() %>)
                                                 </option>
                                                 <% } } } %>
@@ -110,7 +127,7 @@
                                             </thead>
                                             <tbody id="itemsBody">
                                                 <tr id="emptyRow">
-                                                    <td colspan="7" class="text-muted py-4">Chưa có sản phẩm nào được thêm.</td>
+                                                    <td colspan="7" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa có sản phẩm nào được thêm.</p></div></td>
                                                 </tr>
                                             </tbody>
                                             <tfoot>
@@ -220,8 +237,8 @@
                 '</td>' +
                 '<td><span class="badge bg-secondary bg-opacity-10 text-secondary">' + sku + '</span></td>' +
                 '<td>' + unit + '</td>' +
-                '<td><input type="number" class="form-control form-control-sm text-center qty-input" name="quantity" value="1" min="1" required></td>' +
-                '<td><input type="number" class="form-control form-control-sm text-end price-input" name="unit_price" value="' + defaultCost + '" min="0" required></td>' +
+                '<td><input type="number" class="form-control form-control-sm text-center qty-input" name="quantity" value="1" min="1" onkeydown="if(!/^[0-9]$/.test(event.key) && ![\'Backspace\', \'Delete\', \'ArrowLeft\', \'ArrowRight\', \'Tab\', \'Enter\', \'Escape\'].includes(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();" required></td>' +
+                '<td><input type="number" class="form-control form-control-sm text-end price-input" name="unit_price" value="' + defaultCost + '" min="0" step="any" onkeydown="if(!/^[0-9.]$/.test(event.key) && ![\'Backspace\', \'Delete\', \'ArrowLeft\', \'ArrowRight\', \'Tab\', \'Enter\', \'Escape\'].includes(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();" required></td>' +
                 '<td class="fw-bold row-total">' + formatNumber(defaultCost) + ' VND</td>' +
                 '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(' + productId + ')"><i class="bi bi-trash"></i></button></td>';
 
