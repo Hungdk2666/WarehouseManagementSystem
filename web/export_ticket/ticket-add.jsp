@@ -1,4 +1,4 @@
-<%@page import="model.Request"%>
+﻿<%@page import="model.Request"%>
 <%@page import="model.RequestDetail"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
@@ -38,18 +38,18 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Tạo Phiếu xuất kho</h2>
-                        <p class="text-muted small mb-0">Ghi nhận xuất kho thực tế theo Yêu cầu xuất kho đã duyệt</p>
+                        <h2 class="page-title">Tạo Phiếu xuất kho</h2>
+                        <p class="page-subtitle">Ghi nhận xuất kho thực tế theo Yêu cầu xuất kho đã duyệt</p>
                     </div>
-                    <a href="export-ticket?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <a href="export-ticket?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-arrow-left"></i> Quay lại
                     </a>
                 </div>
 
                 <%-- Banner kho đang làm việc --%>
-                <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 py-2 px-3 mb-4" style="background: #fff8e1;">
+                <div class="d-flex align-items-center gap-3 py-2 px-3 mb-4 rounded-3 bg-warning bg-opacity-10">
                     <i class="bi bi-building-fill fs-5 text-warning"></i>
                     <div class="small">
                         <span class="text-muted">Kho xuất hàng:</span>
@@ -61,7 +61,7 @@
                 </div>
 
                 <% if (error != null) { %>
-                <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4">
+                <div class="alert alert-danger rounded-3 mb-4">
                     <% if ("NoItemsDispatched".equals(error)) { %>
                         <i class="bi bi-exclamation-triangle-fill me-2"></i> Bạn phải chọn xuất ít nhất 1 sản phẩm (số lượng > 0) để lưu Phiếu xuất kho.
                     <% } else if ("ExceededRemainingQuantity".equals(error)) { %>
@@ -76,9 +76,9 @@
                 </div>
                 <% } %>
 
-                <div class="card card-overflow-visible shadow-sm border-0 bg-white mb-4" style="overflow: visible;">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-receipt me-2"></i>Chọn Yêu cầu xuất kho tham chiếu</h5>
+                <div class="card card-overflow-visible bg-white mb-4" style="overflow: visible;">
+                    <div class="card-header bg-transparent py-3 border-bottom">
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-receipt me-2 text-primary"></i>Chọn Yêu cầu xuất kho tham chiếu</h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="row align-items-end g-3">
@@ -122,9 +122,9 @@
                 <form action="export-ticket?action=add" method="POST" id="ginForm">
                     <input type="hidden" name="request_id" value="<%= selectedReq.getId() %>">
                     
-                    <div class="card shadow-sm border-0 bg-white mb-4">
-                        <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                            <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-seam me-2"></i>Chi tiết phiếu xuất kho</h5>
+                    <div class="card bg-white mb-4">
+                        <div class="card-header bg-transparent py-3 border-bottom">
+                            <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-seam me-2 text-primary"></i>Chi tiết phiếu xuất kho</h5>
                         </div>
                         <div class="card-body p-0">
                             <table class="table align-middle text-center mb-0">
@@ -185,13 +185,13 @@
                                             boolean isNewRequested = "NEW".equals(reqCond);
                                             boolean isUsedRequested = "USED".equals(reqCond);
                                         %>
-                                        <td class="fw-semibold <%= isNewRequested ? (stock < remaining ? "text-danger bg-danger bg-opacity-10" : "text-primary bg-primary bg-opacity-10") : "text-muted" %>">
+                                        <td class="fw-semibold <%= isNewRequested ? (stock < remaining ? "text-danger bg-light" : "text-primary bg-light") : "text-muted" %>">
                                             <%= newStock %>
                                             <% if (isNewRequested && stock < remaining) { %>
                                             <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="Không đủ hàng NEW tại kho này" data-bs-toggle="tooltip"></i>
                                             <% } %>
                                         </td>
-                                        <td class="fw-semibold <%= isUsedRequested ? (stock < remaining ? "text-danger bg-danger bg-opacity-10" : "text-primary bg-primary bg-opacity-10") : "text-muted" %>">
+                                        <td class="fw-semibold <%= isUsedRequested ? (stock < remaining ? "text-danger bg-light" : "text-primary bg-light") : "text-muted" %>">
                                             <%= usedStock %>
                                             <% if (isUsedRequested && stock < remaining) { %>
                                             <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="Không đủ hàng USED tại kho này" data-bs-toggle="tooltip"></i>
@@ -210,6 +210,7 @@
                                                    data-remaining="<%= remaining %>"
                                                    data-stock="<%= stock %>"
                                                    data-pname="<%= d.getProductName() %>"
+                                                   onkeydown="if(!/^[0-9]$/.test(event.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'].includes(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();"
                                                    required 
                                                    style="box-shadow: none;">
                                         </td>
@@ -261,6 +262,19 @@
         }
 
         <% if (selectedReq != null) { %>
+        document.addEventListener("DOMContentLoaded", function() {
+            const qtyInputs = document.querySelectorAll(".qty-input");
+            qtyInputs.forEach(input => input.addEventListener("input", function() {
+                if (this.value !== "") {
+                    let val = parseInt(this.value);
+                    let max = parseInt(this.getAttribute("max"));
+                    if (!isNaN(val) && !isNaN(max) && val > max) {
+                        this.value = max;
+                    }
+                }
+            }));
+        });
+
         document.getElementById("ginForm").addEventListener("submit", function(e) {
             const qtyInputs = document.querySelectorAll(".qty-input");
             let totalQty = 0;

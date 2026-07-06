@@ -1,4 +1,4 @@
-<%@page import="model.Stocktake"%>
+﻿<%@page import="model.Stocktake"%>
 <%@page import="model.StocktakeDetail"%>
 <%@page import="model.StocktakeItem"%>
 <%@page import="model.StocktakeConfig"%>
@@ -52,18 +52,30 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
 
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold mb-1"><%= s.getStocktakeCode() %>
-                            <span class="badge bg-<%= badge %> ms-2"><%= s.getStatus() %></span>
+                        <h2 class="page-title"><%= s.getStocktakeCode() %>
+                            <%
+                                String detailStatusVn = s.getStatus();
+                                String detailChipCls = "chip-muted";
+                                if ("DRAFT".equals(detailStatusVn)) { detailStatusVn = "Bản nháp"; detailChipCls = "chip-muted"; }
+                                else if ("COUNTING".equals(detailStatusVn)) { detailStatusVn = "Đang kiểm"; detailChipCls = "chip-info"; }
+                                else if ("SUBMITTED".equals(detailStatusVn)) { detailStatusVn = "Chờ duyệt"; detailChipCls = "chip-warning"; }
+                                else if ("L1_APPROVED".equals(detailStatusVn)) { detailStatusVn = "Duyệt cấp 1"; detailChipCls = "chip-primary"; }
+                                else if ("APPROVED".equals(detailStatusVn)) { detailStatusVn = "Đã duyệt"; detailChipCls = "chip-success"; }
+                                else if ("REJECTED".equals(detailStatusVn)) { detailStatusVn = "Từ chối"; detailChipCls = "chip-danger"; }
+                                else if ("ADJUSTED".equals(detailStatusVn)) { detailStatusVn = "Đã điều chỉnh"; detailChipCls = "chip-success"; }
+                                else if ("CANCELLED".equals(detailStatusVn)) { detailStatusVn = "Đã hủy"; detailChipCls = "chip-muted"; }
+                            %>
+                            <span class="status-chip <%= detailChipCls %> ms-2" style="vertical-align: middle;"><%= detailStatusVn %></span>
                             <% if (s.isRequiresL2Approval() && !s.isAdjusted() && !s.isCancelled()) { %>
-                                <span class="badge bg-warning text-dark">Cần duyệt 2 cấp</span>
+                                <span class="status-chip chip-warning">Cần duyệt 2 cấp</span>
                             <% } %>
                         </h2>
-                        <p class="text-muted small mb-0">
+                        <p class="page-subtitle">
                             Kho: <strong><%= s.getWarehouseName() %></strong> ·
-                            Phạm vi: <%= s.isFullScope() ? "Toàn kho" : "Một phần" %> ·
-                            Cách đếm: <%= s.isSerialMode() ? "Scan serial" : "Theo số lượng" %>
+                            Phạm vi kiểm kê: <%= s.isFullScope() ? "Toàn kho" : "Một phần" %> ·
+                            Hình thức kiểm: <%= s.isSerialMode() ? "Quét mã serial" : "Theo số lượng" %>
                         </p>
                     </div>
                     <a href="<%= request.getContextPath() %>/warehouse/stocktake" class="btn btn-outline-secondary btn-sm">
@@ -87,13 +99,13 @@
                 <!-- Thông tin chung -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <div class="card shadow-sm border-0">
+                        <div class="card">
                             <div class="card-body">
                                 <h6 class="text-muted small fw-semibold mb-3">THÔNG TIN PHIẾU</h6>
                                 <dl class="row mb-0 small">
                                     <dt class="col-5">Người tạo:</dt><dd class="col-7"><%= s.getCreatedByFullName() %></dd>
                                     <dt class="col-5">Ngày tạo:</dt><dd class="col-7"><%= s.getCreatedAt() %></dd>
-                                    <dt class="col-5">Người đếm:</dt><dd class="col-7"><%= s.getCountedByFullName() == null ? "—" : s.getCountedByFullName() %></dd>
+                                    <dt class="col-5">Người kiểm:</dt><dd class="col-7"><%= s.getCountedByFullName() == null ? "—" : s.getCountedByFullName() %></dd>
                                     <dt class="col-5">Nộp lúc:</dt><dd class="col-7"><%= s.getSubmittedAt() == null ? "—" : s.getSubmittedAt() %></dd>
                                     <% if (s.getNotes() != null && !s.getNotes().isEmpty()) { %>
                                         <dt class="col-5">Ghi chú:</dt><dd class="col-7"><%= s.getNotes() %></dd>
@@ -103,7 +115,7 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="card shadow-sm border-0">
+                        <div class="card">
                             <div class="card-body">
                                 <h6 class="text-muted small fw-semibold mb-3">CHÊNH LỆCH</h6>
                                 <% if (s.getVariancePercent() == null) { %>
@@ -131,9 +143,9 @@
 
                 <!-- Lịch sử duyệt -->
                 <% if (s.getL1ApprovedAt() != null || s.getL2ApprovedAt() != null || s.getRejectReason() != null) { %>
-                    <div class="card shadow-sm border-0 mb-4">
+                    <div class="card mb-4">
                         <div class="card-header bg-light">
-                            <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Lịch sử duyệt</h6>
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Lịch sử duyệt</h6>
                         </div>
                         <ul class="list-group list-group-flush small">
                             <% if (s.getL1ApprovedAt() != null) { %>
@@ -167,9 +179,9 @@
                 <% } %>
 
                 <!-- Bảng chi tiết -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-primary bg-opacity-10">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-list-ul me-2"></i>Chi tiết kiểm kê</h5>
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-ul me-2 text-primary"></i>Chi tiết kiểm kê</h5>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0 align-middle">
@@ -179,7 +191,7 @@
                                     <th>SKU</th>
                                     <th class="text-end">Lý thuyết</th>
                                     <th class="text-end">Thực tế</th>
-                                    <th class="text-end">Hỏng</th>
+                                    <th class="text-end">Lỗi</th>
                                     <th class="text-end">Chênh lệch</th>
                                     <th>Lý do</th>
                                     <th>Ghi chú</th>
@@ -208,7 +220,7 @@
 
                 <!-- Serial items (nếu SERIAL mode) -->
                 <% if (s.isSerialMode() && items != null && !items.isEmpty()) { %>
-                <div class="card shadow-sm border-0 mb-4">
+                <div class="card mb-4">
                     <div class="card-header bg-info bg-opacity-10">
                         <h5 class="mb-0 fw-bold text-info"><i class="bi bi-upc me-2"></i>Chi tiết serial (<%= items.size() %>)</h5>
                     </div>
@@ -219,17 +231,29 @@
                             </thead>
                             <tbody>
                             <% for (StocktakeItem it : items) {
-                                String b = "secondary";
-                                if ("FOUND".equals(it.getScannedStatus())) b = "success";
-                                else if ("MISSING".equals(it.getScannedStatus())) b = "warning";
-                                else if ("DAMAGED".equals(it.getScannedStatus())) b = "danger";
-                                else if ("EXTRA".equals(it.getScannedStatus())) b = "info";
+                                String b = "chip-muted";
+                                if ("FOUND".equals(it.getScannedStatus())) b = "chip-success";
+                                else if ("MISSING".equals(it.getScannedStatus())) b = "chip-warning";
+                                else if ("DAMAGED".equals(it.getScannedStatus())) b = "chip-danger";
+                                else if ("EXTRA".equals(it.getScannedStatus())) b = "chip-info";
                             %>
                                 <tr>
                                     <td><strong><%= it.getSerialNumber() %></strong></td>
                                     <td><%= it.getProductName() %> <span class="badge bg-secondary bg-opacity-10 text-secondary"><%= it.getSku() %></span></td>
-                                    <td><span class="badge bg-<%= b %>"><%= it.getScannedStatus() %></span></td>
-                                    <td><%= it.getNewCondition() == null ? "—" : it.getNewCondition() %></td>
+                                    <td><span class="status-chip <%= b %>"><%
+                                        if ("FOUND".equals(it.getScannedStatus())) out.print("Tìm thấy");
+                                        else if ("MISSING".equals(it.getScannedStatus())) out.print("Thiếu");
+                                        else if ("DAMAGED".equals(it.getScannedStatus())) out.print("Hàng lỗi");
+                                        else if ("EXTRA".equals(it.getScannedStatus())) out.print("Phát hiện thêm");
+                                        else out.print(it.getScannedStatus());
+                                    %></span></td>
+                                    <td><%
+                                        String condVn = it.getNewCondition();
+                                        if (condVn == null) condVn = "—";
+                                        else if ("NEW".equals(condVn)) condVn = "Mới";
+                                        else if ("USED".equals(condVn)) condVn = "Đã dùng";
+                                        else if ("DAMAGED".equals(condVn)) condVn = "Lỗi";
+                                    %><%= condVn %></td>
                                     <td><%= it.getNote() == null ? "" : it.getNote() %></td>
                                 </tr>
                             <% } %>
@@ -240,11 +264,11 @@
                 <% } %>
 
                 <!-- Action buttons -->
-                <div class="card shadow-sm border-0 mb-4">
+                <div class="card mb-4">
                     <div class="card-body d-flex flex-wrap gap-2">
                     <% if ((s.isDraft() || s.isCounting() || s.isRejected()) && canCount) { %>
                         <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=count&id=<%= s.getId() %>" class="btn btn-primary">
-                            <i class="bi bi-input-cursor-text"></i> <%= s.isDraft() ? "Bắt đầu đếm" : (s.isRejected() ? "Đếm lại" : "Tiếp tục đếm") %>
+                            <i class="bi bi-input-cursor-text"></i> <%= s.isDraft() ? "Bắt đầu kiểm" : (s.isRejected() ? "Kiểm lại" : "Tiếp tục kiểm") %>
                         </a>
                     <% } %>
 

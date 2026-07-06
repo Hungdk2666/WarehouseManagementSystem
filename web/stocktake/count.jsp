@@ -1,4 +1,4 @@
-<%@page import="model.Stocktake"%>
+﻿<%@page import="model.Stocktake"%>
 <%@page import="model.StocktakeDetail"%>
 <%@page import="model.StocktakeItem"%>
 <%@page import="java.util.List"%>
@@ -32,17 +32,19 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
 
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold mb-1"><%= s.getStocktakeCode() %></h2>
-                        <p class="text-muted small mb-0">
+                        <h2 class="page-title"><%= s.getStocktakeCode() %></h2>
+                        <p class="page-subtitle">
                             Kho: <strong><%= s.getWarehouseName() %></strong> ·
-                            Cách đếm: <strong><%= serialMode ? "Scan serial" : "Theo số lượng" %></strong>
+                            Hình thức kiểm: <strong><%= serialMode ? "Quét mã serial" : "Theo số lượng" %></strong>
                         </p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=detail&id=<%= s.getId() %>" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=detail&id=<%= s.getId() %>" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
                 </div>
 
                 <% String msg = request.getParameter("msg"); if ("Saved".equals(msg)) { %>
@@ -58,19 +60,19 @@
                     <input type="hidden" name="submit_after_save" id="submitAfterSave" value="0">
 
                 <% if (!serialMode) {  /* ========= QUANTITY MODE ========= */ %>
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-primary bg-opacity-10">
-                            <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-input-cursor-text me-2"></i>Nhập số lượng đếm được</h5>
+                    <div class="card mb-4">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-slate-800"><i class="bi bi-input-cursor-text me-2 text-primary"></i>Nhập số lượng đếm được</span>
                         </div>
                         <div class="card-body p-0">
-                            <table class="table table-sm mb-0 align-middle">
+                            <table class="table table-sm table-hover mb-0 align-middle">
                                 <thead class="table-light">
                                     <tr>
                                         <th>Sản phẩm</th>
                                         <th>SKU</th>
                                         <th class="text-end">Số sổ sách</th>
                                         <th class="text-end" width="120">Số đếm được</th>
-                                        <th class="text-end" width="120">Trong đó hỏng</th>
+                                        <th class="text-end" width="120">Trong đó lỗi</th>
                                         <th width="140">Lý do</th>
                                         <th>Ghi chú</th>
                                     </tr>
@@ -92,7 +94,7 @@
                                         <td>
                                             <select class="form-select form-select-sm" name="reason_<%= d.getProductId() %>">
                                                 <% String[] reasons = {"NONE","LOST","FOUND","DAMAGED","EXPIRED","MISCOUNT","OTHER"};
-                                                   String[] labels = {"—","Mất","Thừa","Hỏng","Hết hạn","Đếm nhầm","Khác"};
+                                                   String[] labels = {"—","Thất thoát","Thừa","Hàng lỗi","Hết hạn","Đếm nhầm","Khác"};
                                                    for (int i=0; i<reasons.length; i++) { %>
                                                     <option value="<%= reasons[i] %>" <%= reasons[i].equals(d.getVarianceReason()) ? "selected" : "" %>><%= labels[i] %></option>
                                                 <% } %>
@@ -107,9 +109,9 @@
                         </div>
                     </div>
                 <% } else {  /* ========= SERIAL MODE ========= */ %>
-                    <div class="card shadow-sm border-0 mb-3">
-                        <div class="card-header bg-info bg-opacity-10">
-                            <h5 class="mb-0 fw-bold text-info"><i class="bi bi-upc-scan me-2"></i>Scan từng serial</h5>
+                    <div class="card mb-3">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-slate-800"><i class="bi bi-upc-scan me-2 text-primary"></i>Quét từng serial</span>
                         </div>
                         <div class="card-body">
                             <div class="row g-2 align-items-end">
@@ -120,29 +122,29 @@
                                 <div class="col-md-3">
                                     <label class="form-label small fw-semibold">Tình trạng vật lý</label>
                                     <select id="scanCondition" class="form-select">
-                                        <option value="NEW">Tốt (FOUND)</option>
-                                        <option value="DAMAGED">Hỏng (DAMAGED)</option>
+                                        <option value="NEW">Tốt</option>
+                                        <option value="DAMAGED">Hàng lỗi</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
                                     <button type="button" id="markMissing" class="btn btn-outline-warning w-100">
-                                        Đánh dấu MISSING
+                                        Đánh dấu thiếu
                                     </button>
                                 </div>
                             </div>
                             <p class="small text-muted mt-2 mb-0">
-                                Serial chưa có trong hệ thống sẽ tự đánh dấu EXTRA. Sau khi đếm xong, các serial của SKU đã có trong phiếu nhưng chưa scan sẽ được đánh dấu MISSING khi bạn bấm "Đánh dấu MISSING".
+                                Serial chưa có trong hệ thống sẽ được ghi nhận là "phát hiện thêm". Sau khi đếm xong, các serial có trong sổ sách nhưng chưa quét sẽ được đánh dấu "thiếu" khi bạn bấm nút trên.
                             </p>
                         </div>
                     </div>
 
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-light d-flex justify-content-between">
-                            <strong><i class="bi bi-list-ul me-2"></i>Serial đã scan</strong>
+                    <div class="card mb-4">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-slate-800"><i class="bi bi-list-ul me-2 text-primary"></i>Serial đã quét</span>
                             <span id="itemCount" class="badge bg-primary">0</span>
                         </div>
                         <div class="card-body p-0">
-                            <table class="table table-sm mb-0 align-middle">
+                            <table class="table table-sm table-hover mb-0 align-middle">
                                 <thead class="table-light">
                                     <tr>
                                         <th>#</th>
@@ -170,13 +172,19 @@
                                         <td><%= it.getProductName() %> <span class="badge bg-secondary bg-opacity-10 text-secondary"><%= it.getSku() %></span></td>
                                         <td>
                                             <%
-                                                String bclass = "secondary";
-                                                if ("FOUND".equals(it.getScannedStatus())) bclass = "success";
-                                                else if ("MISSING".equals(it.getScannedStatus())) bclass = "warning";
-                                                else if ("DAMAGED".equals(it.getScannedStatus())) bclass = "danger";
-                                                else if ("EXTRA".equals(it.getScannedStatus())) bclass = "info";
+                                                String bclass = "chip-muted";
+                                                if ("FOUND".equals(it.getScannedStatus())) bclass = "chip-success";
+                                                else if ("MISSING".equals(it.getScannedStatus())) bclass = "chip-warning";
+                                                else if ("DAMAGED".equals(it.getScannedStatus())) bclass = "chip-danger";
+                                                else if ("EXTRA".equals(it.getScannedStatus())) bclass = "chip-info";
                                             %>
-                                            <span class="badge bg-<%= bclass %>"><%= it.getScannedStatus() %></span>
+                                            <span class="status-chip <%= bclass %>"><%
+                                                if ("FOUND".equals(it.getScannedStatus())) out.print("Tìm thấy");
+                                                else if ("MISSING".equals(it.getScannedStatus())) out.print("Thiếu");
+                                                else if ("DAMAGED".equals(it.getScannedStatus())) out.print("Hàng lỗi");
+                                                else if ("EXTRA".equals(it.getScannedStatus())) out.print("Phát hiện thêm");
+                                                else out.print(it.getScannedStatus());
+                                            %></span>
                                         </td>
                                         <td><%= it.getNote() == null ? "" : it.getNote() %></td>
                                         <td><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button></td>
@@ -230,6 +238,11 @@
         }
         updateCount();
 
+        function statusLabel(s) {
+            var map = {FOUND:"Tìm thấy",MISSING:"Thiếu",DAMAGED:"Hàng lỗi",EXTRA:"Phát hiện thêm"};
+            return map[s] || s;
+        }
+
         function getExistingSerials() {
             const set = new Set();
             scannedBody.querySelectorAll("tr").forEach(tr => set.add(tr.dataset.serial));
@@ -245,8 +258,8 @@
             const idx = scannedBody.querySelectorAll("tr").length + 1;
             const tr = document.createElement("tr");
             tr.dataset.serial = serial;
-            const bclass = status === "FOUND" ? "success" : status === "MISSING" ? "warning"
-                         : status === "DAMAGED" ? "danger" : status === "EXTRA" ? "info" : "secondary";
+            const bclass = status === "FOUND" ? "chip-success" : status === "MISSING" ? "chip-warning"
+                         : status === "DAMAGED" ? "chip-danger" : status === "EXTRA" ? "chip-info" : "chip-muted";
             tr.innerHTML =
                 '<td>' + idx + '</td>' +
                 '<td><strong>' + serial + '</strong>' +
@@ -258,7 +271,7 @@
                     '<input type="hidden" name="item_note" value="' + (note || "") + '">' +
                 '</td>' +
                 '<td>' + productName + ' <span class="badge bg-secondary bg-opacity-10 text-secondary">' + sku + '</span></td>' +
-                '<td><span class="badge bg-' + bclass + '">' + status + '</span></td>' +
+                '<td><span class="status-chip ' + bclass + '">' + statusLabel(status) + '</span></td>' +
                 '<td>' + (note || "") + '</td>' +
                 '<td><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button></td>';
             scannedBody.appendChild(tr);
@@ -300,7 +313,7 @@
         });
 
         document.getElementById("markMissing").addEventListener("click", function() {
-            if (!confirm("Đánh dấu MISSING cho tất cả serial CHƯA scan trong các SKU của phiếu này?\nBước này cần internet để truy DB serial. Tính năng đơn giản: bạn cần biết những serial bị mất rồi nhập tay.")) return;
+            if (!confirm("Đánh dấu thiếu cho tất cả serial CHƯA scan trong các SKU của phiếu này?\nBước này cần internet để truy DB serial. Tính năng đơn giản: bạn cần biết những serial bị mất rồi nhập tay.")) return;
             const serial = prompt("Nhập serial bị mất (MISSING):");
             if (!serial) return;
             fetch(CTX + "/warehouse/stocktake?action=lookupSerial&serial=" + encodeURIComponent(serial.trim()) + "&warehouse_id=" + WAREHOUSE_ID)

@@ -1,4 +1,4 @@
-<%@page import="model.Stocktake"%>
+﻿<%@page import="model.Stocktake"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -28,10 +28,10 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold mb-1">Phiếu kiểm kê</h2>
-                        <p class="text-muted small mb-0">Quản lý phiếu kiểm kê tồn kho</p>
+                        <h2 class="page-title">Phiếu kiểm kê</h2>
+                        <p class="page-subtitle">Quản lý phiếu kiểm kê tồn kho</p>
                     </div>
                     <div class="d-flex gap-2">
                         <% if (canConfig) { %>
@@ -47,9 +47,58 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-primary bg-opacity-10 py-3">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-clipboard-check me-2"></i>Danh sách</h5>
+                <!-- Filters -->
+                <div class="card mb-3" style="position: relative; z-index: 20;">
+                    <div class="card-body py-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-3">
+                                <label for="stocktakeSearch" class="form-label small fw-semibold mb-1">Tìm kiếm</label>
+                                <input type="text" id="stocktakeSearch" class="form-control form-control-sm" placeholder="Mã phiếu, kho, người tạo...">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="startDateFilter" class="form-label small fw-semibold mb-1">Từ ngày</label>
+                                <input type="date" id="startDateFilter" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="endDateFilter" class="form-label small fw-semibold mb-1">Đến ngày</label>
+                                <input type="date" id="endDateFilter" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label small fw-semibold mb-1">Trạng thái</label>
+                                <div class="dropdown">
+                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal"
+                                            data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem;">
+                                        <span id="statusLabel">-- Tất cả --</span>
+                                    </button>
+                                    <ul class="dropdown-menu p-2 shadow-sm" id="statusDropdownMenu" style="min-width:180px;">
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="DRAFT"> Bản nháp</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="COUNTING"> Đang kiểm</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="SUBMITTED"> Chờ duyệt</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="L1_APPROVED"> Duyệt cấp 1</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="APPROVED"> Đã duyệt</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="ADJUSTED"> Đã điều chỉnh</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="REJECTED"> Từ chối</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="CANCELLED"> Đã hủy</label></li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><button type="button" id="clearStatusBtn" class="btn btn-link btn-sm w-100 text-muted text-decoration-none py-1" style="font-size:0.8rem;"><i class="bi bi-x-circle me-1"></i>Xóa chọn</button></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-auto ms-md-auto d-flex gap-2">
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm px-3">
+                                    <i class="bi bi-funnel-fill me-1"></i>Lọc
+                                </button>
+                                <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm px-3" title="Đặt lại bộ lọc">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-clipboard-check me-2 text-primary"></i>Danh sách</span>
                     </div>
                     <div class="card-body p-0">
                         <table id="stocktakeTable" class="table table-hover mb-0 align-middle">
@@ -57,37 +106,47 @@
                                 <tr>
                                     <th>Mã phiếu</th>
                                     <th>Kho</th>
-                                    <th>Phạm vi</th>
-                                    <th>Cách đếm</th>
+                                    <th>Phạm vi kiểm kê</th>
+                                    <th>Hình thức kiểm</th>
                                     <th>Trạng thái</th>
-                                    <th>Chênh lệch</th>
+                                    <th>Chênh lệch (%)</th>
                                     <th>Người tạo</th>
                                     <th>Ngày tạo</th>
-                                    <th></th>
+                                    <th class="text-center">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
                             <% if (stocktakeList == null || stocktakeList.isEmpty()) { %>
-                                <tr><td colspan="9" class="text-center text-muted p-4">Chưa có phiếu nào.</td></tr>
+                                <tr><td colspan="9" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa có phiếu nào.</p></div></td></tr>
                             <% } else { for (Stocktake s : stocktakeList) {
-                                String badge = "secondary";
+                                String badge = "chip-muted";
                                 switch (s.getStatus()) {
-                                    case "DRAFT":       badge = "secondary"; break;
-                                    case "COUNTING":    badge = "info"; break;
-                                    case "SUBMITTED":   badge = "warning"; break;
-                                    case "L1_APPROVED": badge = "primary"; break;
-                                    case "APPROVED":    badge = "success"; break;
-                                    case "REJECTED":    badge = "danger"; break;
-                                    case "ADJUSTED":    badge = "success"; break;
-                                    case "CANCELLED":   badge = "dark"; break;
+                                    case "DRAFT":       badge = "chip-muted"; break;
+                                    case "COUNTING":    badge = "chip-info"; break;
+                                    case "SUBMITTED":   badge = "chip-warning"; break;
+                                    case "L1_APPROVED": badge = "chip-primary"; break;
+                                    case "APPROVED":    badge = "chip-success"; break;
+                                    case "REJECTED":    badge = "chip-danger"; break;
+                                    case "ADJUSTED":    badge = "chip-success"; break;
+                                    case "CANCELLED":   badge = "chip-muted"; break;
                                 }
                             %>
                                 <tr>
                                     <td><strong><%= s.getStocktakeCode() %></strong></td>
                                     <td><%= s.getWarehouseName() %></td>
                                     <td><%= s.isFullScope() ? "Toàn kho" : "Một phần" %></td>
-                                    <td><%= s.isSerialMode() ? "Scan serial" : "Theo số lượng" %></td>
-                                    <td><span class="badge bg-<%= badge %>"><%= s.getStatus() %></span>
+                                    <td><%= s.isSerialMode() ? "Quét mã serial" : "Theo số lượng" %></td>
+                                    <td><span class="status-chip <%= badge %>"><%
+                                        String displaySt = s.getStatus();
+                                        if ("DRAFT".equals(displaySt)) displaySt = "Bản nháp";
+                                        else if ("COUNTING".equals(displaySt)) displaySt = "Đang kiểm";
+                                        else if ("SUBMITTED".equals(displaySt)) displaySt = "Chờ duyệt";
+                                        else if ("L1_APPROVED".equals(displaySt)) displaySt = "Duyệt cấp 1";
+                                        else if ("APPROVED".equals(displaySt)) displaySt = "Đã duyệt";
+                                        else if ("REJECTED".equals(displaySt)) displaySt = "Từ chối";
+                                        else if ("ADJUSTED".equals(displaySt)) displaySt = "Đã điều chỉnh";
+                                        else if ("CANCELLED".equals(displaySt)) displaySt = "Đã hủy";
+                                    %><%= displaySt %></span>
                                         <% if (s.isRequiresL2Approval() && !s.isAdjusted() && !s.isCancelled()) { %>
                                             <span class="badge bg-warning text-dark ms-1">L2</span>
                                         <% } %>
@@ -95,10 +154,10 @@
                                     <td><%= s.getVariancePercent() == null ? "—" : s.getVariancePercent() + "%" %></td>
                                     <td><%= s.getCreatedByFullName() %></td>
                                     <td><%= s.getCreatedAt() %></td>
-                                    <td>
+                                    <td class="text-center">
                                         <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=detail&id=<%= s.getId() %>"
-                                           class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-eye"></i>
+                                           class="btn btn-table btn-outline-secondary">
+                                            <i class="bi bi-eye"></i> Xem
                                         </a>
                                     </td>
                                 </tr>
@@ -125,7 +184,75 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     document.addEventListener("DOMContentLoaded", function() {
-        initPagination("stocktakeTable", "paginationContainer", "entriesPerPage", null);
+        initPagination("stocktakeTable", "paginationContainer", "entriesPerPage", "stocktakeSearch");
+
+        // Multi-select trạng thái
+        function getSelectedStatuses() {
+            return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(function(cb) { return cb.value; });
+        }
+        function updateStatusLabel() {
+            var checked = document.querySelectorAll('#statusDropdownMenu .status-cb:checked');
+            var label = document.getElementById('statusLabel');
+            if (checked.length === 0) label.textContent = '-- Tất cả --';
+            else if (checked.length === 1) label.textContent = checked[0].closest('label').textContent.trim();
+            else label.textContent = checked.length + ' đã chọn';
+        }
+        document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(function(cb) { cb.addEventListener('change', updateStatusLabel); });
+        document.getElementById('clearStatusBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(function(cb) { cb.checked = false; });
+            updateStatusLabel();
+        });
+        new bootstrap.Dropdown(document.getElementById('statusDropdownBtn'), { popperConfig: { strategy: 'fixed' } });
+
+        var startDateFilter = document.getElementById("startDateFilter");
+        var endDateFilter = document.getElementById("endDateFilter");
+        startDateFilter.addEventListener("change", function() {
+            endDateFilter.min = startDateFilter.value;
+            if (endDateFilter.value && endDateFilter.value < startDateFilter.value) endDateFilter.value = startDateFilter.value;
+        });
+        endDateFilter.addEventListener("change", function() {
+            startDateFilter.max = endDateFilter.value;
+            if (startDateFilter.value && startDateFilter.value > endDateFilter.value) startDateFilter.value = endDateFilter.value;
+        });
+
+        var tbody = document.querySelector("#stocktakeTable tbody");
+        var allRows = tbody ? Array.from(tbody.querySelectorAll("tr")) : [];
+
+        function applyFilters() {
+            var q = (document.getElementById("stocktakeSearch").value || "").toLowerCase();
+            var selectedStatuses = getSelectedStatuses();
+            var from = document.getElementById("startDateFilter").value;
+            var to = document.getElementById("endDateFilter").value;
+            allRows.forEach(function(row) {
+                if (row.querySelector("td[colspan]")) return;
+                var text = row.textContent.toLowerCase();
+                var cells = row.querySelectorAll("td");
+                var rowDate = cells[7] ? cells[7].textContent.trim().substring(0, 10) : "";
+                var rowStatus = cells[4] ? cells[4].querySelector(".status-chip") ? cells[4].querySelector(".status-chip").textContent.trim() : "" : "";
+                var ok = (!q || text.includes(q))
+                    && (selectedStatuses.length === 0 || selectedStatuses.includes(rowStatus))
+                    && (!from || rowDate >= from)
+                    && (!to || rowDate <= to);
+                row.style.display = ok ? "" : "none";
+            });
+        }
+
+        ["stocktakeSearch","statusFilter","startDateFilter","endDateFilter"].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener("input", applyFilters);
+        });
+        document.getElementById("filterBtn").addEventListener("click", applyFilters);
+        document.getElementById("resetBtn").addEventListener("click", function() {
+            document.getElementById("stocktakeSearch").value = "";
+            document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(function(cb) { cb.checked = false; });
+            updateStatusLabel();
+            document.getElementById("startDateFilter").value = "";
+            document.getElementById("startDateFilter").max = "";
+            document.getElementById("endDateFilter").value = "";
+            document.getElementById("endDateFilter").min = "";
+            applyFilters();
+        });
     });
 
     function initPagination(tableId, containerId, selectId, searchInputId) {

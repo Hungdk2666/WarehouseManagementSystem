@@ -25,14 +25,16 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
 
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold mb-1">Ngưỡng duyệt 2 cấp</h2>
-                        <p class="text-muted small mb-0">Phiếu kiểm kê vượt ngưỡng sẽ cần Giám đốc duyệt thêm cấp 2</p>
+                        <h2 class="page-title">Ngưỡng duyệt 2 cấp</h2>
+                        <p class="page-subtitle">Phiếu kiểm kê vượt ngưỡng sẽ cần Giám đốc duyệt thêm cấp 2</p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/warehouse/stocktake" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="<%= request.getContextPath() %>/warehouse/stocktake" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
                 </div>
 
                 <% if ("Saved".equals(request.getParameter("msg"))) { %>
@@ -44,7 +46,7 @@
 
                 <form action="<%= request.getContextPath() %>/warehouse/stocktake" method="POST">
                     <input type="hidden" name="action" value="saveConfig">
-                    <div class="card shadow-sm border-0">
+                    <div class="card form-card">
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -73,11 +75,12 @@
                                     </div>
                                 <% } %>
                             </div>
-                        </div>
-                        <div class="card-footer">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Lưu ngưỡng
-                            </button>
+                            <div class="form-actions">
+                                <a href="<%= request.getContextPath() %>/warehouse/stocktake" class="btn btn-outline-secondary">Hủy</a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-lg me-1"></i>Lưu ngưỡng
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>

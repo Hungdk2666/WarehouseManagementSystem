@@ -1,4 +1,4 @@
-<%@page import="model.Supplier"%>
+﻿<%@page import="model.Supplier"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -36,55 +36,57 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Danh sách nhà cung cấp</h2>
-                        <p class="text-muted small mb-0">Quản lý các đối tác và nhà cung cấp sản phẩm</p>
+                        <h2 class="page-title">Danh sách nhà cung cấp</h2>
+                        <p class="page-subtitle">Quản lý các đối tác và nhà cung cấp sản phẩm</p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Search Panel -->
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-body">
+                <div class="card mb-3">
+                    <div class="card-body py-3">
                         <div class="row g-2">
                             <div class="col-md-4">
-                                <label class="form-label small fw-semibold">Tìm kiếm</label>
+                                <label class="form-label small fw-semibold mb-1">Tìm kiếm</label>
                                 <input type="text" id="supplierSearchInput" class="form-control form-control-sm" placeholder="Tìm kiếm theo tên, liên hệ, điện thoại, email, địa chỉ...">
                             </div>
                             <div class="col-md-2 d-flex align-items-end gap-1">
-                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm px-3"><i class="bi bi-funnel-fill"></i> Lọc</button>
                                 <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-truck me-2"></i>Quản lý nhà cung cấp</h5>
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-truck me-2 text-primary"></i>Quản lý nhà cung cấp</span>
                         <% if (canAdd) { %>
-                        <a class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" href="supplier?action=add">
+                        <a class="btn btn-primary btn-sm" href="supplier?action=add">
                             <i class="bi bi-plus-circle-fill"></i> Thêm nhà cung cấp
                         </a>
                         <% } %>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table id="supplierTable" class="table table-hover align-middle text-center mb-0">
+                            <table id="supplierTable" class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Mã ID</th>
+                                        <th class="text-center">Mã ID</th>
                                         <th>Tên nhà cung cấp</th>
                                         <th>Người liên hệ</th>
                                         <th>Số điện thoại</th>
                                         <th>Email</th>
                                         <th>Địa chỉ</th>
-                                        <th>Trạng thái</th>
+                                        <th class="text-center">Trạng thái</th>
                                         <% if (canManage) { %>
-                                        <th>Hành động</th>
+                                        <th class="text-center">Thao tác</th>
                                         <% } %>
                                     </tr>
                                 </thead>
@@ -94,31 +96,31 @@
                                             for (Supplier s : supplierList) {
                                     %>
                                     <tr>
-                                        <td class="fw-semibold text-muted">#<%= s.getId() %></td>
-                                        <td class="fw-bold text-slate-800 text-start ps-3"><%= s.getSupplierName() %></td>
+                                        <td class="fw-semibold text-muted text-center">#<%= s.getId() %></td>
+                                        <td class="fw-bold text-slate-800"><%= s.getSupplierName() %></td>
                                         <td><%= s.getContactName() != null ? s.getContactName() : "-" %></td>
                                         <td><%= s.getPhone() != null ? s.getPhone() : "-" %></td>
                                         <td><%= s.getEmail() != null ? s.getEmail() : "-" %></td>
-                                        <td class="text-muted text-start text-truncate" style="max-width: 250px;"><%= s.getAddress() != null ? s.getAddress() : "" %></td>
-                                        <td>
+                                        <td class="text-muted text-truncate" style="max-width: 250px;"><%= s.getAddress() != null ? s.getAddress() : "" %></td>
+                                        <td class="text-center">
                                             <% if (s.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                <span class="status-chip chip-success">Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Không hoạt động</span>
+                                                <span class="status-chip chip-muted">Không hoạt động</span>
                                             <% } %>
                                         </td>
                                         <% if (canManage) { %>
-                                        <td>
+                                        <td class="text-center">
                                             <div class="d-flex align-items-center justify-content-center gap-1">
                                                  <% if (canEdit) { %>
-                                                 <a href="supplier?action=update&id=<%= s.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Chỉnh sửa">
+                                                 <a href="supplier?action=update&id=<%= s.getId() %>" class="btn btn-table btn-outline-primary" title="Chỉnh sửa">
                                                      <i class="bi bi-pencil-square"></i> Sửa
                                                  </a>
                                                  <% } %>
                                                 <% if (canToggle) { %>
                                                 <form action="supplier?action=toggle" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= s.getId() %>">
-                                                    <button type="submit" class="btn btn-sm <%= s.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= s.isStatus() ? "Vô hiệu hóa nhà cung cấp" : "Kích hoạt nhà cung cấp" %>">
+                                                    <button type="submit" class="btn btn-table <%= s.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= s.isStatus() ? "Vô hiệu hóa nhà cung cấp" : "Kích hoạt nhà cung cấp" %>">
                                                         <i class="bi bi-power"></i> <%= s.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
                                                     </button>
                                                 </form>
@@ -132,9 +134,11 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="<%= canManage ? 8 : 7 %>" class="text-center text-muted py-5">
-                                            <i class="bi bi-truck text-muted display-4 d-block mb-3"></i>
-                                            Không có nhà cung cấp nào được đăng ký trong cơ sở dữ liệu.
+                                        <td colspan="<%= canManage ? 8 : 7 %>" class="p-0">
+                                            <div class="empty-state">
+                                                <i class="bi bi-inbox"></i>
+                                                <p>Không có nhà cung cấp nào được đăng ký trong cơ sở dữ liệu.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                     <% } %>

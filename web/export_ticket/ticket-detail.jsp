@@ -1,4 +1,4 @@
-<%@page import="model.Ticket"%>
+﻿<%@page import="model.Ticket"%>
 <%@page import="model.TicketDetail"%>
 <%@page import="model.User"%>
 <%@page import="model.ProductItem"%>
@@ -32,7 +32,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-layout-1">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -41,61 +41,61 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="detail-page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Chi tiết phiếu xuất kho</h2>
-                        <p class="text-muted small mb-0">Xem chi tiết sản phẩm và xác nhận xuất kho thực tế cho Phiếu xuất kho #<%= ticket.getTicketCode() %></p>
+                        <h2 class="page-title">Chi tiết phiếu xuất kho</h2>
+                        <p class="page-subtitle">Xem chi tiết sản phẩm và xác nhận xuất kho thực tế cho Phiếu xuất kho #<%= ticket.getTicketCode() %></p>
                     </div>
                     <a href="export-ticket?action=list" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
                         <i class="bi bi-arrow-left"></i> Quay lại danh sách
                     </a>
                 </div>
 
-                <div class="card shadow-sm border-0 bg-white mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-info-circle-fill me-2"></i>Thông tin phiếu xuất kho</h5>
+                <div class="card detail-section-card bg-white">
+                    <div class="card-header bg-transparent py-3 border-bottom">
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin phiếu xuất kho</h5>
                     </div>
                     <div class="card-body p-4">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="text-muted small d-block">Mã phiếu xuất</label>
-                                <span class="fw-bold text-slate-800">#<%= ticket.getTicketCode() %></span>
+                        <div class="detail-info-grid">
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Mã phiếu xuất</label>
+                                <span class="detail-info-value">#<%= ticket.getTicketCode() %></span>
                             </div>
-                            <div class="col-md-4">
-                                <label class="text-muted small d-block">Mã yêu cầu liên kết</label>
-                                <a href="export-request?action=detail&id=<%= ticket.getRequestId() %>" class="fw-bold text-primary text-decoration-none">
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Mã yêu cầu liên kết</label>
+                                <a href="export-request?action=detail&id=<%= ticket.getRequestId() %>" class="detail-info-value text-decoration-none">
                                     #<%= ticket.getRequestCode() %>
                                 </a>
                             </div>
-                            <div class="col-md-4">
-                                <label class="text-muted small d-block">Trạng thái</label>
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Trạng thái</label>
                                 <%
-                                    String statusBadge = "bg-secondary text-secondary";
+                                    String statusBadge = "chip-muted";
                                     String displayStatus = ticket.getStatus();
                                     if ("DRAFT".equals(ticket.getStatus())) {
-                                        statusBadge = "bg-warning text-warning";
+                                        statusBadge = "chip-warning";
                                         displayStatus = "Bản nháp";
                                     } else if ("IN_TRANSIT".equals(ticket.getStatus())) {
-                                        statusBadge = "bg-info text-info";
+                                        statusBadge = "chip-info";
                                         displayStatus = "Đang vận chuyển";
                                     } else if ("CONFIRMED".equals(ticket.getStatus())) {
-                                        statusBadge = "bg-success text-success";
+                                        statusBadge = "chip-success";
                                         displayStatus = "Đã xác nhận";
                                     } else if ("CANCELLED".equals(ticket.getStatus())) {
-                                        statusBadge = "bg-danger text-danger";
+                                        statusBadge = "chip-muted";
                                         displayStatus = "Đã hủy";
                                     }
                                 %>
-                                <span class="badge <%= statusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= displayStatus %></span>
+                                <span class="status-chip <%= statusBadge %>"><%= displayStatus %></span>
                             </div>
                             
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Điểm nhận / Đối tác</label>
-                                <span class="fw-semibold text-slate-700"><%= ticket.getPartnerName() %></span>
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Điểm nhận / Đối tác</label>
+                                <span class="detail-info-value"><%= ticket.getPartnerName() %></span>
                             </div>
-                            <div class="col-md-3 border-top pt-2">
-                                <label class="text-muted small d-block">Lý do xuất</label>
-                                <span class="badge bg-light text-dark border">
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Lý do xuất</label>
+                                <span class="detail-info-value">
                                     <%
                                         if ("TRANSFER".equals(ticket.getRequestReason())) out.print("CHUYỂN KHO");
                                         else if ("CUSTOMER_SALE".equals(ticket.getRequestReason())) out.print("BÁN HÀNG");
@@ -106,41 +106,42 @@
                                     %>
                                 </span>
                             </div>
-                            <div class="col-md-3 border-top pt-2">
-                                <label class="text-muted small d-block">Tình trạng xuất</label>
-                                <span class="badge bg-light text-dark border">
-                                    <%= "USED".equals(ticket.getRequestedCondition()) ? "Hàng Cũ (USED)" : "Hàng Mới (NEW)" %>
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Tình trạng xuất</label>
+                                <span class="detail-info-value">
+                                    <%= "USED".equals(ticket.getRequestedCondition()) ? "Hàng Cũ" : "Hàng Mới" %>
                                 </span>
                             </div>
-                            <div class="col-md-3 border-top pt-2">
-                                <label class="text-muted small d-block">Người tạo (Thủ kho)</label>
-                                <span class="text-slate-700"><%= ticket.getKeeperFullName() %></span>
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Người tạo (Thủ kho)</label>
+                                <span class="detail-info-value"><%= ticket.getKeeperFullName() %></span>
                             </div>
                             
-                            <div class="col-md-3 border-top pt-2">
-                                <label class="text-muted small d-block">Thời gian tạo</label>
-                                <span class="text-slate-700"><%= ticket.getCreatedAt() %></span>
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Thời gian tạo</label>
+                                <span class="detail-info-value"><%= ticket.getCreatedAt() %></span>
                             </div>
                             
                             <% if (ticket.getConfirmedBy() != null) { %>
-                            <div class="col-md-6 border-top pt-2">
-                                <label class="text-muted small d-block">Người xác nhận (Quản lý)</label>
-                                <span class="text-slate-700"><%= ticket.getConfirmedByFullName() %></span>
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Người xác nhận</label>
+                                <span class="detail-info-value"><%= ticket.getConfirmedByFullName() %></span>
                             </div>
-                            <div class="col-md-6 border-top pt-2">
-                                <label class="text-muted small d-block">Thời gian xác nhận</label>
-                                <span class="text-slate-700"><%= ticket.getConfirmedAt() %></span>
+                            <div class="detail-info-item">
+                                <label class="detail-info-label">Thời gian xác nhận</label>
+                                <span class="detail-info-value"><%= ticket.getConfirmedAt() %></span>
                             </div>
                             <% } %>
                         </div>
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 bg-white mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-list-check me-2"></i>Danh sách sản phẩm xuất kho</h5>
+                <div class="card detail-section-card bg-white">
+                    <div class="card-header bg-transparent py-3 border-bottom">
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-check me-2 text-primary"></i>Danh sách sản phẩm xuất kho</h5>
                     </div>
                     <div class="card-body p-0">
+                        <div class="table-responsive">
                         <table class="table align-middle text-center mb-0">
                             <thead class="table-light">
                                 <tr>
@@ -195,10 +196,11 @@
                                 <% } %>
                             </tbody>
                         </table>
+                        </div>
                     </div>
                     
                     <% if ("DRAFT".equals(ticket.getStatus()) && (canConfirm || canCancel)) { %>
-                    <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0">
+                    <div class="card-footer detail-actions">
                         <% if (canCancel) { %>
                         <form action="export-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy Phiếu xuất kho này không?');">
                             <input type="hidden" name="id" value="<%= ticket.getId() %>">
@@ -219,8 +221,8 @@
                     <% if ("IN_TRANSIT".equals(ticket.getStatus())) { %>
                     <div class="card-footer bg-info bg-opacity-10 p-3 small text-info border-top-0">
                         <i class="bi bi-info-circle me-1"></i>
-                        Phiếu đang IN_TRANSIT. Kho đích cần vào <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list">Yêu cầu nhập kho</a>
-                        để xử lý phiếu nhập tương ứng (đã được hệ thống tự sinh khi confirm xuất kho).
+                        Phiếu đang vận chuyển. Kho đích cần vào <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list">Yêu cầu nhập kho</a>
+                        để xử lý phiếu nhập tương ứng (hệ thống đã tự tạo khi xác nhận xuất kho).
                     </div>
                     <% } %>
                 </div>
@@ -229,8 +231,8 @@
                     List<ProductItem> exportedSerials = (List<ProductItem>) request.getAttribute("exportedSerials");
                     if (exportedSerials != null && !exportedSerials.isEmpty()) {
                 %>
-                <div class="card shadow-sm border-0 bg-white mb-4">
-                    <div class="card-header bg-success bg-opacity-10 py-3 border-0">
+                <div class="card bg-white mb-4">
+                    <div class="card-header bg-light py-3 border-0">
                         <h5 class="mb-0 fw-bold text-success"><i class="bi bi-check2-all me-2"></i>Danh sách mã Serial xuất kho (Truy xuất nguồn gốc)</h5>
                     </div>
                     <div class="card-body p-4">
@@ -242,7 +244,7 @@
                                         <span class="fw-semibold text-slate-800 small d-block text-truncate" title="<%= item.getProductName() %>"><%= item.getProductName() %></span>
                                         <span class="text-muted small font-monospace"><%= item.getSku() %></span>
                                     </div>
-                                    <span class="badge bg-success bg-opacity-10 text-success font-monospace px-2 py-1"><%= item.getSerialNumber() %></span>
+                                    <span class="badge bg-light text-success font-monospace px-2 py-1"><%= item.getSerialNumber() %></span>
                                 </div>
                             </div>
                             <% } %>
@@ -253,7 +255,7 @@
 
                 <% if ("DRAFT".equals(ticket.getStatus()) && canConfirm) { %>
                 <!-- Scanning Interface Panel -->
-                <div class="card shadow-sm border-0 bg-white mb-4">
+                <div class="card bg-white mb-4">
                     <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
                         <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-barcode me-2"></i>Thực hiện quét mã vạch (Barcode/Serial)</h5>
                     </div>
@@ -496,7 +498,7 @@
                         const panel = document.getElementById("prod-panel-" + productId);
                         if (currentCount === requiredCount) {
                             scannedCountEl.className = "scanned-count text-success";
-                            panel.className = "border rounded p-3 bg-success bg-opacity-10 border-success";
+                            panel.className = "border rounded p-3 bg-light border-success";
                         } else {
                             scannedCountEl.className = "scanned-count text-danger";
                             panel.className = "border rounded p-3 bg-light";

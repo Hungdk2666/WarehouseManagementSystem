@@ -39,26 +39,28 @@
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10">
                 <jsp:include page="/includes/frozen-banner.jsp" />
-                <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Phiếu xuất kho</h2>
-                        <p class="text-muted small mb-0">Ghi nhận và xác nhận thực tế xuất hàng hóa khỏi kho.</p>
+                        <h2 class="page-title">Phiếu xuất kho</h2>
+                        <p class="page-subtitle">Ghi nhận và xác nhận thực tế xuất hàng hóa khỏi kho.</p>
                     </div>
-                    <% if (canAdd) { %>
-                    <a href="export-ticket?action=add" class="btn btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 shadow-sm rounded-3">
-                        <i class="bi bi-plus-circle-fill"></i> Tạo Phiếu xuất kho
-                    </a>
-                    <% } %>
+                    <div class="d-flex gap-2">
+                        <% if (canAdd) { %>
+                        <a href="export-ticket?action=add" class="btn btn-primary d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-plus-circle-fill"></i> Tạo Phiếu xuất kho
+                        </a>
+                        <% } %>
+                    </div>
                 </div>
 
                 <%-- Phase 4: Incoming Transfers section — only for destination warehouse staff --%>
                 <% if (incomingTransfers != null && !incomingTransfers.isEmpty()) { %>
-                <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #f59e0b !important;">
-                    <div class="card-header bg-warning bg-opacity-10 py-3 border-0 d-flex align-items-center gap-2">
+                <div class="card mb-4" style="border-left: 4px solid #f59e0b !important;">
+                    <div class="card-header bg-warning bg-opacity-10 py-3 d-flex align-items-center gap-2">
                         <i class="bi bi-truck fs-5 text-warning"></i>
-                        <h5 class="mb-0 fw-bold text-warning">Hàng đang chuyển đến kho bạn</h5>
+                        <span class="fw-bold text-warning">Hàng đang chuyển đến kho bạn</span>
                         <span class="badge bg-warning text-dark ms-2"><%= incomingTransfers.size() %> phiếu</span>
-                        <span class="ms-auto text-muted small">Những phiếu chuyển kho này đang trên đường vận chuyển (IN_TRANSIT) — tạo phiếu nhập khi nhận được hàng.</span>
+                        <span class="ms-auto text-muted small">Những phiếu chuyển kho này đang trên đường vận chuyển — tạo phiếu nhập khi nhận được hàng.</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -100,59 +102,64 @@
                 <% } %>
 
                 <!-- Filters -->
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-body">
-                        <div class="row g-2">
-                            <!-- Search -->
-                            <div class="col-md-3">
-                                <label for="searchInput" class="form-label small fw-semibold">Tìm kiếm mã</label>
-                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Tìm mã phiếu, mã yêu cầu...">
+                <div class="card mb-3" style="position: relative; z-index: 20;">
+                    <div class="card-body py-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-3">
+                                <label for="searchInput" class="form-label small fw-semibold mb-1">Tìm kiếm</label>
+                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Mã phiếu, mã yêu cầu...">
                             </div>
-                            <!-- Date Filter -->
-                            <div class="col-md-2">
-                                <label for="startDateFilter" class="form-label small fw-semibold">Từ ngày</label>
+                            <div class="col-6 col-md-2">
+                                <label for="startDateFilter" class="form-label small fw-semibold mb-1">Từ ngày</label>
                                 <input type="date" id="startDateFilter" class="form-control form-control-sm">
                             </div>
-                            <div class="col-md-2">
-                                <label for="endDateFilter" class="form-label small fw-semibold">Đến ngày</label>
+                            <div class="col-6 col-md-2">
+                                <label for="endDateFilter" class="form-label small fw-semibold mb-1">Đến ngày</label>
                                 <input type="date" id="endDateFilter" class="form-control form-control-sm">
                             </div>
-                            <!-- Status Filter -->
-                            <div class="col-md-2">
-                                <label for="statusFilter" class="form-label small fw-semibold">Trạng thái</label>
-                                <select id="statusFilter" class="form-select form-select-sm">
-                                    <option value="">-- Tất cả --</option>
-                                    <option value="Bản nháp">Bản nháp</option>
-                                    <option value="Đã xác nhận">Đã xác nhận</option>
-                                    <option value="Đang vận chuyển">Đang vận chuyển</option>
-                                    <option value="Đã hủy">Đã hủy</option>
-                                </select>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label small fw-semibold mb-1">Trạng thái</label>
+                                <div class="dropdown">
+                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal"
+                                            data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem;">
+                                        <span id="statusLabel">-- Tất cả --</span>
+                                    </button>
+                                    <ul class="dropdown-menu p-2 shadow-sm" id="statusDropdownMenu" style="min-width:170px;">
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Bản nháp"> Bản nháp</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã xác nhận"> Đã xác nhận</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang vận chuyển"> Đang vận chuyển</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã hủy"> Đã hủy</label></li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><button type="button" id="clearStatusBtn" class="btn btn-link btn-sm w-100 text-muted text-decoration-none py-1" style="font-size:0.8rem;"><i class="bi bi-x-circle me-1"></i>Xóa chọn</button></li>
+                                    </ul>
+                                </div>
                             </div>
-                            <!-- Warehouse Filter -->
-                            <div class="col-md-2">
-                                <label for="warehouseFilter" class="form-label small fw-semibold">Kho xuất</label>
+                            <div class="col-6 col-md-2">
+                                <label for="warehouseFilter" class="form-label small fw-semibold mb-1">Kho xuất</label>
                                 <select id="warehouseFilter" class="form-select form-select-sm">
                                     <option value="">-- Tất cả kho --</option>
                                 </select>
                             </div>
-                            <!-- Keeper Filter -->
-                            <div class="col-md-2">
-                                <label for="keeperFilter" class="form-label small fw-semibold">Thủ kho</label>
-                                <input type="text" id="keeperFilter" class="form-control form-control-sm" placeholder="Nhập tên thủ kho...">
+                            <div class="col-6 col-md-2">
+                                <label for="keeperFilter" class="form-label small fw-semibold mb-1">Thủ kho</label>
+                                <input type="text" id="keeperFilter" class="form-control form-control-sm" placeholder="Nhập tên...">
                             </div>
-                            <!-- Action Buttons -->
-                            <div class="col-md-2 d-flex align-items-end gap-1">
-                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
-                                <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
+                            <div class="col-6 col-md-auto ms-md-auto d-flex gap-2">
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm px-3">
+                                    <i class="bi bi-funnel-fill me-1"></i>Lọc
+                                </button>
+                                <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm px-3" title="Đặt lại bộ lọc">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tickets Directory Table -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-box-arrow-up-right me-2"></i>Danh sách phiếu xuất kho</h5>
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-box-arrow-up-right me-2 text-primary"></i>Danh sách phiếu xuất kho</span>
                         <div class="d-flex align-items-center gap-2">
                             <span class="text-muted small">Hiển thị</span>
                             <select id="entriesPerPage" class="form-select form-select-sm py-0.5 ps-2 pe-4 border rounded" style="width: 75px; font-size: 0.75rem;">
@@ -184,19 +191,19 @@
                                     <%
                                         if (ticketList != null && !ticketList.isEmpty()) {
                                             for (Ticket t : ticketList) {
-                                                String statusBadge = "bg-secondary text-secondary";
+                                                String statusBadge = "chip-muted";
                                                 String displayStatus = t.getStatus();
                                                 if ("DRAFT".equals(t.getStatus())) {
-                                                    statusBadge = "bg-warning text-warning";
+                                                    statusBadge = "chip-warning";
                                                     displayStatus = "Bản nháp";
                                                 } else if ("CONFIRMED".equals(t.getStatus())) {
-                                                    statusBadge = "bg-success text-success";
+                                                    statusBadge = "chip-success";
                                                     displayStatus = "Đã xác nhận";
                                                 } else if ("IN_TRANSIT".equals(t.getStatus())) {
-                                                    statusBadge = "bg-info text-info";
+                                                    statusBadge = "chip-info";
                                                     displayStatus = "Đang vận chuyển";
                                                 } else if ("CANCELLED".equals(t.getStatus())) {
-                                                    statusBadge = "bg-danger text-danger";
+                                                    statusBadge = "chip-muted";
                                                     displayStatus = "Đã hủy";
                                                 }
                                     %>
@@ -216,16 +223,16 @@
                                                 %>
                                             </span>
                                         </td>
-                                        <td><span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-building me-1"></i><%= t.getWarehouseName() != null ? t.getWarehouseName() : "-" %></span></td>
+                                        <td><span class="badge bg-light text-primary"><i class="bi bi-building me-1"></i><%= t.getWarehouseName() != null ? t.getWarehouseName() : "-" %></span></td>
                                         <td><%= t.getKeeperFullName() %></td>
                                         <td>
-                                            <span class="badge <%= statusBadge %> bg-opacity-10"><%= displayStatus %></span>
+                                            <span class="status-chip <%= statusBadge %>"><%= displayStatus %></span>
                                         </td>
                                         <td class="text-muted small"><%= t.getCreatedAt() %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <a href="export-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                    <i class="bi bi-eye"></i> Chi tiết
+                                                <a href="export-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết" aria-label="Xem chi tiết phiếu xuất">
+                                                    <i class="bi bi-eye" aria-hidden="true"></i>
                                                 </a>
                                                 <% if (canConfirm && "DRAFT".equals(t.getStatus())) { %>
                                                 <form action="export-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Xác nhận phiếu này sẽ trừ tồn kho thực tế. Bạn có chắc chắn không?');">
@@ -251,9 +258,11 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="9" class="text-center py-5 text-muted">
-                                            <i class="bi bi-inbox display-6 d-block mb-2 text-muted bg-opacity-10"></i>
-                                            Không tìm thấy phiếu xuất kho nào.
+                                        <td colspan="9" class="p-0">
+                                            <div class="empty-state">
+                                                <i class="bi bi-inbox"></i>
+                                                <p>Không tìm thấy phiếu xuất kho nào.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                     <% } %>
@@ -288,10 +297,36 @@
             const searchInput = document.getElementById("searchInput");
             const startDateFilter = document.getElementById("startDateFilter");
             const endDateFilter = document.getElementById("endDateFilter");
-            const statusFilter = document.getElementById("statusFilter");
+            startDateFilter.addEventListener("change", () => {
+                endDateFilter.min = startDateFilter.value;
+                if (endDateFilter.value && endDateFilter.value < startDateFilter.value) endDateFilter.value = startDateFilter.value;
+            });
+            endDateFilter.addEventListener("change", () => {
+                startDateFilter.max = endDateFilter.value;
+                if (startDateFilter.value && startDateFilter.value > endDateFilter.value) startDateFilter.value = endDateFilter.value;
+            });
             const warehouseFilter = document.getElementById("warehouseFilter");
             const keeperFilter = document.getElementById("keeperFilter");
             const select = document.getElementById("entriesPerPage");
+
+            // Multi-select trạng thái
+            function getSelectedStatuses() {
+                return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(cb => cb.value);
+            }
+            function updateStatusLabel() {
+                const checked = document.querySelectorAll('#statusDropdownMenu .status-cb:checked');
+                const label = document.getElementById('statusLabel');
+                if (checked.length === 0) label.textContent = '-- Tất cả --';
+                else if (checked.length === 1) label.textContent = checked[0].closest('label').textContent.trim();
+                else label.textContent = checked.length + ' đã chọn';
+            }
+            document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.addEventListener('change', updateStatusLabel));
+            document.getElementById('clearStatusBtn').addEventListener('click', e => {
+                e.stopPropagation();
+                document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.checked = false);
+                updateStatusLabel();
+            });
+            new bootstrap.Dropdown(document.getElementById('statusDropdownBtn'), { popperConfig: { strategy: 'fixed' } });
 
             // Populate warehouse dropdown
             if (warehouseFilter) {
@@ -315,7 +350,7 @@
                 const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : "";
                 const startDateVal = startDateFilter ? startDateFilter.value : "";
                 const endDateVal = endDateFilter ? endDateFilter.value : "";
-                const statusVal = statusFilter ? statusFilter.value : "";
+                const statusVals = getSelectedStatuses();
                 const warehouseVal = warehouseFilter ? warehouseFilter.value.trim() : "";
                 const keeperVal = keeperFilter ? keeperFilter.value.toLowerCase().trim() : "";
 
@@ -339,7 +374,7 @@
                     if (endDateVal && createdAtDatePart > endDateVal) matchesDate = false;
                     if (!matchesDate) return false;
 
-                    if (statusVal && status !== statusVal) return false;
+                    if (statusVals.length > 0 && !statusVals.includes(status)) return false;
                     if (warehouseVal && warehouse !== warehouseVal) return false;
                     if (keeperVal && !keeper.includes(keeperVal)) return false;
 
@@ -354,7 +389,7 @@
             function renderTable() {
                 tbody.innerHTML = "";
                 if (filteredRows.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-search display-6 d-block mb-2"></i>Không tìm thấy bản ghi phù hợp.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="9" class="p-0"><div class="empty-state"><i class="bi bi-search"></i><p>Không tìm thấy bản ghi phù hợp.</p></div></td></tr>`;
                     return;
                 }
 
@@ -455,9 +490,10 @@
             if (document.getElementById("resetBtn")) {
                 document.getElementById("resetBtn").addEventListener("click", () => {
                     if (searchInput) searchInput.value = "";
-                    if (startDateFilter) startDateFilter.value = "";
-                    if (endDateFilter) endDateFilter.value = "";
-                    if (statusFilter) statusFilter.value = "";
+                    if (startDateFilter) { startDateFilter.value = ""; startDateFilter.max = ""; }
+                    if (endDateFilter) { endDateFilter.value = ""; endDateFilter.min = ""; }
+                    document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.checked = false);
+                    updateStatusLabel();
                     if (warehouseFilter) warehouseFilter.value = "";
                     if (keeperFilter) keeperFilter.value = "";
                     currentPage = 1;
