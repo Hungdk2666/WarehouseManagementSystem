@@ -31,4 +31,8 @@ public class SupplierService {
         return dao.addSupplier(arg0);
     }
 
+    public List<Supplier> getActiveSuppliers() {
+        return dao.getActiveSuppliers();
+    }
+
 }

@@ -33,6 +33,29 @@ public class SupplierDAO {
         return list;
     }
 
+    public List<Supplier> getActiveSuppliers() {
+        List<Supplier> list = new ArrayList<>();
+        String query = "SELECT * FROM Suppliers WHERE status = TRUE ORDER BY supplier_name ASC";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new Supplier(
+                    rs.getInt("id"),
+                    rs.getString("supplier_name"),
+                    rs.getString("contact_name"),
+                    rs.getString("phone"),
+                    rs.getString("email"),
+                    rs.getString("address"),
+                    rs.getBoolean("status")
+                ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     public Supplier getSupplierById(int id) {
         String query = "SELECT * FROM Suppliers WHERE id = ?";
         try (Connection conn = DBUtils.getConnection();
