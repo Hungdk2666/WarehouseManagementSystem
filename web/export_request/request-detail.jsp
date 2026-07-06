@@ -1,4 +1,4 @@
-<%@page import="model.Request"%>
+﻿<%@page import="model.Request"%>
 <%@page import="model.RequestDetail"%>
 <%@page import="model.Ticket"%>
 <%@page import="java.util.List"%>
@@ -46,7 +46,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-layout-1">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -57,15 +57,18 @@
 
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10">
-                <!-- Back Button -->
-                <div class="mb-3">
+                <div class="detail-page-header">
+                    <div>
+                        <h2 class="page-title">Chi tiết yêu cầu xuất kho</h2>
+                        <p class="page-subtitle">Theo dõi sản phẩm, tiến độ thực hiện và các phiếu xuất liên kết cho yêu cầu #<%= req.getRequestCode() %></p>
+                    </div>
                     <a href="export-request?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1.5 px-3 py-2 rounded-3">
                         <i class="bi bi-arrow-left"></i> Quay lại danh sách
                     </a>
                 </div>
 
                 <% if (req.getCancelRequestedAt() != null && "APPROVED".equals(req.getStatus())) { %>
-                <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 p-3 mb-4" role="alert">
+                <div class="alert alert-warning border-0 d-flex align-items-center gap-3 p-3 mb-4" role="alert">
                     <i class="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
                     <div>
                         <h6 class="alert-heading fw-bold mb-1">Yêu cầu hủy phiếu xuất đang chờ duyệt</h6>
@@ -78,7 +81,7 @@
                 <% } %>
                 
                 <% if ("CANCELLED".equals(req.getStatus())) { %>
-                <div class="alert alert-secondary border-0 shadow-sm d-flex align-items-center gap-3 p-3 mb-4" role="alert">
+                <div class="alert alert-secondary border-0 d-flex align-items-center gap-3 p-3 mb-4" role="alert">
                     <i class="bi bi-x-circle-fill fs-3 text-secondary"></i>
                     <div>
                         <h6 class="alert-heading fw-bold mb-1">Yêu cầu xuất kho đã bị đóng/hủy</h6>
@@ -93,121 +96,117 @@
                 <% } %>
 
                 <!-- Header Info -->
-                <div class="card shadow-sm border-0 mb-4 bg-white">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-file-earmark-text-fill me-2"></i>Yêu cầu xuất kho #<%= req.getRequestCode() %></h4>
-                        <%
-                            String statusBadge = "bg-secondary text-secondary";
-                            String displayStatus = req.getStatus();
-                            if ("PENDING".equals(req.getStatus())) {
-                                statusBadge = "bg-warning text-warning";
-                                displayStatus = "Chờ duyệt";
-                            } else if ("APPROVED".equals(req.getStatus())) {
-                                if (req.getCancelRequestedAt() != null) {
-                                    statusBadge = "bg-warning text-warning";
-                                    displayStatus = "Chờ hủy";
-                                } else {
-                                    statusBadge = "bg-info text-info";
-                                    displayStatus = "Đã duyệt";
-                                }
-                            } else if ("PARTIALLY_COMPLETED".equals(req.getStatus())) {
-                                statusBadge = "bg-primary text-primary";
-                                displayStatus = "Đang xuất dở";
-                            } else if ("REJECTED".equals(req.getStatus())) {
-                                statusBadge = "bg-danger text-danger";
-                                displayStatus = "Từ chối";
-                            } else if ("COMPLETED".equals(req.getStatus())) {
-                                statusBadge = "bg-success text-success";
-                                displayStatus = "Hoàn thành";
-                            } else if ("CANCELLED".equals(req.getStatus())) {
-                                statusBadge = "bg-secondary text-secondary";
-                                displayStatus = "Đã hủy";
-                            }
-                        %>
-                        <span class="badge <%= statusBadge %> bg-opacity-10 px-3 py-2 fs-6"><%= displayStatus %></span>
+                <div class="card detail-section-card">
+                    <div class="card-header bg-white py-3">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin yêu cầu xuất kho</span>
                     </div>
                     <div class="card-body p-4">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label class="text-muted small d-block">Lý do xuất</label>
-                                <span class="badge bg-light text-dark border py-1 px-2 fs-6 mt-1">
-                                    <%
-                                        if ("TRANSFER".equals(req.getReason())) out.print("CHUYỂN KHO");
-                                        else if ("CUSTOMER_SALE".equals(req.getReason())) out.print("BÁN HÀNG");
-                                        else if ("DISPLAY".equals(req.getReason())) out.print("TRƯNG BÀY");
-                                        else if ("WARRANTY".equals(req.getReason())) out.print("BẢO HÀNH");
-                                        else if ("DISPOSAL".equals(req.getReason())) out.print("TIÊU HỦY");
-                                        else out.print(req.getReason());
-                                    %>
-                                </span>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="text-muted small d-block">Kho nguồn</label>
-                                <span class="fw-bold text-slate-800"><%= req.getWarehouseName() != null ? req.getWarehouseName() : "-" %></span>
-                            </div>
-                            <div class="col-md-3">
+                        <div class="row gx-5 detail-info-grid">
+                            <div class="col-lg-6">
+                                <div class="detail-row">
+                                    <div class="detail-label">Mã yêu cầu xuất</div>
+                                    <div class="detail-value">#<%= req.getRequestCode() %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Trạng thái</div>
+                                    <div class="detail-value">
+                                        <%
+                                            String statusBadge = "chip-muted";
+                                            String displayStatus = req.getStatus();
+                                            if ("PENDING".equals(req.getStatus())) { statusBadge = "chip-warning"; displayStatus = "Chờ duyệt"; }
+                                            else if ("APPROVED".equals(req.getStatus())) { statusBadge = req.getCancelRequestedAt() != null ? "chip-warning" : "chip-success"; displayStatus = req.getCancelRequestedAt() != null ? "Chờ hủy" : "Đã duyệt"; }
+                                            else if ("PARTIALLY_COMPLETED".equals(req.getStatus())) { statusBadge = "chip-info"; displayStatus = "Đang xuất dở"; }
+                                            else if ("REJECTED".equals(req.getStatus())) { statusBadge = "chip-danger"; displayStatus = "Từ chối"; }
+                                            else if ("COMPLETED".equals(req.getStatus())) { statusBadge = "chip-primary"; displayStatus = "Hoàn thành"; }
+                                            else if ("CANCELLED".equals(req.getStatus())) { displayStatus = "Đã hủy"; }
+                                        %>
+                                        <span class="status-chip <%= statusBadge %>"><%= displayStatus %></span>
+                                    </div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Lý do xuất</div>
+                                    <div class="detail-value">
+                                        <span>
+                                            <%
+                                                if ("TRANSFER".equals(req.getReason())) out.print("CHUYỂN KHO");
+                                                else if ("CUSTOMER_SALE".equals(req.getReason())) out.print("BÁN HÀNG");
+                                                else if ("DISPLAY".equals(req.getReason())) out.print("TRƯNG BÀY");
+                                                else if ("WARRANTY".equals(req.getReason())) out.print("BẢO HÀNH");
+                                                else if ("DISPOSAL".equals(req.getReason())) out.print("TIÊU HỦY");
+                                                else out.print(req.getReason());
+                                            %>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Kho nguồn</div>
+                                    <div class="detail-value"><%= req.getWarehouseName() != null ? req.getWarehouseName() : "-" %></div>
+                                </div>
                                 <%-- Polymorphic destination: show the right one based on reason --%>
-                                <% if ("TRANSFER".equals(req.getReason())) { %>
-                                <label class="text-muted small d-block">Kho đích</label>
-                                <span class="fw-bold text-slate-800"><%= req.getPartnerName() != null ? req.getPartnerName() : "-" %></span>
-                                <% } else if ("CUSTOMER_SALE".equals(req.getReason())) { %>
-                                <label class="text-muted small d-block">Khách hàng</label>
-                                <span class="fw-bold text-slate-800"><%= req.getPartnerName() != null ? req.getPartnerName() : "-" %></span>
-                                <% } else { %>
-                                <label class="text-muted small d-block">Điểm đến</label>
-                                <span class="fw-bold text-slate-800"><%= req.getPartnerName() != null ? req.getPartnerName() : "-" %></span>
+                                <div class="detail-row">
+                                    <% if ("TRANSFER".equals(req.getReason())) { %>
+                                    <div class="detail-label">Kho đích</div>
+                                    <% } else if ("CUSTOMER_SALE".equals(req.getReason())) { %>
+                                    <div class="detail-label">Khách hàng</div>
+                                    <% } else { %>
+                                    <div class="detail-label">Điểm đến</div>
+                                    <% } %>
+                                    <div class="detail-value"><%= req.getPartnerName() != null ? req.getPartnerName() : "-" %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Ngày xuất dự kiến</div>
+                                    <div class="detail-value"><%= req.getExpectedDate() %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Tình trạng xuất</div>
+                                    <div class="detail-value">
+                                        <span>
+                                            <%= "USED".equals(req.getRequestedCondition()) ? "Hàng Cũ" : "Hàng Mới" %>
+                                        </span>
+                                    </div>
+                                </div>
+                                <% if ("CUSTOMER_SALE".equals(req.getReason()) && req.getShippingAddress() != null && !req.getShippingAddress().isEmpty()) { %>
+                                <div class="detail-row">
+                                    <div class="detail-label">Địa chỉ giao hàng</div>
+                                    <div class="detail-value"><%= req.getShippingAddress() %></div>
+                                </div>
                                 <% } %>
                             </div>
-                            <div class="col-md-2">
-                                <label class="text-muted small d-block">Ngày xuất dự kiến</label>
-                                <span class="fw-semibold text-slate-800"><%= req.getExpectedDate() %></span>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="text-muted small d-block">Tình trạng xuất</label>
-                                <span class="badge bg-light text-dark border py-1 px-2 fs-7 mt-1">
-                                    <%= "USED".equals(req.getRequestedCondition()) ? "Hàng Cũ (USED)" : "Hàng Mới (NEW)" %>
-                                </span>
-                            </div>
-                            <% if ("CUSTOMER_SALE".equals(req.getReason()) && req.getShippingAddress() != null && !req.getShippingAddress().isEmpty()) { %>
-                            <div class="col-md-8">
-                                <label class="text-muted small d-block">Địa chỉ giao hàng</label>
-                                <span class="fw-semibold text-slate-700"><%= req.getShippingAddress() %></span>
-                            </div>
-                            <% } %>
-                            
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Người đề xuất</label>
-                                <span class="fw-semibold text-slate-700"><%= req.getStaffFullName() %></span>
-                            </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Thời gian đề xuất</label>
-                                <span class="fw-semibold text-slate-700"><%= req.getCreatedAt() %></span>
-                            </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Người duyệt / từ chối</label>
-                                <span class="fw-semibold text-slate-800"><%= req.getApprovedBy() != null ? req.getApprovedByFullName() : "-" %></span>
-                            </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Thời gian duyệt / từ chối</label>
-                                <span class="fw-semibold text-slate-800"><%= req.getApprovedAt() != null ? req.getApprovedAt() : "-" %></span>
-                            </div>
+                            <div class="col-lg-6">
+                                <div class="detail-row">
+                                    <div class="detail-label">Người đề xuất</div>
+                                    <div class="detail-value"><%= req.getStaffFullName() %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Thời gian đề xuất</div>
+                                    <div class="detail-value"><%= req.getCreatedAt() %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Người duyệt / từ chối</div>
+                                    <div class="detail-value"><%= req.getApprovedBy() != null ? req.getApprovedByFullName() : "-" %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Thời gian duyệt / từ chối</div>
+                                    <div class="detail-value"><%= req.getApprovedAt() != null ? req.getApprovedAt() : "-" %></div>
+                                </div>
 
-                            <% if ("CANCELLED".equals(req.getStatus())) { %>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Người hủy / đóng</label>
-                                <span class="fw-semibold text-slate-800"><%= req.getCancelledByFullName() != null ? req.getCancelledByFullName() : "Hệ thống" %></span>
+                                <% if ("CANCELLED".equals(req.getStatus())) { %>
+                                <div class="detail-row">
+                                    <div class="detail-label">Người hủy / đóng</div>
+                                    <div class="detail-value"><%= req.getCancelledByFullName() != null ? req.getCancelledByFullName() : "Hệ thống" %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Thời gian hủy / đóng</div>
+                                    <div class="detail-value"><%= req.getCancelledAt() %></div>
+                                </div>
+                                <% if (req.getCancelReason() != null) { %>
+                                <div class="detail-row">
+                                    <div class="detail-label">Lý do hủy</div>
+                                    <div class="detail-value text-danger"><%= req.getCancelReason() %></div>
+                                </div>
+                                <% } %>
+                                <% } %>
                             </div>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Thời gian hủy / đóng</label>
-                                <span class="fw-semibold text-slate-800"><%= req.getCancelledAt() %></span>
-                            </div>
-                            <% if (req.getCancelReason() != null) { %>
-                            <div class="col-md-4 border-top pt-2">
-                                <label class="text-muted small d-block">Lý do hủy</label>
-                                <span class="fw-semibold text-danger"><%= req.getCancelReason() %></span>
-                            </div>
-                            <% } %>
-                            <% } %>
                         </div>
 
                         <!-- Action Buttons -->
@@ -229,7 +228,7 @@
                             
                             if (hasActions) {
                         %>
-                        <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                        <div class="detail-actions mt-4">
                             <% if ("PENDING".equals(req.getStatus())) { %>
                                 <% if (canApprove) { %>
                                 <form action="export-request?action=approve" method="POST" class="d-inline m-0">
@@ -278,8 +277,8 @@
                 </div>
 
                 <!-- Products Table -->
-                <div class="card shadow-sm border-0 mb-4 bg-white">
-                    <div class="card-header bg-transparent py-3 border-0">
+                <div class="card detail-section-card bg-white">
+                    <div class="card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-check me-2 text-primary"></i>Danh sách sản phẩm & Tiến độ xuất kho</h5>
                     </div>
                     <div class="card-body p-0">
@@ -318,7 +317,7 @@
                                         <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= d.getSku() %></span></td>
                                         <td><%= d.getUnit() %></td>
                                         <td class="fw-bold"><%= reqQty %></td>
-                                        <td class="fw-bold text-primary"><%= issuedQty %></td>
+                                        <td class="fw-bold text-slate-800"><%= issuedQty %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-2" style="max-width: 180px; margin: 0 auto;">
                                                 <div class="progress flex-grow-1" style="height: 6px; min-width: 80px;">
@@ -339,8 +338,8 @@
                 </div>
 
                 <!-- Linked Export Tickets (GINs) -->
-                <div class="card shadow-sm border-0 bg-white">
-                    <div class="card-header bg-transparent py-3 border-0">
+                <div class="card detail-section-card bg-white">
+                    <div class="card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-arrow-up-right me-2 text-primary"></i>Phiếu xuất kho liên kết (<%= ticketList != null ? ticketList.size() : 0 %>)</h5>
                     </div>
                     <div class="card-body p-0">
@@ -361,16 +360,16 @@
                                     <%
                                         if (ticketList != null && !ticketList.isEmpty()) {
                                             for (Ticket t : ticketList) {
-                                                String tStatusBadge = "bg-secondary text-secondary";
+                                                String tStatusBadge = "chip-muted";
                                                 String displayTStatus = t.getStatus();
                                                 if ("DRAFT".equals(t.getStatus())) {
-                                                    tStatusBadge = "bg-warning text-warning";
+                                                    tStatusBadge = "chip-warning";
                                                     displayTStatus = "Bản nháp";
                                                 } else if ("CONFIRMED".equals(t.getStatus())) {
-                                                    tStatusBadge = "bg-success text-success";
+                                                    tStatusBadge = "chip-success";
                                                     displayTStatus = "Đã xác nhận";
                                                 } else if ("CANCELLED".equals(t.getStatus())) {
-                                                    tStatusBadge = "bg-danger text-danger";
+                                                    tStatusBadge = "chip-danger";
                                                     displayTStatus = "Đã hủy";
                                                 }
                                     %>
@@ -379,13 +378,13 @@
                                         <td><%= t.getKeeperFullName() %></td>
                                         <td class="small text-muted"><%= t.getCreatedAt() %></td>
                                         <td>
-                                            <span class="badge <%= tStatusBadge %> bg-opacity-10 px-2.5 py-1.5"><%= displayTStatus %></span>
+                                            <span class="status-chip <%= tStatusBadge %>"><%= displayTStatus %></span>
                                         </td>
                                         <td><%= t.getConfirmedBy() != null ? t.getConfirmedByFullName() : "-" %></td>
                                         <td class="small text-muted"><%= t.getConfirmedAt() != null ? t.getConfirmedAt() : "-" %></td>
                                         <td>
-                                            <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-sm btn-outline-primary py-0.5 px-2">
-                                                <i class="bi bi-eye"></i> Xem phiếu xuất
+                                            <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-table btn-outline-primary" title="Xem phiếu xuất">
+                                                <i class="bi bi-eye"></i>
                                             </a>
                                         </td>
                                     </tr>
@@ -394,7 +393,7 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="7" class="text-center py-4 text-muted small">Chưa có phiếu xuất kho nào liên kết với yêu cầu này.</td>
+                                        <td colspan="7" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa có phiếu xuất kho nào liên kết với yêu cầu này.</p></div></td>
                                     </tr>
                                     <% } %>
                                 </tbody>

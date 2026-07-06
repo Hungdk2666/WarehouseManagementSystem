@@ -36,19 +36,19 @@
             cursor: pointer;
         }
         .notification-row.unread {
-            background-color: rgba(13, 110, 253, 0.04);
-            border-left: 4px solid #0d6efd;
+            background-color: rgba(37, 99, 235, 0.04);
+            border-left: 3px solid var(--primary);
         }
         .notification-row.read {
-            border-left: 4px solid transparent;
+            border-left: 3px solid transparent;
         }
         .notification-row:hover {
-            background-color: rgba(0, 0, 0, 0.02) !important;
+            background-color: var(--slate-50) !important;
         }
         .unread-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #0d6efd;
+            width: 7px;
+            height: 7px;
+            background-color: var(--primary);
             border-radius: 50%;
             display: inline-block;
         }
@@ -60,10 +60,10 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Thông báo</h2>
-                        <p class="text-muted small mb-0">Cập nhật các nhiệm vụ quan trọng và hoạt động hệ thống</p>
+                        <h2 class="page-title">Thông báo</h2>
+                        <p class="page-subtitle">Cập nhật các nhiệm vụ quan trọng và hoạt động hệ thống</p>
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-outline-primary btn-sm px-3 py-2 d-flex align-items-center gap-1" onclick="markAllAsRead()">
@@ -73,7 +73,7 @@
                 </div>
 
                 <!-- Notifications Card -->
-                <div class="card shadow-sm border-0 bg-white">
+                <div class="card bg-white">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                         <span class="fw-bold text-slate-800"><i class="bi bi-bell-fill me-2 text-primary"></i>Danh sách thông báo (tổng số <%= totalCount %>)</span>
                     </div>
@@ -119,9 +119,9 @@
                                 <% } %>
                             </div>
                         <% } else { %>
-                            <div class="text-center py-5 text-muted">
-                                <i class="bi bi-bell-slash fs-1 d-block mb-3 text-muted" style="opacity: 0.5;"></i>
-                                Bạn không có thông báo nào.
+                            <div class="empty-state">
+                                <i class="bi bi-bell-slash"></i>
+                                <p>Bạn không có thông báo nào.</p>
                             </div>
                         <% } %>
                     </div>

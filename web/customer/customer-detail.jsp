@@ -1,4 +1,4 @@
-<%@page import="model.Customer"%>
+﻿<%@page import="model.Customer"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
@@ -30,11 +30,9 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <div class="card shadow-sm border-0">
-                            <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                                <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-person-fill me-2"></i>Chi Tiết Khách Hàng</h4>
+                <div class="card form-card-narrow">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-slate-800"><i class="bi bi-person-fill me-2 text-primary"></i>Chi Tiết Khách Hàng</span>
                                 <div class="d-flex gap-2">
                                     <% if (loggedInUser.hasPermission("CUSTOMER_EDIT")) { %>
                                     <a href="<%= request.getContextPath() %>/warehouse/customer?action=edit&id=<%= customer.getId() %>" class="btn btn-sm btn-outline-secondary">
@@ -47,41 +45,35 @@
                                 </div>
                             </div>
                             <div class="card-body p-4">
-                                <table class="table table-borderless" style="font-size: 0.95rem;">
-                                    <tbody>
-                                        <tr>
-                                            <td class="fw-semibold text-muted" style="width: 35%;">ID</td>
-                                            <td><%= customer.getId() %></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-semibold text-muted">Tên khách hàng</td>
-                                            <td class="fw-bold"><%= customer.getCustomerName() %></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-semibold text-muted">Số điện thoại</td>
-                                            <td><%= customer.getPhone() != null ? customer.getPhone() : "-" %></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-semibold text-muted">Email</td>
-                                            <td><%= customer.getEmail() != null ? customer.getEmail() : "-" %></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-semibold text-muted">Địa chỉ</td>
-                                            <td><%= customer.getAddress() != null ? customer.getAddress() : "-" %></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-semibold text-muted">Mã đối chiếu ngoài</td>
-                                            <td><%= customer.getExternalRef() != null ? customer.getExternalRef() : "-" %></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-semibold text-muted">Ngày tạo</td>
-                                            <td><%= customer.getCreatedAt() != null ? customer.getCreatedAt().toString() : "-" %></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                <div class="detail-row">
+                                    <div class="detail-label">ID</div>
+                                    <div class="detail-value"><%= customer.getId() %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Tên khách hàng</div>
+                                    <div class="detail-value fw-bold"><%= customer.getCustomerName() %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Số điện thoại</div>
+                                    <div class="detail-value"><%= customer.getPhone() != null ? customer.getPhone() : "-" %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Email</div>
+                                    <div class="detail-value"><%= customer.getEmail() != null ? customer.getEmail() : "-" %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Địa chỉ</div>
+                                    <div class="detail-value"><%= customer.getAddress() != null ? customer.getAddress() : "-" %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Mã đối chiếu ngoài</div>
+                                    <div class="detail-value"><%= customer.getExternalRef() != null ? customer.getExternalRef() : "-" %></div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Ngày tạo</div>
+                                    <div class="detail-value"><%= customer.getCreatedAt() != null ? customer.getCreatedAt().toString() : "-" %></div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

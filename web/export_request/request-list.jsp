@@ -38,67 +38,75 @@
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10">
                 <jsp:include page="/includes/frozen-banner.jsp" />
-                <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Yêu cầu xuất kho</h2>
-                        <p class="text-muted small mb-0">Quản lý và theo dõi các yêu cầu xuất kho nội bộ.</p>
+                        <h2 class="page-title">Yêu cầu xuất kho</h2>
+                        <p class="page-subtitle">Quản lý và theo dõi các yêu cầu xuất kho nội bộ.</p>
                     </div>
-                    <% if (canAdd) { %>
-                    <a href="export-request?action=add" class="btn btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 shadow-sm rounded-3">
-                        <i class="bi bi-plus-circle-fill"></i> Tạo yêu cầu
-                    </a>
-                    <% } %>
+                    <div class="d-flex gap-2">
+                        <% if (canAdd) { %>
+                        <a href="export-request?action=add" class="btn btn-primary d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-plus-circle-fill"></i> Tạo yêu cầu
+                        </a>
+                        <% } %>
+                    </div>
                 </div>
 
                 <!-- Filters -->
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-body">
-                        <div class="row g-2">
-                            <!-- Search -->
-                            <div class="col-md-2">
-                                <label for="searchInput" class="form-label small fw-semibold">Tìm kiếm mã</label>
-                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Nhập mã yêu cầu...">
+                <div class="card mb-3" style="position: relative; z-index: 20;">
+                    <div class="card-body py-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-3">
+                                <label for="searchInput" class="form-label small fw-semibold mb-1">Tìm kiếm</label>
+                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Mã yêu cầu, người tạo...">
                             </div>
-                            <!-- Date Filter -->
-                            <div class="col-md-2">
-                                <label for="startDateFilter" class="form-label small fw-semibold">Từ ngày</label>
+                            <div class="col-6 col-md-2">
+                                <label for="startDateFilter" class="form-label small fw-semibold mb-1">Từ ngày</label>
                                 <input type="date" id="startDateFilter" class="form-control form-control-sm">
                             </div>
-                            <div class="col-md-2">
-                                <label for="endDateFilter" class="form-label small fw-semibold">Đến ngày</label>
+                            <div class="col-6 col-md-2">
+                                <label for="endDateFilter" class="form-label small fw-semibold mb-1">Đến ngày</label>
                                 <input type="date" id="endDateFilter" class="form-control form-control-sm">
                             </div>
-                            <!-- Status Filter -->
-                            <div class="col-md-2">
-                                <label for="statusFilter" class="form-label small fw-semibold">Trạng thái</label>
-                                <select id="statusFilter" class="form-select form-select-sm">
-                                    <option value="">-- Tất cả --</option>
-                                    <option value="Chờ duyệt">Chờ duyệt</option>
-                                    <option value="Đã duyệt">Đã duyệt</option>
-                                    <option value="Chờ hủy">Chờ hủy</option>
-                                    <option value="Từ chối">Từ chối</option>
-                                    <option value="Hoàn thành">Hoàn thành</option>
-                                    <option value="Đã hủy">Đã hủy</option>
-                                </select>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label small fw-semibold mb-1">Trạng thái</label>
+                                <div class="dropdown">
+                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal"
+                                            data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem;">
+                                        <span id="statusLabel">-- Tất cả --</span>
+                                    </button>
+                                    <ul class="dropdown-menu p-2 shadow-sm" id="statusDropdownMenu" style="min-width:170px;">
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ duyệt"> Chờ duyệt</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã duyệt"> Đã duyệt</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ hủy"> Chờ hủy</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Từ chối"> Từ chối</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Hoàn thành"> Hoàn thành</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã hủy"> Đã hủy</label></li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><button type="button" id="clearStatusBtn" class="btn btn-link btn-sm w-100 text-muted text-decoration-none py-1" style="font-size:0.8rem;"><i class="bi bi-x-circle me-1"></i>Xóa chọn</button></li>
+                                    </ul>
+                                </div>
                             </div>
-                            <!-- Creator Filter -->
-                            <div class="col-md-2">
-                                <label for="creatorFilter" class="form-label small fw-semibold">Người tạo</label>
+                            <div class="col-6 col-md-2">
+                                <label for="creatorFilter" class="form-label small fw-semibold mb-1">Người tạo</label>
                                 <input type="text" id="creatorFilter" class="form-control form-control-sm" placeholder="Nhập tên...">
                             </div>
-                            <!-- Action Buttons -->
-                            <div class="col-md-2 d-flex align-items-end gap-1">
-                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel"></i> Lọc</button>
-                                <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm" title="Làm mới"><i class="bi bi-arrow-counterclockwise"></i></button>
+                            <div class="col-12 col-md-auto ms-md-auto d-flex gap-2">
+                                <button type="button" id="filterBtn" class="btn btn-primary btn-sm px-3">
+                                    <i class="bi bi-funnel-fill me-1"></i>Lọc
+                                </button>
+                                <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm px-3" title="Đặt lại bộ lọc">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Requests Directory Table -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-list-task me-2"></i>Danh sách yêu cầu xuất kho</h5>
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-slate-800"><i class="bi bi-list-task me-2 text-primary"></i>Danh sách yêu cầu xuất kho</span>
                         <div class="d-flex align-items-center gap-2">
                             <span class="text-muted small">Hiển thị</span>
                             <select id="entriesPerPage" class="form-select form-select-sm py-0.5 ps-2 pe-4 border rounded" style="width: 75px; font-size: 0.75rem;">
@@ -129,30 +137,30 @@
                                     <%
                                         if (requestList != null && !requestList.isEmpty()) {
                                             for (Request r : requestList) {
-                                                String statusBadge = "bg-secondary text-secondary";
+                                                String statusBadge = "chip-muted";
                                                 String displayStatus = r.getStatus();
                                                 if ("PENDING".equals(r.getStatus())) {
-                                                    statusBadge = "bg-warning text-warning";
+                                                    statusBadge = "chip-warning";
                                                     displayStatus = "Chờ duyệt";
                                                 } else if ("APPROVED".equals(r.getStatus())) {
                                                     if (r.getCancelRequestedAt() != null) {
-                                                        statusBadge = "bg-warning text-warning";
+                                                        statusBadge = "chip-warning";
                                                         displayStatus = "Chờ hủy";
                                                     } else {
-                                                        statusBadge = "bg-info text-info";
+                                                        statusBadge = "chip-success";
                                                         displayStatus = "Đã duyệt";
                                                     }
                                                 } else if ("PARTIALLY_COMPLETED".equals(r.getStatus())) {
-                                                    statusBadge = "bg-primary text-primary";
+                                                    statusBadge = "chip-info";
                                                     displayStatus = "Đang xuất dở";
                                                 } else if ("REJECTED".equals(r.getStatus())) {
-                                                    statusBadge = "bg-danger text-danger";
+                                                    statusBadge = "chip-danger";
                                                     displayStatus = "Từ chối";
                                                 } else if ("COMPLETED".equals(r.getStatus())) {
-                                                    statusBadge = "bg-success text-success";
+                                                    statusBadge = "chip-primary";
                                                     displayStatus = "Hoàn thành";
                                                 } else if ("CANCELLED".equals(r.getStatus())) {
-                                                    statusBadge = "bg-secondary text-secondary";
+                                                    statusBadge = "chip-muted";
                                                     displayStatus = "Đã hủy";
                                                 }
                                     %>
@@ -183,13 +191,13 @@
                                         <td><%= r.getExpectedDate() %></td>
                                         <td><%= r.getStaffFullName() %></td>
                                         <td>
-                                            <span class="badge <%= statusBadge %> bg-opacity-10"><%= displayStatus %></span>
+                                            <span class="status-chip <%= statusBadge %>"><%= displayStatus %></span>
                                         </td>
                                         <td class="text-muted small"><%= r.getCreatedAt() %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <a href="export-request?action=detail&id=<%= r.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                    <i class="bi bi-eye"></i> Chi tiết
+                                                <a href="export-request?action=detail&id=<%= r.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết" aria-label="Xem chi tiết yêu cầu xuất">
+                                                    <i class="bi bi-eye" aria-hidden="true"></i>
                                                 </a>
                                                 <% if (canApprove && "PENDING".equals(r.getStatus())) { %>
                                                 <form action="export-request?action=approve" method="POST" class="d-inline m-0">
@@ -221,9 +229,11 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="8" class="text-center py-5 text-muted">
-                                            <i class="bi bi-inbox display-6 d-block mb-2 text-muted bg-opacity-10"></i>
-                                            Không tìm thấy yêu cầu xuất kho nào.
+                                        <td colspan="8" class="p-0">
+                                            <div class="empty-state">
+                                                <i class="bi bi-inbox"></i>
+                                                <p>Không tìm thấy yêu cầu xuất kho nào.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                     <% } %>
@@ -256,8 +266,34 @@
             const searchInput = document.getElementById("searchInput");
             const startDateFilter = document.getElementById("startDateFilter");
             const endDateFilter = document.getElementById("endDateFilter");
-            const statusFilter = document.getElementById("statusFilter");
+            startDateFilter.addEventListener("change", () => {
+                endDateFilter.min = startDateFilter.value;
+                if (endDateFilter.value && endDateFilter.value < startDateFilter.value) endDateFilter.value = startDateFilter.value;
+            });
+            endDateFilter.addEventListener("change", () => {
+                startDateFilter.max = endDateFilter.value;
+                if (startDateFilter.value && startDateFilter.value > endDateFilter.value) startDateFilter.value = endDateFilter.value;
+            });
             const creatorFilter = document.getElementById("creatorFilter");
+
+            // Multi-select trạng thái
+            function getSelectedStatuses() {
+                return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(cb => cb.value);
+            }
+            function updateStatusLabel() {
+                const checked = document.querySelectorAll('#statusDropdownMenu .status-cb:checked');
+                const label = document.getElementById('statusLabel');
+                if (checked.length === 0) label.textContent = '-- Tất cả --';
+                else if (checked.length === 1) label.textContent = checked[0].closest('label').textContent.trim();
+                else label.textContent = checked.length + ' đã chọn';
+            }
+            document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.addEventListener('change', updateStatusLabel));
+            document.getElementById('clearStatusBtn').addEventListener('click', e => {
+                e.stopPropagation();
+                document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.checked = false);
+                updateStatusLabel();
+            });
+            new bootstrap.Dropdown(document.getElementById('statusDropdownBtn'), { popperConfig: { strategy: 'fixed' } });
             const select = document.getElementById("entriesPerPage");
             const container = document.getElementById("paginationContainer");
 
@@ -269,7 +305,7 @@
                 const searchVal = searchInput.value.toLowerCase().trim();
                 const startDateVal = startDateFilter.value;
                 const endDateVal = endDateFilter.value;
-                const statusVal = statusFilter.value;
+                const statusVals = getSelectedStatuses();
                 const creatorVal = creatorFilter.value.toLowerCase().trim();
 
                 filteredRows = allRows.filter(row => {
@@ -291,7 +327,7 @@
                     if (startDateVal && createdAtDatePart < startDateVal) matchesDate = false;
                     if (endDateVal && createdAtDatePart > endDateVal) matchesDate = false;
                     if (!matchesDate) return false;
-                    if (statusVal && status !== statusVal) return false;
+                    if (statusVals.length > 0 && !statusVals.includes(status)) return false;
                     if (creatorVal && !creator.includes(creatorVal)) return false;
 
                     return true;
@@ -305,7 +341,7 @@
             function renderTable() {
                 tbody.innerHTML = "";
                 if (filteredRows.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-search display-6 d-block mb-2"></i>Không tìm thấy bản ghi phù hợp.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-0"><div class="empty-state"><i class="bi bi-search"></i><p>Không tìm thấy bản ghi phù hợp.</p></div></td></tr>`;
                     return;
                 }
 
@@ -404,8 +440,11 @@
             document.getElementById("resetBtn").addEventListener("click", () => {
                 searchInput.value = "";
                 startDateFilter.value = "";
+                startDateFilter.max = "";
                 endDateFilter.value = "";
-                statusFilter.value = "";
+                endDateFilter.min = "";
+                document.querySelectorAll('#statusDropdownMenu .status-cb').forEach(cb => cb.checked = false);
+                updateStatusLabel();
                 creatorFilter.value = "";
                 currentPage = 1;
                 filterAndPaginate();

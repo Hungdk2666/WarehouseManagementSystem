@@ -1,4 +1,4 @@
-<%@page import="model.User"%>
+﻿<%@page import="model.User"%>
 <%@page import="model.Role"%>
 <%@page import="java.util.List"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -31,20 +31,22 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Quản lý người dùng</h2>
-                        <p class="text-muted small mb-0">Quản lý người dùng, vai trò và trạng thái tài khoản của hệ thống</p>
+                        <h2 class="page-title">Quản lý người dùng</h2>
+                        <p class="page-subtitle">Quản lý người dùng, vai trò và trạng thái tài khoản của hệ thống</p>
                     </div>
-                    <% if (loggedInUser.hasPermission("USER_ADD")) { %>
-                    <a href="user?action=add" class="btn btn-success d-flex align-items-center gap-2">
-                        <i class="bi bi-person-plus-fill fs-5"></i> Thêm người dùng mới
-                    </a>
-                    <% } %>
+                    <div class="d-flex gap-2">
+                        <% if (loggedInUser.hasPermission("USER_ADD")) { %>
+                        <a href="user?action=add" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-person-plus-fill"></i> Thêm người dùng mới
+                        </a>
+                        <% } %>
+                    </div>
                 </div>
 
                 <!-- Server-Side Search and Filter Panel -->
-                <div class="card shadow-sm border-0 mb-3">
+                <div class="card mb-3">
                     <div class="card-body">
                         <form action="user" method="GET" class="row g-2">
                             <input type="hidden" name="action" value="list">
@@ -78,20 +80,20 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 mb-4">
+                <div class="card mb-4">
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle text-center mb-0">
+                            <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>ID</th>
+                                        <th class="ps-4">ID</th>
                                         <th>Tên đăng nhập</th>
                                         <th>Email</th>
                                         <th>Họ và tên</th>
                                         <th>Tên vai trò</th>
                                         <th>Trạng thái</th>
-                                        <th>Mã đặt lại</th>
-                                        <th>Hành động</th>
+                                        <th class="text-center">Mã đặt lại</th>
+                                        <th class="text-center">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -100,41 +102,41 @@
                                             for (User u : userList) {
                                     %>
                                     <tr>
-                                        <td class="fw-semibold text-muted">#<%= u.getId() %></td>
+                                        <td class="ps-4 fw-semibold text-muted">#<%= u.getId() %></td>
                                         <td class="fw-bold text-slate-800"><%= u.getUsername() %></td>
                                         <td><%= u.getEmail() %></td>
                                         <td><%= u.getFullName() %></td>
                                         <td>
-                                            <span class="badge bg-primary bg-opacity-10 text-primary"><%= u.getRoleName() != null ? u.getRoleName() : "Chưa có vai trò" %></span>
+                                            <span class="badge bg-light text-primary"><%= u.getRoleName() != null ? u.getRoleName() : "Chưa có vai trò" %></span>
                                         </td>
                                         <td>
                                             <% if (u.isStatus()) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                <span class="status-chip chip-success">Hoạt động</span>
                                             <% } else { %>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
+                                                <span class="status-chip chip-muted">Ngừng hoạt động</span>
                                             <% } %>
                                         </td>
-                                        <td>
+                                        <td class="text-center">
                                             <% if (u.getResetCode() != null) { %>
-                                                <span class="badge bg-danger bg-opacity-10 text-danger"><%= u.getResetCode() %></span>
+                                                <span class="badge bg-light text-danger"><%= u.getResetCode() %></span>
                                             <% } else { %>
                                                 <span class="text-muted">-</span>
                                             <% } %>
                                         </td>
-                                        <td>
+                                        <td class="text-center">
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <a href="user?action=info&id=<%= u.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Chi tiết">
-                                                    <i class="bi bi-info-circle"></i> Chi tiết
+                                                <a href="user?action=info&id=<%= u.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết">
+                                                    <i class="bi bi-eye"></i> Chi tiết
                                                 </a>
                                                 <% if (loggedInUser.hasPermission("USER_EDIT")) { %>
-                                                <a href="user?action=update&id=<%= u.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Sửa">
+                                                <a href="user?action=update&id=<%= u.getId() %>" class="btn btn-table btn-outline-primary" title="Sửa">
                                                     <i class="bi bi-pencil-square"></i> Sửa
                                                 </a>
                                                 <% } %>
                                                 <% if (loggedInUser.hasPermission("USER_TOGGLE")) { %>
                                                 <form action="user?action=toggle" method="POST" style="display:inline;" class="m-0">
                                                     <input type="hidden" name="id" value="<%= u.getId() %>">
-                                                    <button type="submit" class="btn btn-sm <%= u.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= u.isStatus() ? "Vô hiệu hóa tài khoản" : "Kích hoạt tài khoản" %>">
+                                                    <button type="submit" class="btn btn-table <%= u.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= u.isStatus() ? "Vô hiệu hóa tài khoản" : "Kích hoạt tài khoản" %>">
                                                         <i class="bi bi-power"></i> <%= u.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
                                                     </button>
                                                 </form>
@@ -147,10 +149,7 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted py-5">
-                                            <i class="bi bi-people text-muted display-4 d-block mb-3"></i>
-                                            Không tìm thấy người dùng nào phù hợp với tiêu chí tìm kiếm.
-                                        </td>
+                                        <td colspan="8" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Không tìm thấy người dùng nào phù hợp với tiêu chí tìm kiếm.</p></div></td>
                                     </tr>
                                     <% } %>
                                 </tbody>

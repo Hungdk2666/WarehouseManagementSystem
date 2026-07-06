@@ -1,4 +1,4 @@
-<%@page import="model.InternalDestination"%>
+﻿<%@page import="model.InternalDestination"%>
 <%@page import="model.Product"%>
 <%@page import="model.Warehouse"%>
 <%@page import="model.Customer"%>
@@ -36,16 +36,25 @@
             <jsp:include page="/includes/sidebar.jsp" />
 
             <div class="col-md-9 col-lg-10">
+                <div class="page-header">
+                    <div>
+                        <h2 class="page-title">Tạo Yêu cầu xuất kho</h2>
+                        <p class="page-subtitle">Tạo mới yêu cầu xuất hàng ra khỏi kho</p>
+                    </div>
+                    <a href="<%= request.getContextPath() %>/warehouse/export-request?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-arrow-left"></i> Hủy
+                    </a>
+                </div>
                 <div class="row justify-content-center">
                     <div class="col-md-11">
                         <form action="<%= request.getContextPath() %>/warehouse/export-request?action=add" method="POST" id="requestForm">
-                            <div class="card shadow-sm border-0 bg-white" style="overflow: visible;">
-                                <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                                    <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-plus-circle-fill me-2"></i>Tạo Yêu Cầu Xuất Kho</h4>
+                            <div class="card bg-white" style="overflow: visible;">
+                                <div class="card-header bg-white py-3">
+                                    <span class="fw-bold text-slate-800"><i class="bi bi-plus-circle-fill me-2 text-primary"></i>Thông tin Yêu cầu xuất kho</span>
                                 </div>
                                 <div class="card-body p-4">
                                     <% if (request.getAttribute("error") != null) { %>
-                                    <div class="alert alert-danger shadow-sm border-0 rounded-3 mb-3 d-flex align-items-center">
+                                    <div class="alert alert-danger rounded-3 mb-3 d-flex align-items-center">
                                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
                                         <%= request.getAttribute("error") %>
                                     </div>
@@ -60,9 +69,20 @@
                                                 <option value="CUSTOMER_SALE">CUSTOMER_SALE — Xuất bán cho khách hàng</option>
                                                 <option value="DISPLAY">DISPLAY — Hàng trưng bày</option>
                                                 <option value="WARRANTY">WARRANTY — Bảo hành / sửa chữa</option>
-                                                <option value="DISPOSAL">DISPOSAL — Tiêu hủy</option>
                                                 <option value="OTHER">OTHER — Lý do khác</option>
                                             </select>
+                                            <% if (loggedInUser.hasPermission("DISPOSAL_CREATE")) { %>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="bi bi-info-circle"></i>
+                                                Cần <strong>thanh lý hàng hỏng</strong>?
+                                                <a href="<%= request.getContextPath() %>/warehouse/disposal?action=add">Vào module Thanh lý sản phẩm →</a>
+                                            </small>
+                                            <% } else { %>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="bi bi-info-circle"></i>
+                                                Hàng bị hỏng cần <strong>thanh lý</strong>? Vui lòng báo cho <em>nhân viên kho / quản lý kho</em> để xử lý.
+                                            </small>
+                                            <% } %>
                                         </div>
                                         <div class="col-md-3">
                                             <label for="expectedDate" class="form-label fw-semibold text-muted small mb-1">Ngày xuất kho dự kiến <span class="text-danger">*</span></label>
@@ -80,8 +100,8 @@
                                         <div class="col-md-3">
                                             <label for="conditionSelect" class="form-label fw-semibold text-muted small mb-1">Tình trạng xuất <span class="text-danger">*</span></label>
                                             <select class="form-select shadow-sm rounded-3" id="conditionSelect" name="requested_condition" required>
-                                                <option value="NEW" selected>Hàng Mới (NEW)</option>
-                                                <option value="USED">Hàng Cũ (USED)</option>
+                                                <option value="NEW" selected>Hàng mới</option>
+                                                <option value="USED">Đã qua sử dụng</option>
                                             </select>
                                         </div>
                                     </div>
@@ -170,7 +190,7 @@
                                             </thead>
                                             <tbody id="itemsBody">
                                                 <tr id="emptyRow">
-                                                    <td colspan="6" class="text-muted py-4">Chưa có sản phẩm nào được thêm.</td>
+                                                    <td colspan="6" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa có sản phẩm nào được thêm.</p></div></td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -324,23 +344,31 @@
             const select = document.getElementById("productSelect");
             const options = select.options;
             const stockMap = getActiveStockMap();
-            
+
             for (let i = 1; i < options.length; i++) {
                 const opt = options[i];
                 const pId = opt.value;
                 const avail = (stockMap[warehouseId] && stockMap[warehouseId][pId] !== undefined)
                     ? stockMap[warehouseId][pId]
                     : 0;
-                
+
                 opt.dataset.avail = avail;
                 const productName = opt.text.split(" (SKU:")[0];
                 const sku = opt.dataset.sku;
                 opt.text = productName + " (SKU: " + sku + ") [Khả dụng: " + avail + "]";
             }
-            
+
             if (tsProduct) {
-                tsProduct.sync();
                 tsProduct.clear();
+                tsProduct.clearOptions();
+                for (let i = 1; i < options.length; i++) {
+                    const opt = options[i];
+                    tsProduct.addOption({
+                        value: opt.value,
+                        text: opt.text
+                    });
+                }
+                tsProduct.refreshOptions(false);
             }
         }
 
@@ -449,6 +477,18 @@
                 document.getElementById("emptyRow").style.display = "";
             }
         }
+
+        document.getElementById("itemsBody").addEventListener("input", function(e) {
+            if (e.target && e.target.classList.contains("qty-input")) {
+                if (e.target.value !== "") {
+                    let val = parseInt(e.target.value);
+                    let max = parseInt(e.target.getAttribute("max"));
+                    if (!isNaN(val) && !isNaN(max) && val > max) {
+                        e.target.value = max;
+                    }
+                }
+            }
+        });
 
         document.getElementById("requestForm").addEventListener("submit", function (e) {
             const reason = document.getElementById("reasonSelect").value;
