@@ -18,7 +18,7 @@ import model.Warehouse;
 @WebServlet(name = "InventoryHistoryServlet", urlPatterns = {"/warehouse/inventory-history"})
 public class InventoryHistoryServlet extends HttpServlet {
 
-    private static final int PAGE_SIZE = 20;
+    private static final int DEFAULT_PAGE_SIZE = 10;
 
     @Override
     protected void doGet(HttpServletRequest httpReq, HttpServletResponse response)
@@ -77,11 +77,31 @@ public class InventoryHistoryServlet extends HttpServlet {
             try { page = Math.max(1, Integer.parseInt(pageStr)); } catch (NumberFormatException ignored) {}
         }
 
-        List<HistoryEntry> entries = historyService.getHistory(
-                search, transactionType, warehouseId, startDate, endDate, page, PAGE_SIZE);
+        int pageSize = DEFAULT_PAGE_SIZE;
+        String pageSizeStr = httpReq.getParameter("pageSize");
+        if (pageSizeStr != null && !pageSizeStr.trim().isEmpty()) {
+            try {
+                pageSize = Integer.parseInt(pageSizeStr.trim());
+            } catch (NumberFormatException ignored) {
+                pageSize = DEFAULT_PAGE_SIZE;
+            }
+        }
+        if (pageSize != 10 && pageSize != 25 && pageSize != 100) {
+            pageSize = DEFAULT_PAGE_SIZE;
+        }
+
         int totalCount = historyService.getCount(
                 search, transactionType, warehouseId, startDate, endDate);
-        int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        if (totalPages == 0) {
+            totalPages = 1;
+        }
+        if (page > totalPages) {
+            page = totalPages;
+        }
+
+        List<HistoryEntry> entries = historyService.getHistory(
+                search, transactionType, warehouseId, startDate, endDate, page, pageSize);
 
         List<Warehouse> warehouses = new WarehouseService().getAllWarehouses();
 
@@ -90,7 +110,7 @@ public class InventoryHistoryServlet extends HttpServlet {
         httpReq.setAttribute("currentPage", page);
         httpReq.setAttribute("totalPages", totalPages);
         httpReq.setAttribute("totalCount", totalCount);
-        httpReq.setAttribute("pageSize", PAGE_SIZE);
+        httpReq.setAttribute("pageSize", pageSize);
         httpReq.setAttribute("search", search);
         httpReq.setAttribute("transactionType", transactionType);
         httpReq.setAttribute("warehouseId", warehouseId);

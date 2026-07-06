@@ -156,14 +156,14 @@ public class CustomerServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/warehouse/customer?action=list");
                 }
                 break;
-            case "delete":
+            case "toggle":
                 if (!loggedInUser.hasPermission("CUSTOMER_DELETE")) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN);
                     return;
                 }
                 try {
                     int id = Integer.parseInt(request.getParameter("id"));
-                    dao.deleteCustomer(id);
+                    dao.toggleCustomerStatus(id);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

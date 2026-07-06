@@ -9,6 +9,7 @@ public class Customer {
     private String email;
     private String address;
     private String externalRef;
+    private boolean status = true;
     private Timestamp createdAt;
 
     public Customer() {}
@@ -30,6 +31,9 @@ public class Customer {
 
     public String getExternalRef() { return externalRef; }
     public void setExternalRef(String externalRef) { this.externalRef = externalRef; }
+
+    public boolean isStatus() { return status; }
+    public void setStatus(boolean status) { this.status = status; }
 
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }

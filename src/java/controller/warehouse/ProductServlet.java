@@ -200,9 +200,15 @@ public class ProductServlet extends HttpServlet {
                     String[] specValues = request.getParameterValues("spec_value");
 
                     // Validation checks
+                    if (minStock < 0) {
+                        request.setAttribute("error", "Mức tồn kho tối thiểu không được âm.");
+                        request.setAttribute("action", "add");
+                        doGet(request, response);
+                        return;
+                    }
                     if (dao.isSkuExists(sku, 0)) {
                         request.setAttribute("error", "SKU unique constraint violated! Product SKU already exists.");
-                        doGet(request, response); // re-populate and forward
+                        doGet(request, response);
                         return;
                     }
 
@@ -249,9 +255,15 @@ public class ProductServlet extends HttpServlet {
                     String[] updateSpecValues = request.getParameterValues("spec_value");
 
                     // Validation checks
+                    if (updateMinStock < 0) {
+                        request.setAttribute("error", "Mức tồn kho tối thiểu không được âm.");
+                        request.setAttribute("action", "update");
+                        doGet(request, response);
+                        return;
+                    }
                     if (dao.isSkuExists(updateSku, id)) {
                         request.setAttribute("error", "SKU unique constraint violated! Product SKU already exists.");
-                        doGet(request, response); // re-populate and forward
+                        doGet(request, response);
                         return;
                     }
 

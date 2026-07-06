@@ -19,6 +19,7 @@ public class CustomerDAO {
         c.setEmail(rs.getString("email"));
         c.setAddress(rs.getString("address"));
         c.setExternalRef(rs.getString("external_ref"));
+        c.setStatus(rs.getBoolean("status"));
         c.setCreatedAt(rs.getTimestamp("created_at"));
         return c;
     }
@@ -89,8 +90,21 @@ public class CustomerDAO {
         return false;
     }
 
-    public boolean deleteCustomer(int id) {
-        String query = "DELETE FROM Customers WHERE id = ?";
+    public List<Customer> getActiveCustomers() {
+        List<Customer> list = new ArrayList<>();
+        String query = "SELECT * FROM Customers WHERE status = TRUE ORDER BY customer_name ASC";
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(mapRow(rs));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public boolean toggleCustomerStatus(int id) {
+        String query = "UPDATE Customers SET status = NOT status WHERE id = ?";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setInt(1, id);

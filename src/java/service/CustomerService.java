@@ -27,8 +27,12 @@ public class CustomerService {
         return dao.updateCustomer(arg0);
     }
 
-    public boolean deleteCustomer(int arg0) {
-        return dao.deleteCustomer(arg0);
+    public boolean toggleCustomerStatus(int arg0) {
+        return dao.toggleCustomerStatus(arg0);
+    }
+
+    public List<Customer> getActiveCustomers() {
+        return dao.getActiveCustomers();
     }
 
 }

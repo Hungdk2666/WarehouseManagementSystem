@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.User;
 import model.Role;
+import service.AuditLogService;
 import service.RoleService;
 
 @WebServlet(name = "AdminUserServlet", urlPatterns = {"/admin/user"})
@@ -21,7 +22,7 @@ public class UserServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
-        
+
         if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
@@ -32,7 +33,6 @@ public class UserServlet extends HttpServlet {
             action = "list";
         }
 
-        // Action-based permission checks
         if ("list".equals(action) || "info".equals(action)) {
             if (!loggedInUser.hasPermission("USER_VIEW")) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view users.");
@@ -100,7 +100,7 @@ public class UserServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
-        
+
         if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
@@ -112,7 +112,6 @@ public class UserServlet extends HttpServlet {
             return;
         }
 
-        // Action-based permission checks
         if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("USER_ADD")) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add users.");
@@ -131,52 +130,92 @@ public class UserServlet extends HttpServlet {
         }
 
         UserService dao = new UserService();
+        AuditLogService auditLog = new AuditLogService();
 
         try {
             switch (action) {
-                case "add":
+                case "add": {
                     String username = request.getParameter("username");
                     String email = request.getParameter("email");
                     String fullName = request.getParameter("full_name");
                     int roleId = Integer.parseInt(request.getParameter("role_id"));
                     String warehouseIdStr = request.getParameter("warehouse_id");
                     Integer warehouseId = (warehouseIdStr != null && !warehouseIdStr.trim().isEmpty()) ? Integer.parseInt(warehouseIdStr) : null;
-                    
+
                     User newUser = new User();
                     newUser.setUsername(username);
                     newUser.setEmail(email);
                     newUser.setFullName(fullName);
                     newUser.setRoleId(roleId);
                     newUser.setWarehouseId(warehouseId);
-                    newUser.setStatus(true); // default active
+                    newUser.setStatus(true);
                     dao.addUser(newUser, "123456");
+                    auditLog.log(loggedInUser.getId(), "USER_ADD", "Created user: " + username + " (role_id=" + roleId + ")");
                     break;
-                case "update":
+                }
+                case "update": {
                     int updateId = Integer.parseInt(request.getParameter("id"));
                     String updateEmail = request.getParameter("email");
                     String updateFullName = request.getParameter("full_name");
                     int updateRoleId = Integer.parseInt(request.getParameter("role_id"));
                     String updateWarehouseIdStr = request.getParameter("warehouse_id");
                     Integer updateWarehouseId = (updateWarehouseIdStr != null && !updateWarehouseIdStr.trim().isEmpty()) ? Integer.parseInt(updateWarehouseIdStr) : null;
-                    
+
+                    if (updateId == loggedInUser.getId()) {
+                        User currentUser = dao.getUserById(updateId);
+                        if (currentUser != null && currentUser.getRoleId() != updateRoleId) {
+                            request.getSession().setAttribute("errorMessage", "You cannot change your own role.");
+                            response.sendRedirect(request.getContextPath() + "/admin/user?action=list");
+                            return;
+                        }
+                    }
+
+                    User oldUser = dao.getUserById(updateId);
+
                     User updateUser = new User();
                     updateUser.setId(updateId);
                     updateUser.setEmail(updateEmail);
                     updateUser.setFullName(updateFullName);
                     updateUser.setRoleId(updateRoleId);
                     updateUser.setWarehouseId(updateWarehouseId);
-                    
+
                     dao.updateUser(updateUser);
+
+                    StringBuilder details = new StringBuilder("Updated user ID " + updateId);
+                    if (oldUser != null && oldUser.getRoleId() != updateRoleId) {
+                        details.append(" | Role changed from ").append(oldUser.getRoleId()).append(" to ").append(updateRoleId);
+                    }
+                    auditLog.log(loggedInUser.getId(), "USER_UPDATE", details.toString());
                     break;
-                case "toggle":
+                }
+                case "toggle": {
                     int toggleId = Integer.parseInt(request.getParameter("id"));
+
+                    User targetUser = dao.getUserById(toggleId);
+                    if (targetUser != null && targetUser.isStatus()) {
+                        if (toggleId == loggedInUser.getId()) {
+                            request.getSession().setAttribute("errorMessage", "You cannot deactivate your own account.");
+                            response.sendRedirect(request.getContextPath() + "/admin/user?action=list");
+                            return;
+                        }
+                        int activeCount = dao.countActiveUsersByRoleId(targetUser.getRoleId());
+                        if (activeCount <= 1) {
+                            request.getSession().setAttribute("errorMessage", "Cannot deactivate the last active user with this role.");
+                            response.sendRedirect(request.getContextPath() + "/admin/user?action=list");
+                            return;
+                        }
+                    }
+
                     dao.toggleUserStatus(toggleId);
+                    String statusAction = (targetUser != null && targetUser.isStatus()) ? "DEACTIVATED" : "ACTIVATED";
+                    auditLog.log(loggedInUser.getId(), "USER_TOGGLE", statusAction + " user ID " + toggleId);
                     break;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         response.sendRedirect(request.getContextPath() + "/admin/user?action=list");
     }
 }
