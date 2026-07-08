@@ -32,14 +32,16 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Quản lý vai trò</h2>
-                        <p class="text-muted small mb-0">Cấu hình vai trò hệ thống, cấp độ truy cập và gán quyền</p>
+                        <h2 class="page-title">Quản lý vai trò</h2>
+                        <p class="page-subtitle">Cấu hình vai trò hệ thống, cấp độ truy cập và gán quyền</p>
                     </div>
-                    <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-arrow-left"></i> Quay lại Trang chủ
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-arrow-left"></i> Quay lại Trang chủ
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Navigation Tabs -->
@@ -56,9 +58,9 @@
                     
                     <!-- Roles Tab Pane -->
                     <div class="tab-pane fade show active" id="roles-pane" role="tabpanel" aria-labelledby="roles-tab">
-                        <div class="card shadow-sm border-0 mb-4">
-                            <div class="card-header bg-primary bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-safe-fill me-2"></i>Vai trò truy cập hệ thống</h5>
+                        <div class="card mb-4">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-slate-800"><i class="bi bi-safe-fill me-2 text-primary"></i>Vai trò truy cập hệ thống</span>
                                 <% if (loggedInUser.hasPermission("ROLE_ADD")) { %>
                                 <button class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#addRoleModal">
                                     <i class="bi bi-plus-circle-fill"></i> Thêm vai trò mới
@@ -67,13 +69,13 @@
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle text-center mb-0">
+                                    <table class="table table-hover align-middle mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th>ID</th>
+                                                <th class="ps-4">ID</th>
                                                 <th>Tên vai trò</th>
                                                 <th>Trạng thái</th>
-                                                <th>Hành động</th>
+                                                <th class="text-center" style="min-width: 330px;">Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -82,31 +84,31 @@
                                                     for (Role r : roleList) {
                                             %>
                                             <tr>
-                                                <td class="fw-semibold text-muted">#<%= r.getId() %></td>
+                                                <td class="ps-4 fw-semibold text-muted">#<%= r.getId() %></td>
                                                 <td class="fw-bold text-slate-800"><%= r.getRoleName() %></td>
                                                 <td>
                                                     <% if (r.isStatus()) { %>
-                                                        <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Hoạt động</span>
+                                                        <span class="status-chip chip-success">Hoạt động</span>
                                                     <% } else { %>
-                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> Ngừng hoạt động</span>
+                                                        <span class="status-chip chip-muted">Ngừng hoạt động</span>
                                                     <% } %>
                                                 </td>
-                                                <td>
-                                                    <div class="d-flex align-items-center justify-content-center gap-1">
+                                                <td class="text-center">
+                                                    <div class="d-flex flex-nowrap align-items-center justify-content-center gap-2 role-action-buttons">
                                                         <% if (loggedInUser.hasPermission("ROLE_ASSIGN")) { %>
-                                                        <a href="role?action=permissions&id=<%= r.getId() %>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Quản lý phân quyền">
+                                                        <a href="role?action=permissions&id=<%= r.getId() %>" class="btn btn-sm btn-outline-secondary" title="Quản lý phân quyền">
                                                             <i class="bi bi-shield-lock"></i> Phân quyền
                                                         </a>
                                                         <% } %>
                                                         <% if (loggedInUser.hasPermission("ROLE_EDIT")) { %>
-                                                        <a href="role?action=update&id=<%= r.getId() %>" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1 py-1 px-2.5" title="Sửa">
+                                                        <a href="role?action=update&id=<%= r.getId() %>" class="btn btn-sm btn-outline-primary" title="Sửa">
                                                             <i class="bi bi-pencil-square"></i> Sửa
                                                         </a>
                                                         <% } %>
                                                         <% if (loggedInUser.hasPermission("ROLE_TOGGLE")) { %>
                                                         <form action="role?action=toggle" method="POST" class="d-inline m-0">
                                                             <input type="hidden" name="id" value="<%= r.getId() %>">
-                                                            <button type="submit" class="btn btn-sm <%= r.isStatus() ? "btn-outline-danger" : "btn-primary" %> d-inline-flex align-items-center gap-1 py-1 px-2.5" title="<%= r.isStatus() ? "Vô hiệu hóa vai trò" : "Kích hoạt vai trò" %>">
+                                                            <button type="submit" class="btn btn-sm <%= r.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= r.isStatus() ? "Vô hiệu hóa vai trò" : "Kích hoạt vai trò" %>">
                                                                 <i class="bi bi-power"></i> <%= r.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
                                                             </button>
                                                         </form>
@@ -119,10 +121,7 @@
                                                 } else {
                                             %>
                                             <tr>
-                                                <td colspan="4" class="text-center text-muted py-5">
-                                                    <i class="bi bi-shield-slash text-muted display-4 d-block mb-3"></i>
-                                                    Chưa đăng ký vai trò hệ thống nào.
-                                                </td>
+                                                <td colspan="4" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa đăng ký vai trò hệ thống nào.</p></div></td>
                                             </tr>
                                             <% } %>
                                         </tbody>
@@ -142,8 +141,8 @@
     <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-3">
-                <div class="modal-header border-0 bg-primary bg-opacity-10 py-3">
-                    <h5 class="modal-title fw-bold text-primary" id="addRoleModalLabel"><i class="bi bi-plus-circle-fill me-2"></i>Tạo vai trò hệ thống mới</h5>
+                <div class="modal-header border-0 bg-light py-3">
+                    <h5 class="modal-title fw-bold text-slate-800" id="addRoleModalLabel"><i class="bi bi-plus-circle-fill me-2"></i>Tạo vai trò hệ thống mới</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="role?action=addRole" method="POST" class="m-0">

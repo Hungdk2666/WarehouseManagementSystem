@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpSession;
 import model.Permission;
 import model.Role;
 import model.User;
+import service.AuditLogService;
 
 @WebServlet(name = "AdminRoleServlet", urlPatterns = {"/admin/role"})
 public class RoleServlet extends HttpServlet {
@@ -21,7 +22,7 @@ public class RoleServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
-        
+
         if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
@@ -32,7 +33,6 @@ public class RoleServlet extends HttpServlet {
             action = "list";
         }
 
-        // Action-based permission checks
         if ("list".equals(action) || "permissions".equals(action)) {
             if (!loggedInUser.hasPermission("ROLE_VIEW")) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view roles.");
@@ -64,11 +64,11 @@ public class RoleServlet extends HttpServlet {
                 Role rolePerm = dao.getRoleById(idPerm);
                 List<Permission> allPerms = dao.getAllPermissions();
                 List<Integer> assignedPerms = dao.getPermissionsByRoleId(idPerm);
-                
+
                 request.setAttribute("roleInfo", rolePerm);
                 request.setAttribute("allPerms", allPerms);
                 request.setAttribute("assignedPerms", assignedPerms);
-                
+
                 request.getRequestDispatcher("/admin/role-permissions.jsp").forward(request, response);
                 break;
             default:
@@ -82,7 +82,7 @@ public class RoleServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User loggedInUser = (User) session.getAttribute("user");
-        
+
         if (loggedInUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
@@ -94,7 +94,6 @@ public class RoleServlet extends HttpServlet {
             return;
         }
 
-        // Action-based permission checks
         if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("ROLE_EDIT")) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit roles.");
@@ -118,28 +117,32 @@ public class RoleServlet extends HttpServlet {
         }
 
         RoleService dao = new RoleService();
+        AuditLogService auditLog = new AuditLogService();
 
         try {
             switch (action) {
-                case "update":
+                case "update": {
                     int updateId = Integer.parseInt(request.getParameter("id"));
                     String updateRoleName = request.getParameter("role_name");
-                    
+
                     Role updateRole = new Role();
                     updateRole.setId(updateId);
                     updateRole.setRoleName(updateRoleName);
-                    
+
                     dao.updateRole(updateRole);
+                    auditLog.log(loggedInUser.getId(), "ROLE_UPDATE", "Updated role ID " + updateId + " name to: " + updateRoleName);
                     break;
-                case "toggle":
+                }
+                case "toggle": {
                     int toggleId = Integer.parseInt(request.getParameter("id"));
                     dao.toggleRoleStatus(toggleId);
+                    auditLog.log(loggedInUser.getId(), "ROLE_TOGGLE", "Toggled status of role ID " + toggleId);
                     break;
-                case "permissions":
+                }
+                case "permissions": {
                     int roleId = Integer.parseInt(request.getParameter("id"));
                     String[] selectedPerms = request.getParameterValues("permissions");
-                    
-                    // Backend protection: only allow assigning System Admin permissions (1 to 10) to System Admin (1)
+
                     if (roleId == 1 && selectedPerms != null) {
                         java.util.List<String> filtered = new java.util.ArrayList<>();
                         for (String pIdStr : selectedPerms) {
@@ -150,19 +153,24 @@ public class RoleServlet extends HttpServlet {
                         }
                         selectedPerms = filtered.toArray(new String[0]);
                     }
-                    
+
                     dao.updateRolePermissions(roleId, selectedPerms);
+                    int permCount = (selectedPerms != null) ? selectedPerms.length : 0;
+                    auditLog.log(loggedInUser.getId(), "ROLE_PERMISSIONS", "Updated permissions for role ID " + roleId + " (" + permCount + " permissions assigned)");
                     break;
-                case "addRole":
+                }
+                case "addRole": {
                     String roleName = request.getParameter("role_name");
                     boolean roleStatus = "true".equalsIgnoreCase(request.getParameter("status"));
                     dao.addRole(roleName, roleStatus);
+                    auditLog.log(loggedInUser.getId(), "ROLE_ADD", "Created new role: " + roleName);
                     break;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         response.sendRedirect(request.getContextPath() + "/admin/role?action=list");
     }
 }
