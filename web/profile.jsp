@@ -1,4 +1,4 @@
-<%@page import="model.User"%>
+﻿<%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User user = (User) session.getAttribute("user");
@@ -30,46 +30,35 @@
             <div class="col-md-9 col-lg-10">
                 <div class="row justify-content-center">
                     <div class="col-md-6">
-                        <div class="card shadow-sm border-0 bg-white">
-                             <div class="card-header bg-primary bg-opacity-10 py-3 border-0">
-                                <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-person-fill me-2"></i>Thông tin cá nhân</h4>
+                        <div class="card form-card-narrow bg-white">
+                             <div class="card-header bg-white py-3">
+                                <span class="fw-bold text-slate-800"><i class="bi bi-person-fill me-2 text-primary"></i>Thông tin cá nhân</span>
                             </div>
                             <div class="card-body p-4 text-center">
                                 <div class="mb-4">
-                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow-sm" style="width: 100px; height: 100px; border: 4px solid #fff;">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 92px; height: 92px;">
                                         <i class="bi bi-person-badge fs-1"></i>
                                     </div>
                                     <h4 class="fw-bold text-slate-800 mb-0"><%= user.getFullName() %></h4>
                                     <p class="text-muted small"><i class="bi bi-shield-check me-1"></i>Vai trò: <%= user.getRoleName() != null ? user.getRoleName() : "Mã vai trò: " + user.getRoleId() %></p>
                                 </div>
-                                
-                                <div class="table-responsive border-0">
-                                    <table class="table table-borderless text-start align-middle mb-0">
-                                        <tbody>
-                                            <tr class="border-bottom border-light">
-                                                <th class="text-muted fw-semibold py-3 ps-0" style="width: 35%;"><i class="bi bi-person-fill me-2 text-primary"></i>Tên đăng nhập:</th>
-                                                <td class="fw-bold text-slate-800 py-3 pe-0"><%= user.getUsername() %></td>
-                                            </tr>
-                                            <tr class="border-bottom border-light">
-                                                <th class="text-muted fw-semibold py-3 ps-0"><i class="bi bi-envelope-fill me-2 text-primary"></i>Địa chỉ Email:</th>
-                                                <td class="text-slate-800 py-3 pe-0"><%= user.getEmail() %></td>
-                                            </tr>
-                                            <tr>
-                                                <th class="text-muted fw-semibold py-3 ps-0"><i class="bi bi-toggle-on me-2 text-primary"></i>Trạng thái tài khoản:</th>
-                                                <td class="py-3 pe-0">
-                                                    <% if (user.isStatus()) { %>
-                                                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; vertical-align: middle;"></i> Hoạt động</span>
-                                                    <% } else { %>
-                                                        <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-1.5"><i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; vertical-align: middle;"></i> Không hoạt động</span>
-                                                    <% } %>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+
+                                <div class="text-start">
+                                    <div class="detail-row"><div class="detail-label"><i class="bi bi-person-fill me-1 text-primary"></i>Tên đăng nhập</div><div class="detail-value"><%= user.getUsername() %></div></div>
+                                    <div class="detail-row"><div class="detail-label"><i class="bi bi-envelope-fill me-1 text-primary"></i>Địa chỉ Email</div><div class="detail-value"><%= user.getEmail() %></div></div>
+                                    <div class="detail-row"><div class="detail-label"><i class="bi bi-toggle-on me-1 text-primary"></i>Trạng thái tài khoản</div>
+                                        <div class="detail-value">
+                                            <% if (user.isStatus()) { %>
+                                                <span class="status-chip chip-success">Hoạt động</span>
+                                            <% } else { %>
+                                                <span class="status-chip chip-danger">Không hoạt động</span>
+                                            <% } %>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="d-flex justify-content-center gap-3 mt-4">
+                                <div class="d-flex justify-content-center gap-2 mt-4">
                                     <a href="index.jsp" class="btn btn-outline-secondary px-4"><i class="bi bi-speedometer2 me-1"></i> Trang chủ</a>
-                                    <a href="change-password" class="btn btn-warning px-4"><i class="bi bi-shield-lock-fill me-1"></i> Đổi mật khẩu</a>
+                                    <a href="change-password" class="btn btn-primary px-4"><i class="bi bi-shield-lock-fill me-1"></i> Đổi mật khẩu</a>
                                 </div>
                             </div>
                         </div>
