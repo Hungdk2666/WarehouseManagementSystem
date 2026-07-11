@@ -26,11 +26,20 @@ public class AuditLogServlet extends HttpServlet {
             return;
         }
         
-        // RBAC Check
-        if (!loggedInUser.hasPermission("AUDIT_LOG_VIEW")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view audit logs.");
+        // RBAC: System Admin (SYSTEM_LOG_VIEW) chỉ xem nhật ký hệ thống;
+        // Business Admin (AUDIT_LOG_VIEW) chỉ xem nhật ký nghiệp vụ.
+        boolean canSystem = loggedInUser.hasPermission("SYSTEM_LOG_VIEW");
+        boolean canBusiness = loggedInUser.hasPermission("AUDIT_LOG_VIEW");
+        if (!canSystem && !canBusiness) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view logs.");
             return;
         }
+        // Nếu (hiếm) có cả hai quyền, ưu tiên nhật ký hệ thống.
+        String category = canSystem ? "SYSTEM" : "BUSINESS";
+        String pageTitle = canSystem ? "Nhật ký hệ thống" : "Nhật ký nghiệp vụ";
+        String pageSubtitle = canSystem
+                ? "Theo dõi thay đổi người dùng, vai trò, phân quyền và mật khẩu"
+                : "Giám sát hoạt động nghiệp vụ và dấu vết các giao dịch quan trọng";
 
         String search = request.getParameter("search");
         String[] actionFilters = request.getParameterValues("actionFilter");
@@ -58,17 +67,19 @@ public class AuditLogServlet extends HttpServlet {
         }
         
         AuditLogService dao = new AuditLogService();
-        List<AuditLog> list = dao.getLogs(search, actionFilters, startDate, endDate, page, pageSize);
-        int totalLogs = dao.getLogsCount(search, actionFilters, startDate, endDate);
+        List<AuditLog> list = dao.getLogs(category, search, actionFilters, startDate, endDate, page, pageSize);
+        int totalLogs = dao.getLogsCount(category, search, actionFilters, startDate, endDate);
         int totalPages = (int) Math.ceil((double) totalLogs / pageSize);
         if (totalPages == 0) {
             totalPages = 1;
         }
-        
-        List<String> actions = dao.getAllUniqueActions();
+
+        List<String> actions = dao.getAllUniqueActions(category);
 
         request.setAttribute("logs", list);
         request.setAttribute("actions", actions);
+        request.setAttribute("pageTitle", pageTitle);
+        request.setAttribute("pageSubtitle", pageSubtitle);
         request.setAttribute("currentPage", page);
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("totalCount", totalLogs);

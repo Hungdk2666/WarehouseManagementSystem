@@ -7,10 +7,15 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
-    if (loggedInUser == null || !loggedInUser.hasPermission("AUDIT_LOG_VIEW")) {
+    if (loggedInUser == null
+            || !(loggedInUser.hasPermission("AUDIT_LOG_VIEW") || loggedInUser.hasPermission("SYSTEM_LOG_VIEW"))) {
         response.sendRedirect(request.getContextPath() + "/login");
         return;
     }
+    String pageTitle = (String) request.getAttribute("pageTitle");
+    if (pageTitle == null) pageTitle = "Nhật ký hoạt động";
+    String pageSubtitle = (String) request.getAttribute("pageSubtitle");
+    if (pageSubtitle == null) pageSubtitle = "Giám sát hoạt động của hệ thống và dấu vết các giao dịch quan trọng";
     List<AuditLog> logs = (List<AuditLog>) request.getAttribute("logs");
     List<String> actions = (List<String>) request.getAttribute("actions");
     int currentPage = (int) request.getAttribute("currentPage");
@@ -49,7 +54,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Nhật ký hoạt động - WMS</title>
+    <title><%= pageTitle %> - WMS</title>
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,26 +71,26 @@
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header">
                     <div>
-                        <h2 class="fw-bold text-slate-800 mb-1">Nhật ký hoạt động</h2>
-                        <p class="text-muted small mb-0">Giám sát hoạt động của hệ thống và dấu vết các giao dịch quan trọng</p>
+                        <h2 class="page-title"><%= pageTitle %></h2>
+                        <p class="page-subtitle"><%= pageSubtitle %></p>
                     </div>
                 </div>
 
                 <!-- Filters -->
-                <div class="card shadow-sm border-0 mb-3" style="position: relative; z-index: 20;">
+                <div class="card mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <form id="filterForm" action="audit-log" method="GET" class="row g-2 align-items-end">
                             <div class="col-12 col-md-3">
                                 <label class="form-label small fw-semibold mb-1">Tìm kiếm</label>
                                 <input type="text" name="search" class="form-control form-control-sm" placeholder="Tên đăng nhập, họ tên, chi tiết..." value="<%= search %>">
                             </div>
-                            <div class="col-6 col-md-2">
+                            <div class="col-12 col-md-3">
                                 <label class="form-label small fw-semibold mb-1">Loại hành động</label>
                                 <div class="dropdown" id="actionDropdownWrap">
-                                    <button type="button" id="actionDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal"
-                                            data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem;">
+                                    <button type="button" id="actionDropdownBtn" class="btn btn-outline-secondary dropdown-toggle w-100 text-start fw-normal"
+                                            data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem; padding: 0.25rem 0.75rem; line-height:1.5; height: calc(1.5em + 0.5rem + 2px);">
                                         <span id="actionLabel"><%= actionLabel %></span>
                                     </button>
                                     <ul class="dropdown-menu p-2 shadow-sm" id="actionDropdownMenu" style="min-width:200px; max-height:280px; overflow-y:auto;">
@@ -101,11 +106,28 @@
                                                     String aLabel = a;
                                                     if ("LOGIN".equals(a)) aLabel = "Đăng nhập";
                                                     else if ("LOGOUT".equals(a)) aLabel = "Đăng xuất";
-                                                    else if ("CONFIRM_GRN".equals(a)) aLabel = "Xác nhận nhập kho";
-                                                    else if ("CONFIRM_GIN".equals(a)) aLabel = "Xác nhận xuất kho";
                                                     else if ("CREATE".equals(a)) aLabel = "Tạo mới";
                                                     else if ("UPDATE".equals(a)) aLabel = "Cập nhật";
                                                     else if ("DELETE".equals(a)) aLabel = "Xóa";
+                                                    else if ("CREATE_REQUEST_IN".equals(a)) aLabel = "Tạo yêu cầu nhập kho";
+                                                    else if ("CREATE_REQUEST_OUT".equals(a)) aLabel = "Tạo yêu cầu xuất kho";
+                                                    else if ("APPROVE_REQUEST_IN".equals(a)) aLabel = "Duyệt yêu cầu nhập kho";
+                                                    else if ("APPROVE_REQUEST_OUT".equals(a)) aLabel = "Duyệt yêu cầu xuất kho";
+                                                    else if ("CANCEL_REQUEST".equals(a)) aLabel = "Hủy yêu cầu";
+                                                    else if ("REQUEST_CANCEL_REQUEST".equals(a)) aLabel = "Yêu cầu hủy phiếu";
+                                                    else if ("APPROVE_CANCEL_REQUEST".equals(a)) aLabel = "Duyệt hủy yêu cầu";
+                                                    else if ("REJECT_CANCEL_REQUEST".equals(a)) aLabel = "Từ chối hủy yêu cầu";
+                                                    else if ("CREATE_TICKET_IN".equals(a)) aLabel = "Tạo phiếu nhập kho";
+                                                    else if ("CREATE_TICKET_OUT".equals(a)) aLabel = "Tạo phiếu xuất kho";
+                                                    else if ("CONFIRM_TICKET_IN".equals(a)) aLabel = "Xác nhận phiếu nhập kho";
+                                                    else if ("CONFIRM_TICKET_OUT".equals(a)) aLabel = "Xác nhận phiếu xuất kho";
+                                                    else if ("CONFIRM_GRN".equals(a)) aLabel = "Xác nhận nhập kho";
+                                                    else if ("CONFIRM_GIN".equals(a)) aLabel = "Xác nhận xuất kho";
+                                                    else if ("STOCKTAKE_CREATE".equals(a)) aLabel = "Tạo phiếu kiểm kê";
+                                                    else if ("STOCKTAKE_ADJUST".equals(a)) aLabel = "Điều chỉnh kiểm kê";
+                                                    else if ("STOCKTAKE_CANCEL".equals(a)) aLabel = "Hủy kiểm kê";
+                                                    else if ("STOCKTAKE_REJECT".equals(a)) aLabel = "Từ chối kiểm kê";
+                                                    else if ("STOCKTAKE_CONFIG_UPDATE".equals(a)) aLabel = "Cập nhật ngưỡng duyệt";
                                                 %><%= aLabel %>
                                             </label>
                                         </li>
@@ -140,8 +162,8 @@
                 </div>
 
                 <!-- Logs Table Card -->
-                <div class="card shadow-sm border-0 bg-white">
-                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+                <div class="card">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <span class="fw-bold text-slate-800"><i class="bi bi-list-task me-2 text-primary"></i>Bản ghi nhật ký (<%= totalCount %> bản ghi)</span>
                     </div>
                     <div class="card-body p-0">
@@ -153,7 +175,7 @@
                                         <th>Người dùng</th>
                                         <th>Hành động</th>
                                         <th>Chi tiết</th>
-                                        <th class="pe-4 text-center">Hành động</th>
+                                        <th class="pe-4 text-center">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -186,19 +208,36 @@
                                                 String displayAction = log.getAction();
                                                 if ("LOGIN".equals(displayAction)) displayAction = "Đăng nhập";
                                                 else if ("LOGOUT".equals(displayAction)) displayAction = "Đăng xuất";
-                                                else if ("CONFIRM_GRN".equals(displayAction)) displayAction = "Xác nhận nhập kho";
-                                                else if ("CONFIRM_GIN".equals(displayAction)) displayAction = "Xác nhận xuất kho";
                                                 else if ("CREATE".equals(displayAction)) displayAction = "Tạo mới";
                                                 else if ("UPDATE".equals(displayAction)) displayAction = "Cập nhật";
                                                 else if ("DELETE".equals(displayAction)) displayAction = "Xóa";
+                                                else if ("CREATE_REQUEST_IN".equals(displayAction)) displayAction = "Tạo yêu cầu nhập kho";
+                                                else if ("CREATE_REQUEST_OUT".equals(displayAction)) displayAction = "Tạo yêu cầu xuất kho";
+                                                else if ("APPROVE_REQUEST_IN".equals(displayAction)) displayAction = "Duyệt yêu cầu nhập kho";
+                                                else if ("APPROVE_REQUEST_OUT".equals(displayAction)) displayAction = "Duyệt yêu cầu xuất kho";
+                                                else if ("CANCEL_REQUEST".equals(displayAction)) displayAction = "Hủy yêu cầu";
+                                                else if ("REQUEST_CANCEL_REQUEST".equals(displayAction)) displayAction = "Yêu cầu hủy phiếu";
+                                                else if ("APPROVE_CANCEL_REQUEST".equals(displayAction)) displayAction = "Duyệt hủy yêu cầu";
+                                                else if ("REJECT_CANCEL_REQUEST".equals(displayAction)) displayAction = "Từ chối hủy yêu cầu";
+                                                else if ("CREATE_TICKET_IN".equals(displayAction)) displayAction = "Tạo phiếu nhập kho";
+                                                else if ("CREATE_TICKET_OUT".equals(displayAction)) displayAction = "Tạo phiếu xuất kho";
+                                                else if ("CONFIRM_TICKET_IN".equals(displayAction)) displayAction = "Xác nhận phiếu nhập kho";
+                                                else if ("CONFIRM_TICKET_OUT".equals(displayAction)) displayAction = "Xác nhận phiếu xuất kho";
+                                                else if ("CONFIRM_GRN".equals(displayAction)) displayAction = "Xác nhận nhập kho";
+                                                else if ("CONFIRM_GIN".equals(displayAction)) displayAction = "Xác nhận xuất kho";
+                                                else if ("STOCKTAKE_CREATE".equals(displayAction)) displayAction = "Tạo phiếu kiểm kê";
+                                                else if ("STOCKTAKE_ADJUST".equals(displayAction)) displayAction = "Điều chỉnh kiểm kê";
+                                                else if ("STOCKTAKE_CANCEL".equals(displayAction)) displayAction = "Hủy kiểm kê";
+                                                else if ("STOCKTAKE_REJECT".equals(displayAction)) displayAction = "Từ chối kiểm kê";
+                                                else if ("STOCKTAKE_CONFIG_UPDATE".equals(displayAction)) displayAction = "Cập nhật ngưỡng duyệt";
                                             %><%= displayAction %></span>
                                         </td>
                                         <td class="text-truncate" style="max-width: 400px;"><%= log.getDetails() %></td>
                                         <td class="pe-4 text-center">
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-outline-primary py-1 px-3"
-                                                    onclick="showDetails('<%= sdf.format(log.getCreatedAt()) %>', '<%= log.getUsername() != null ? log.getUsername() + " (" + log.getUserFullName() + ")" : "Hệ thống" %>', '<%= log.getAction() %>', '<%= badgeClass %>', '<%= log.getDetails().replace("'", "\\'") %>')">
-                                                <i class="bi bi-eye"></i> Xem
+                                            <button type="button" title="Xem"
+                                                    class="btn btn-table btn-outline-secondary"
+                                                    onclick="showDetails('<%= sdf.format(log.getCreatedAt()) %>', '<%= log.getUsername() != null ? log.getUsername() + " (" + log.getUserFullName() + ")" : "Hệ thống" %>', '<%= displayAction.replace("'", "\\'") %>', '<%= badgeClass %>', '<%= log.getDetails().replace("'", "\\'") %>')">
+                                                <i class="bi bi-eye"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -207,10 +246,7 @@
                                         } else {
                                     %>
                                     <tr>
-                                        <td colspan="5" class="text-center py-5 text-muted">
-                                            <i class="bi bi-journal-x fs-1 d-block mb-3 text-muted" style="opacity: 0.5;"></i>
-                                            Không tìm thấy nhật ký hoạt động nào phù hợp với bộ lọc.
-                                        </td>
+                                        <td colspan="5" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Không tìm thấy nhật ký hoạt động nào phù hợp với bộ lọc.</p></div></td>
                                     </tr>
                                     <%
                                         }
@@ -296,9 +332,9 @@
     <div class="modal fade" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-                <div class="modal-header bg-dark text-white border-0 py-3">
-                    <h5 class="modal-title fw-bold" id="logDetailsModalLabel"><i class="bi bi-journal-text me-2"></i>Chi tiết nhật ký</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-slate-800" id="logDetailsModalLabel"><i class="bi bi-journal-text me-2 text-primary"></i>Chi tiết nhật ký</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4 bg-white">
                     <div class="mb-3">
