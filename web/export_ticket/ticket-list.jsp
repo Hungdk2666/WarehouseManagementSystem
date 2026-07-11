@@ -82,7 +82,7 @@
                                         <td class="fw-semibold text-primary">#<%= it.getRequestCode() %></td>
                                         <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-building me-1"></i><%= it.getWarehouseName() != null ? it.getWarehouseName() : "-" %></span></td>
                                         <td><%= it.getKeeperFullName() %></td>
-                                        <td class="text-muted small"><%= it.getConfirmedAt() != null ? it.getConfirmedAt().toString().substring(0, 16) : "-" %></td>
+                                        <td class="text-muted small text-nowrap"><%= it.getConfirmedAt() != null ? it.getConfirmedAt().toString().substring(0, 16) : "-" %></td>
                                         <% if (canConfirm) { %>
                                         <td>
                                             <div class="d-flex justify-content-center gap-1">
@@ -102,7 +102,7 @@
                 <% } %>
 
                 <!-- Filters -->
-                <div class="card mb-3" style="position: relative; z-index: 20;">
+                <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
                             <div class="col-12 col-md-3">
@@ -120,7 +120,7 @@
                             <div class="col-6 col-md-2">
                                 <label class="form-label small fw-semibold mb-1">Trạng thái</label>
                                 <div class="dropdown">
-                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal"
+                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal justify-content-between"
                                             data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem;">
                                         <span id="statusLabel">-- Tất cả --</span>
                                     </button>
@@ -218,7 +218,6 @@
                                                     else if ("CUSTOMER_SALE".equals(t.getRequestReason())) out.print("BÁN HÀNG");
                                                     else if ("DISPLAY".equals(t.getRequestReason())) out.print("TRƯNG BÀY");
                                                     else if ("WARRANTY".equals(t.getRequestReason())) out.print("BẢO HÀNH");
-                                                    else if ("DISPOSAL".equals(t.getRequestReason())) out.print("TIÊU HỦY");
                                                     else out.print(t.getRequestReason() != null ? t.getRequestReason() : "-");
                                                 %>
                                             </span>
@@ -228,28 +227,12 @@
                                         <td>
                                             <span class="status-chip <%= statusBadge %>"><%= displayStatus %></span>
                                         </td>
-                                        <td class="text-muted small"><%= t.getCreatedAt() %></td>
+                                        <td class="text-muted small text-nowrap"><%= t.getCreatedAt() %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
                                                 <a href="export-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết" aria-label="Xem chi tiết phiếu xuất">
                                                     <i class="bi bi-eye" aria-hidden="true"></i>
                                                 </a>
-                                                <% if (canConfirm && "DRAFT".equals(t.getStatus())) { %>
-                                                <form action="export-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Xác nhận phiếu này sẽ trừ tồn kho thực tế. Bạn có chắc chắn không?');">
-                                                    <input type="hidden" name="id" value="<%= t.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                        <i class="bi bi-check-circle"></i> Xác nhận
-                                                    </button>
-                                                </form>
-                                                <% } %>
-                                                <% if (canCancel && "DRAFT".equals(t.getStatus())) { %>
-                                                <form action="export-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy Phiếu xuất kho này không?');">
-                                                    <input type="hidden" name="id" value="<%= t.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                        <i class="bi bi-trash"></i> Hủy
-                                                    </button>
-                                                </form>
-                                                <% } %>
                                             </div>
                                         </td>
                                     </tr>
@@ -279,6 +262,7 @@
     </div>
 
     <!-- Client-Side Pagination & Filter Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Col indices: 0=code, 1=reqCode, 2=destination, 3=reason, 4=warehouse, 5=keeper, 6=status, 7=createdAt, 8=actions
         const exportUserWarehouse = '<%= loggedInUser.getWarehouseName() != null ? loggedInUser.getWarehouseName().replace("'", "\\'") : "" %>';

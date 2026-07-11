@@ -68,16 +68,6 @@ public class ExportTicketServlet extends HttpServlet {
                 String s = ticket.getStatus();
                 if (Ticket.STATUS_CONFIRMED.equals(s) || Ticket.STATUS_IN_TRANSIT.equals(s) || Ticket.STATUS_COMPLETED.equals(s)) {
                     httpReq.setAttribute("exportedSerials", itemService.getItemsByTicketId(id));
-                } else if (Ticket.STATUS_DRAFT.equals(s) && ticket.getDetails() != null) {
-                    Map<Integer, List<String>> availableSerials = new HashMap<>();
-                    for (TicketDetail d : ticket.getDetails()) {
-                        String cond = ticket.getRequestedCondition();
-                        List<ProductItem> items = itemService.getInStockItemsByProductId(d.getProductId(), ticket.getWarehouseId(), cond);
-                        List<String> serials = new ArrayList<>();
-                        for (ProductItem it : items) serials.add(it.getSerialNumber());
-                        availableSerials.put(d.getProductId(), serials);
-                    }
-                    httpReq.setAttribute("availableSerials", availableSerials);
                 }
                 httpReq.setAttribute("ticket", ticket);
                 httpReq.getRequestDispatcher("/export_ticket/ticket-detail.jsp").forward(httpReq, response);
@@ -104,6 +94,7 @@ public class ExportTicketServlet extends HttpServlet {
                     Map<Integer, Integer> stockMap = new HashMap<>();
                     Map<Integer, Integer> newStockMap = new HashMap<>();
                     Map<Integer, Integer> usedStockMap = new HashMap<>();
+                    Map<Integer, Integer> damagedStockMap = new HashMap<>();
                     Map<Integer, Integer> totalStockMap = new HashMap<>();
                     if (selectedReq != null && selectedReq.getDetails() != null) {
                         for (RequestDetail d : selectedReq.getDetails()) {
@@ -112,23 +103,41 @@ public class ExportTicketServlet extends HttpServlet {
                                 d.setUnit(p.getUnit());
                                 d.setSku(p.getSku());
                                 boolean isUsed = "USED".equals(selectedReq.getRequestedCondition());
-                                stockMap.put(d.getProductId(), isUsed ? p.getAvailableUsedQty() : p.getAvailableNewQty());
+                                boolean isDamaged = "DAMAGED".equals(selectedReq.getRequestedCondition());
+                                stockMap.put(d.getProductId(), isDamaged ? p.getDamagedQty() : (isUsed ? p.getAvailableUsedQty() : p.getAvailableNewQty()));
                                 newStockMap.put(d.getProductId(), p.getAvailableNewQty());
                                 usedStockMap.put(d.getProductId(), p.getAvailableUsedQty());
-                                totalStockMap.put(d.getProductId(), p.getAvailableQty());
+                                damagedStockMap.put(d.getProductId(), p.getDamagedQty());
+                                totalStockMap.put(d.getProductId(), p.getAvailableQty() + p.getDamagedQty());
                             } else {
                                 stockMap.put(d.getProductId(), 0);
                                 newStockMap.put(d.getProductId(), 0);
                                 usedStockMap.put(d.getProductId(), 0);
+                                damagedStockMap.put(d.getProductId(), 0);
                                 totalStockMap.put(d.getProductId(), 0);
                             }
                         }
                     }
+                    // Danh sách serial khả dụng cho từng sản phẩm — để quét ngay trên màn hình gộp
+                    Map<Integer, List<String>> availableSerials = new HashMap<>();
+                    if (selectedReq != null && selectedReq.getDetails() != null) {
+                        String cond = selectedReq.getRequestedCondition();
+                        for (RequestDetail d : selectedReq.getDetails()) {
+                            List<ProductItem> items = itemService.getInStockItemsByProductId(
+                                    d.getProductId(), selectedReq.getWarehouseId(), cond);
+                            List<String> serials = new ArrayList<>();
+                            for (ProductItem it : items) serials.add(it.getSerialNumber());
+                            availableSerials.put(d.getProductId(), serials);
+                        }
+                    }
+
                     httpReq.setAttribute("selectedReq", selectedReq);
                     httpReq.setAttribute("stockMap", stockMap);
                     httpReq.setAttribute("newStockMap", newStockMap);
                     httpReq.setAttribute("usedStockMap", usedStockMap);
+                    httpReq.setAttribute("damagedStockMap", damagedStockMap);
                     httpReq.setAttribute("totalStockMap", totalStockMap);
+                    httpReq.setAttribute("availableSerials", availableSerials);
                 }
                 httpReq.getRequestDispatcher("/export_ticket/ticket-add.jsp").forward(httpReq, response);
                 break;
@@ -148,14 +157,9 @@ public class ExportTicketServlet extends HttpServlet {
         String action = httpReq.getParameter("action");
         if (action == null) { response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"); return; }
 
-        if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo."); return;
-        }
-        if ("confirm".equals(action) && !loggedInUser.hasPermission("TICKET_CONFIRM_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xác nhận."); return;
-        }
-        if ("cancel".equals(action) && !loggedInUser.hasPermission("TICKET_CANCEL_OUT")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy."); return;
+        if ("addAndConfirm".equals(action)
+                && !(loggedInUser.hasPermission("TICKET_ADD_OUT") && loggedInUser.hasPermission("TICKET_CONFIRM_OUT"))) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo và xuất kho."); return;
         }
 
         TicketService ticketService = new TicketService();
@@ -163,7 +167,8 @@ public class ExportTicketServlet extends HttpServlet {
 
         try {
             switch (action) {
-                case "add": {
+                case "addAndConfirm": {
+                    // GỘP 1 MÀN HÌNH: tạo phiếu + xuất kho (quét serial) trong 1 bước, không để lại phiếu nháp.
                     int reqId = Integer.parseInt(httpReq.getParameter("request_id"));
                     Request selectedReq = requestService.getById(reqId);
                     if (selectedReq == null
@@ -174,7 +179,6 @@ public class ExportTicketServlet extends HttpServlet {
                     }
                     Integer userWh = loggedInUser.getWarehouseId();
                     int sourceWh = selectedReq.getWarehouseId();
-                    // Block khi kho nguồn đang kiểm kê
                     {
                         model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(sourceWh);
                         if (active != null) {
@@ -192,19 +196,11 @@ public class ExportTicketServlet extends HttpServlet {
                     if (productIds == null || productIds.length == 0) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=NoItems"); return;
                     }
-
-                    ProductService pService = new ProductService();
                     List<TicketDetail> details = new ArrayList<>();
                     for (int i = 0; i < productIds.length; i++) {
                         int pId = Integer.parseInt(productIds[i]);
                         int qty = Integer.parseInt(quantities[i]);
                         if (qty <= 0) continue;
-                        Product p = pService.getProductById(pId, sourceWh);
-                        boolean isUsed = "USED".equals(selectedReq.getRequestedCondition());
-                        int avail = (p != null) ? (isUsed ? p.getAvailableUsedQty() : p.getAvailableNewQty()) : 0;
-                        if (p == null || avail < qty) {
-                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=InsufficientStock"); return;
-                        }
                         TicketDetail d = new TicketDetail();
                         d.setProductId(pId);
                         d.setQuantity(qty);
@@ -213,44 +209,24 @@ public class ExportTicketServlet extends HttpServlet {
                     if (details.isEmpty()) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=NoValidItems"); return;
                     }
-                    Ticket ticket = new Ticket();
-                    ticket.setType(Ticket.TYPE_OUT);
-                    ticket.setRequestId(reqId);
-                    ticket.setWarehouseId(sourceWh);
-                    ticket.setKeeperId(loggedInUser.getId());
-                    if (!ticketService.add(ticket, details)) {
-                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=Failed"); return;
-                    }
-                    break;
-                }
-                case "confirm": {
-                    int confirmId = Integer.parseInt(httpReq.getParameter("id"));
-                    // Block khi kho đang kiểm kê
-                    {
-                        Ticket ticketForConfirm = ticketService.getById(confirmId);
-                        if (ticketForConfirm != null) {
-                            model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(ticketForConfirm.getWarehouseId());
-                            if (active != null) {
-                                response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + confirmId
-                                        + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
-                                return;
-                            }
-                        }
-                    }
+
                     String[] scanned = httpReq.getParameterValues("scanned_serials");
                     List<String> serials = new ArrayList<>();
                     if (scanned != null) {
                         for (String s : scanned) if (s != null && !s.trim().isEmpty()) serials.add(s.trim());
                     }
-                    boolean ok = ticketService.confirm(confirmId, loggedInUser.getId(), serials);
+
+                    Ticket ticket = new Ticket();
+                    ticket.setType(Ticket.TYPE_OUT);
+                    ticket.setRequestId(reqId);
+                    ticket.setWarehouseId(sourceWh);
+                    ticket.setKeeperId(loggedInUser.getId());
+                    boolean ok = ticketService.addAndConfirm(ticket, details, serials, loggedInUser.getId(), null);
                     if (!ok) {
-                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + confirmId + "&error=ConfirmFailed"); return;
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=DispatchFailed"); return;
                     }
                     break;
                 }
-                case "cancel":
-                    ticketService.cancel(Integer.parseInt(httpReq.getParameter("id")));
-                    break;
             }
         } catch (Exception e) { e.printStackTrace(); }
 

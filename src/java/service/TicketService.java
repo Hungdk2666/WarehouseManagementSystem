@@ -37,33 +37,18 @@ public class TicketService {
         return dao.getById(arg0);
     }
 
-    public boolean confirm(int arg0, int arg1) {
-        return dao.confirm(arg0, arg1);
-    }
-
-    public boolean confirm(int arg0, int arg1, List<String> arg2) {
-        return dao.confirm(arg0, arg1, arg2);
-    }
-
-    public boolean confirm(int ticketId, int confirmedBy, List<String> serials,
-                           Map<String, List<String>> manufacturerSerialsBySku) {
-        return dao.confirm(ticketId, confirmedBy, serials, manufacturerSerialsBySku);
-    }
-
     public List<Ticket> getByRequestId(int arg0) {
         return dao.getByRequestId(arg0);
     }
 
-    public boolean add(Ticket arg0, List<TicketDetail> arg1) {
-        return dao.add(arg0, arg1);
+    /** Gộp 1 màn hình: tạo phiếu + xác nhận trong 1 giao dịch (không để lại phiếu nháp). */
+    public boolean addAndConfirm(Ticket ticket, List<TicketDetail> details, List<String> serials,
+            int confirmedBy, Map<String, List<String>> manufacturerSerialsBySku) {
+        return dao.addAndConfirm(ticket, details, serials, confirmedBy, manufacturerSerialsBySku);
     }
 
     public List<Ticket> getAll(String arg0) {
         return dao.getAll(arg0);
-    }
-
-    public boolean cancel(int arg0) {
-        return dao.cancel(arg0);
     }
 
 }

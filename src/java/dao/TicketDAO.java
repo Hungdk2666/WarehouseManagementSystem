@@ -198,27 +198,74 @@ public class TicketDAO {
         return list;
     }
 
-    // ============================================================
-    // CREATE (draft)
-    // ============================================================
-    public boolean add(Ticket ticket, List<TicketDetail> details) {
+    /**
+     * Lõi xác nhận phiếu — chạy TRONG một transaction đã mở sẵn (KHÔNG tự commit/rollback).
+     * Được addAndConfirm() (1 màn hình gộp) gọi sau khi đã chèn phiếu DRAFT.
+     * Trả về false nếu có gì sai (caller sẽ rollback).
+     */
+    private boolean doConfirm(int ticketId, int confirmedBy, List<String> serials,
+            java.util.Map<String, java.util.List<String>> manufacturerSerialsBySku, Connection conn) throws Exception {
+        // Lock ticket
+        Ticket ticket = lockTicketForUpdate(ticketId, conn);
+        if (ticket == null || !Ticket.STATUS_DRAFT.equals(ticket.getStatus())) {
+            return false;
+        }
+
+        // Load parent request (lock too)
+        Request req = lockRequestForUpdate(ticket.getRequestId(), conn);
+        if (req == null) {
+            return false;
+        }
+
+        // Request phải đang APPROVED hoặc PARTIALLY_COMPLETED
+        if (!Request.STATUS_APPROVED.equals(req.getStatus())
+                && !Request.STATUS_PARTIALLY_COMPLETED.equals(req.getStatus())) {
+            return false;
+        }
+
+        // Chặn xuất/nhập khi đơn đang có ĐỀ NGHỊ HỦY chờ duyệt — tránh cảnh
+        // sếp duyệt hủy xong mới phát hiện hàng đã rời kho.
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT cancel_requested_at FROM Requests WHERE id = ?")) {
+            ps.setInt(1, req.getId());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getTimestamp("cancel_requested_at") != null) {
+                    return false;
+                }
+            }
+        }
+
+        // Chặn confirm khi kho đang kiểm kê
+        if (new StocktakeDAO().isWarehouseFrozen(ticket.getWarehouseId())) {
+            return false;
+        }
+
+        List<TicketDetail> details = getDetailsByTicketId(ticketId, conn);
+
+        return ticket.isIn()
+                ? processConfirmIn(ticket, req, details, confirmedBy, serials, manufacturerSerialsBySku, conn)
+                : processConfirmOut(ticket, req, details, confirmedBy, serials, conn);
+    }
+
+    /**
+     * GỘP 1 MÀN HÌNH: tạo phiếu (DRAFT) rồi xác nhận ngay trong CÙNG một transaction.
+     * Không để lại phiếu nháp mồ côi: nếu bất kỳ bước nào lỗi, toàn bộ được rollback,
+     * hệ thống không ghi gì vào sổ. Trả về mã lỗi cụ thể qua ConfirmResult.
+     */
+    public boolean addAndConfirm(Ticket ticket, List<TicketDetail> details, List<String> serials,
+            int confirmedBy, java.util.Map<String, java.util.List<String>> manufacturerSerialsBySku) {
         try (Connection conn = DBUtils.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                // Lock parent request
+                // 1) Khóa đơn cha + kiểm tra số lượng không vượt đơn (giống add)
                 try (PreparedStatement psLock = conn.prepareStatement(
                         "SELECT id, type, status FROM Requests WHERE id = ? FOR UPDATE")) {
                     psLock.setInt(1, ticket.getRequestId());
                     try (ResultSet rs = psLock.executeQuery()) {
-                        if (!rs.next()) {
-                            conn.rollback();
-                            return false;
-                        }
+                        if (!rs.next()) { conn.rollback(); return false; }
                         ticket.setType(rs.getString("type"));
                     }
                 }
-
-                // Validate quantity not exceeding requested
                 for (TicketDetail d : details) {
                     int requestedQty = 0, activeQty = 0;
                     try (PreparedStatement ps = conn.prepareStatement(
@@ -232,23 +279,18 @@ public class TicketDAO {
                         ps.setInt(3, ticket.getRequestId());
                         ps.setInt(4, d.getProductId());
                         try (ResultSet rs = ps.executeQuery()) {
-                            if (rs.next()) {
-                                requestedQty = rs.getInt("req_qty");
-                                activeQty = rs.getInt("act_qty");
-                            }
+                            if (rs.next()) { requestedQty = rs.getInt("req_qty"); activeQty = rs.getInt("act_qty"); }
                         }
                     }
-                    if (activeQty + d.getQuantity() > requestedQty) {
-                        conn.rollback();
-                        return false;
-                    }
+                    if (activeQty + d.getQuantity() > requestedQty) { conn.rollback(); return false; }
                 }
 
+                // 2) Chèn phiếu (DRAFT) + chi tiết
                 String code = generateUniqueCode(ticket.getType(), conn);
                 int newId;
-                String insT = "INSERT INTO Tickets (ticket_code, type, request_id, warehouse_id, keeper_id, status) "
-                        + "VALUES (?, ?, ?, ?, ?, 'DRAFT')";
-                try (PreparedStatement ps = conn.prepareStatement(insT, Statement.RETURN_GENERATED_KEYS)) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO Tickets (ticket_code, type, request_id, warehouse_id, keeper_id, status) "
+                                + "VALUES (?, ?, ?, ?, ?, 'DRAFT')", Statement.RETURN_GENERATED_KEYS)) {
                     ps.setString(1, code);
                     ps.setString(2, ticket.getType());
                     ps.setInt(3, ticket.getRequestId());
@@ -256,118 +298,28 @@ public class TicketDAO {
                     ps.setInt(5, ticket.getKeeperId());
                     ps.executeUpdate();
                     try (ResultSet keys = ps.getGeneratedKeys()) {
-                        if (!keys.next()) {
-                            conn.rollback();
-                            return false;
-                        }
+                        if (!keys.next()) { conn.rollback(); return false; }
                         newId = keys.getInt(1);
                         ticket.setId(newId);
                         ticket.setTicketCode(code);
                     }
                 }
-
-                String insD = "INSERT INTO Ticket_Details (ticket_id, product_id, quantity, unit_cost) "
-                        + "VALUES (?, ?, ?, ?)";
-                try (PreparedStatement ps = conn.prepareStatement(insD)) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO Ticket_Details (ticket_id, product_id, quantity, unit_cost) VALUES (?, ?, ?, ?)")) {
                     for (TicketDetail d : details) {
                         ps.setInt(1, newId);
                         ps.setInt(2, d.getProductId());
                         ps.setInt(3, d.getQuantity());
-                        if (d.getUnitCost() != null)
-                            ps.setBigDecimal(4, d.getUnitCost());
-                        else
-                            ps.setBigDecimal(4, java.math.BigDecimal.ZERO);
+                        ps.setBigDecimal(4, d.getUnitCost() != null ? d.getUnitCost() : java.math.BigDecimal.ZERO);
                         ps.addBatch();
                     }
                     ps.executeBatch();
                 }
 
-                auditLogDAO.log(ticket.getKeeperId(),
-                        ticket.isIn() ? "CREATE_TICKET_IN" : "CREATE_TICKET_OUT",
-                        "Phiếu " + code);
-                conn.commit();
-                return true;
-            } catch (Exception ex) {
-                conn.rollback();
-                ex.printStackTrace();
-                return false;
-            } finally {
-                conn.setAutoCommit(true);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
+                // 3) Xác nhận ngay trong cùng transaction
+                boolean ok = doConfirm(newId, confirmedBy, serials, manufacturerSerialsBySku, conn);
+                if (!ok) { conn.rollback(); return false; }
 
-    // ============================================================
-    // CANCEL (draft only)
-    // ============================================================
-    public boolean cancel(int ticketId) {
-        try (Connection conn = DBUtils.getConnection();
-                PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE Tickets SET status='CANCELLED' WHERE id = ? AND status = 'DRAFT'")) {
-            ps.setInt(1, ticketId);
-            return ps.executeUpdate() > 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    // ============================================================
-    // CONFIRM
-    // ============================================================
-    public boolean confirm(int ticketId, int confirmedBy) {
-        return confirm(ticketId, confirmedBy, null, null);
-    }
-
-    public boolean confirm(int ticketId, int confirmedBy, List<String> serials) {
-        return confirm(ticketId, confirmedBy, serials, null);
-    }
-
-    public boolean confirm(int ticketId, int confirmedBy, List<String> serials,
-                           java.util.Map<String, java.util.List<String>> manufacturerSerialsBySku) {
-        try (Connection conn = DBUtils.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                // Lock ticket
-                Ticket ticket = lockTicketForUpdate(ticketId, conn);
-                if (ticket == null || !Ticket.STATUS_DRAFT.equals(ticket.getStatus())) {
-                    conn.rollback();
-                    return false;
-                }
-
-                // Load parent request (lock too)
-                Request req = lockRequestForUpdate(ticket.getRequestId(), conn);
-                if (req == null) {
-                    conn.rollback();
-                    return false;
-                }
-
-                // Request phải đang APPROVED hoặc PARTIALLY_COMPLETED
-                if (!Request.STATUS_APPROVED.equals(req.getStatus())
-                        && !Request.STATUS_PARTIALLY_COMPLETED.equals(req.getStatus())) {
-                    conn.rollback();
-                    return false;
-                }
-
-                // Chặn confirm khi kho đang kiểm kê
-                if (new StocktakeDAO().isWarehouseFrozen(ticket.getWarehouseId())) {
-                    conn.rollback();
-                    return false;
-                }
-
-                List<TicketDetail> details = getDetailsByTicketId(ticketId, conn);
-
-                boolean ok = ticket.isIn()
-                        ? processConfirmIn(ticket, req, details, confirmedBy, serials, manufacturerSerialsBySku, conn)
-                        : processConfirmOut(ticket, req, details, confirmedBy, serials, conn);
-
-                if (!ok) {
-                    conn.rollback();
-                    return false;
-                }
                 conn.commit();
                 return true;
             } catch (Exception ex) {
@@ -614,19 +566,35 @@ public class TicketDAO {
         // Update parent request status
         rollupRequestStatus(req, conn);
 
-        // Nếu IN-TRANSFER: đánh dấu Ticket OUT đối ứng → COMPLETED
+        // Nếu IN-TRANSFER: CHỈ đánh dấu Ticket OUT đối ứng + Request OUT gốc → COMPLETED
+        // khi KHÔNG CÒN món nào của phiếu OUT đó còn đang trên đường (status IN_TRANSIT).
+        // Nếu mới nhận một phần thì giữ nguyên IN_TRANSIT để hàng còn lại vẫn hiện trong
+        // danh sách "hàng đang đến", không bị bỏ quên.
         if (Request.REASON_TRANSFER.equals(req.getReason()) && req.getRefTicketId() != null) {
+            int stillInTransit = 0;
             try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE Tickets SET status = 'COMPLETED' WHERE id = ? AND status = 'IN_TRANSIT'")) {
+                    "SELECT COUNT(*) FROM Product_Items pi "
+                            + "JOIN Product_Item_Movements m ON m.product_item_id = pi.id "
+                            + "WHERE m.ticket_id = ? AND m.action = 'TRANSFER_OUT' "
+                            + "  AND pi.status = 'IN_TRANSIT'")) {
                 ps.setInt(1, req.getRefTicketId());
-                ps.executeUpdate();
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) stillInTransit = rs.getInt(1);
+                }
             }
-            // Đánh dấu Request OUT gốc → COMPLETED nếu chưa
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE Requests r JOIN Tickets t ON t.request_id = r.id "
-                            + "SET r.status = 'COMPLETED' WHERE t.id = ?")) {
-                ps.setInt(1, req.getRefTicketId());
-                ps.executeUpdate();
+            if (stillInTransit == 0) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE Tickets SET status = 'COMPLETED' WHERE id = ? AND status = 'IN_TRANSIT'")) {
+                    ps.setInt(1, req.getRefTicketId());
+                    ps.executeUpdate();
+                }
+                // Đánh dấu Request OUT gốc → COMPLETED
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE Requests r JOIN Tickets t ON t.request_id = r.id "
+                                + "SET r.status = 'COMPLETED' WHERE t.id = ?")) {
+                    ps.setInt(1, req.getRefTicketId());
+                    ps.executeUpdate();
+                }
             }
         }
 
@@ -648,14 +616,10 @@ public class TicketDAO {
     private boolean processConfirmOut(Ticket ticket, Request req, List<TicketDetail> details,
             int confirmedBy, List<String> serials, Connection conn) throws Exception {
 
-        // Defensive guard: DISPOSAL đã chuyển sang module /warehouse/disposal.
-        // Chặn tuyệt đối bất kỳ ticket cũ nào không được confirm qua luồng xuất kho thường
-        // (luồng cũ rút hàng tốt thay vì hàng QUARANTINE → bug tồn kho).
-        if (Request.REASON_DISPOSAL.equals(req.getReason())) {
-            return false;
-        }
-
         boolean isTransfer = Request.REASON_TRANSFER.equals(req.getReason());
+        String requestedCondition = req.getRequestedCondition() == null ? "NEW" : req.getRequestedCondition();
+        boolean isDamaged = "DAMAGED".equals(requestedCondition);
+        String sourceItemStatus = isDamaged ? "QUARANTINE" : "IN_STOCK";
 
         // Auto-pick serials nếu caller không cung cấp (test compat)
         if (serials == null) {
@@ -663,13 +627,14 @@ public class TicketDAO {
             for (TicketDetail d : details) {
                 try (PreparedStatement ps = conn.prepareStatement(
                         "SELECT serial_number FROM Product_Items "
-                                + "WHERE product_id = ? AND warehouse_id = ? AND status = 'IN_STOCK' "
+                                + "WHERE product_id = ? AND warehouse_id = ? AND status = ? "
                                 + "  AND item_condition = ? "
                                 + "ORDER BY id LIMIT ?")) {
                     ps.setInt(1, d.getProductId());
                     ps.setInt(2, ticket.getWarehouseId());
-                    ps.setString(3, req.getRequestedCondition() == null ? "NEW" : req.getRequestedCondition());
-                    ps.setInt(4, d.getQuantity());
+                    ps.setString(3, sourceItemStatus);
+                    ps.setString(4, requestedCondition);
+                    ps.setInt(5, d.getQuantity());
                     try (ResultSet rs = ps.executeQuery()) {
                         while (rs.next())
                             serials.add(rs.getString(1));
@@ -694,11 +659,12 @@ public class TicketDAO {
             for (String s : deduped) {
                 try (PreparedStatement ps = conn.prepareStatement(
                         "SELECT COUNT(*) FROM Product_Items WHERE serial_number = ? AND product_id = ? "
-                                + "AND status = 'IN_STOCK' AND warehouse_id = ? AND item_condition = ?")) {
+                                + "AND status = ? AND warehouse_id = ? AND item_condition = ?")) {
                     ps.setString(1, s);
                     ps.setInt(2, productId);
-                    ps.setInt(3, ticket.getWarehouseId());
-                    ps.setString(4, req.getRequestedCondition() == null ? "NEW" : req.getRequestedCondition());
+                    ps.setString(3, sourceItemStatus);
+                    ps.setInt(4, ticket.getWarehouseId());
+                    ps.setString(5, requestedCondition);
                     try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next() && rs.getInt(1) > 0)
                             productSerials.add(s);
@@ -722,7 +688,7 @@ public class TicketDAO {
                     }
                 }
             }
-            if (currentQty < issueQty)
+            if (isDamaged ? currentQuarantineQty < issueQty : currentQty < issueQty)
                 return false;
 
             // Snapshot avg cost
@@ -735,12 +701,14 @@ public class TicketDAO {
                 }
             }
 
-            int newQty = currentQty - issueQty;
+            int newQty = isDamaged ? currentQty : currentQty - issueQty;
+            int newQuarantineQty = isDamaged ? currentQuarantineQty - issueQty : currentQuarantineQty;
             try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE Inventories SET quantity = ? WHERE product_id = ? AND warehouse_id = ?")) {
+                    "UPDATE Inventories SET quantity = ?, quarantine_quantity = ? WHERE product_id = ? AND warehouse_id = ?")) {
                 ps.setInt(1, newQty);
-                ps.setInt(2, productId);
-                ps.setInt(3, ticket.getWarehouseId());
+                ps.setInt(2, newQuarantineQty);
+                ps.setInt(3, productId);
+                ps.setInt(4, ticket.getWarehouseId());
                 ps.executeUpdate();
             }
 
@@ -785,7 +753,7 @@ public class TicketDAO {
             }
 
             // Ledger
-            int newTotalPhysicalQty = newQty + currentQuarantineQty;
+            int newTotalPhysicalQty = newQty + newQuarantineQty;
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO Product_Ledger (product_id, transaction_type, reference_id, change_quantity, balance_quantity, created_by, warehouse_id) "
                             + "VALUES (?, ?, ?, ?, ?, ?, ?)")) {

@@ -1,5 +1,6 @@
 ﻿<%@page import="model.Request"%>
 <%@page import="model.RequestDetail"%>
+<%@page import="java.util.Map"%>
 <%@page import="java.util.List"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -70,8 +71,14 @@
                         <i class="bi bi-exclamation-triangle-fill me-2"></i> Không đủ tồn kho khả dụng cho một hoặc nhiều sản phẩm.
                     <% } else if ("RequiresWarehouseAssignment".equals(error)) { %>
                         <i class="bi bi-building-fill me-2"></i> Tài khoản của bạn chưa được gán kho. Liên hệ quản trị viên để gán kho trước khi tạo phiếu xuất.
+                    <% } else if ("DispatchFailed".equals(error)) { %>
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Xuất kho thất bại: mã serial vừa quét có thể đã được xuất ở phiếu khác, hoặc đơn vừa bị đổi trạng thái. Vui lòng tải lại trang và quét lại.
+                    <% } else if ("RequestNotApproved".equals(error)) { %>
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Yêu cầu này chưa được duyệt hoặc đang chờ hủy, không thể xuất kho.
+                    <% } else if ("WrongWarehouse".equals(error)) { %>
+                        <i class="bi bi-building-fill me-2"></i> Bạn chỉ được xuất kho cho yêu cầu thuộc kho của mình.
                     <% } else { %>
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Tạo Phiếu xuất kho thất bại. Mã lỗi: <%= error %>. Vui lòng thử lại.
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Thao tác thất bại. Mã lỗi: <%= error %>. Vui lòng thử lại.
                     <% } %>
                 </div>
                 <% } %>
@@ -119,8 +126,9 @@
                 </div>
 
                 <% if (selectedReq != null) { %>
-                <form action="export-ticket?action=add" method="POST" id="ginForm">
+                <form action="export-ticket?action=addAndConfirm" method="POST" id="ginForm">
                     <input type="hidden" name="request_id" value="<%= selectedReq.getId() %>">
+                    <div id="hidden-serials-container"></div>
                     
                     <div class="card bg-white mb-4">
                         <div class="card-header bg-transparent py-3 border-bottom">
@@ -145,6 +153,10 @@
                                             <i class="bi bi-info-circle text-muted" title="Số lượng khả dụng hàng CŨ" data-bs-toggle="tooltip"></i>
                                         </th>
                                         <th>
+                                            Tồn hỏng
+                                            <i class="bi bi-info-circle text-muted" title="Số lượng hàng hỏng đang cách ly" data-bs-toggle="tooltip"></i>
+                                        </th>
+                                        <th>
                                             Tổng khả dụng
                                             <i class="bi bi-info-circle text-muted" title="Tổng số lượng khả dụng tại kho của bạn" data-bs-toggle="tooltip"></i>
                                         </th>
@@ -156,6 +168,7 @@
                                         java.util.Map<Integer, Integer> stockMap = (java.util.Map<Integer, Integer>) request.getAttribute("stockMap");
                                         java.util.Map<Integer, Integer> newStockMap = (java.util.Map<Integer, Integer>) request.getAttribute("newStockMap");
                                         java.util.Map<Integer, Integer> usedStockMap = (java.util.Map<Integer, Integer>) request.getAttribute("usedStockMap");
+                                        java.util.Map<Integer, Integer> damagedStockMap = (java.util.Map<Integer, Integer>) request.getAttribute("damagedStockMap");
                                         java.util.Map<Integer, Integer> totalStockMap = (java.util.Map<Integer, Integer>) request.getAttribute("totalStockMap");
                                         String reqCond = selectedReq.getRequestedCondition() != null ? selectedReq.getRequestedCondition() : "NEW";
                                         
@@ -181,9 +194,11 @@
                                         <% 
                                             int newStock = (newStockMap != null && newStockMap.containsKey(d.getProductId())) ? newStockMap.get(d.getProductId()) : 0;
                                             int usedStock = (usedStockMap != null && usedStockMap.containsKey(d.getProductId())) ? usedStockMap.get(d.getProductId()) : 0;
+                                            int damagedStock = (damagedStockMap != null && damagedStockMap.containsKey(d.getProductId())) ? damagedStockMap.get(d.getProductId()) : 0;
                                             int totalStock = (totalStockMap != null && totalStockMap.containsKey(d.getProductId())) ? totalStockMap.get(d.getProductId()) : 0;
                                             boolean isNewRequested = "NEW".equals(reqCond);
                                             boolean isUsedRequested = "USED".equals(reqCond);
+                                            boolean isDamagedRequested = "DAMAGED".equals(reqCond);
                                         %>
                                         <td class="fw-semibold <%= isNewRequested ? (stock < remaining ? "text-danger bg-light" : "text-primary bg-light") : "text-muted" %>">
                                             <%= newStock %>
@@ -195,6 +210,12 @@
                                             <%= usedStock %>
                                             <% if (isUsedRequested && stock < remaining) { %>
                                             <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="Không đủ hàng USED tại kho này" data-bs-toggle="tooltip"></i>
+                                            <% } %>
+                                        </td>
+                                        <td class="fw-semibold <%= isDamagedRequested ? (stock < remaining ? "text-danger bg-light" : "text-primary bg-light") : "text-muted" %>">
+                                            <%= damagedStock %>
+                                            <% if (isDamagedRequested && stock < remaining) { %>
+                                            <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="Không đủ hàng hỏng tại kho này" data-bs-toggle="tooltip"></i>
                                             <% } %>
                                         </td>
                                         <td class="fw-bold text-dark">
@@ -210,6 +231,8 @@
                                                    data-remaining="<%= remaining %>"
                                                    data-stock="<%= stock %>"
                                                    data-pname="<%= d.getProductName() %>"
+                                                   data-pid="<%= d.getProductId() %>"
+                                                   data-sku="<%= d.getSku() %>"
                                                    onkeydown="if(!/^[0-9]$/.test(event.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'].includes(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();"
                                                    required 
                                                    style="box-shadow: none;">
@@ -222,9 +245,40 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0" id="step1Footer">
+                            <a href="export-ticket?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-x-circle me-1"></i> Hủy</a>
+                            <button type="button" id="toScanBtn" class="btn btn-primary px-4" onclick="lockAndBuildScan()">
+                                <i class="bi bi-arrow-right-circle me-1"></i> Tiếp tục: quét mã serial
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BƯỚC 2: Quét serial rồi xuất kho (hiện sau khi bấm "Tiếp tục") -->
+                    <div class="card bg-white mb-4 d-none" id="scanCard">
+                        <div class="card-header bg-warning bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-barcode me-2"></i>Quét mã serial hàng xuất</h5>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="backToQty()">
+                                <i class="bi bi-arrow-left me-1"></i> Sửa số lượng
+                            </button>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <label for="barcode-scanner-input" class="form-label fw-semibold text-slate-700">Quét mã serial (máy quét hoặc nhập tay rồi Enter):</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-upc-scan"></i></span>
+                                    <input type="text" id="barcode-scanner-input" class="form-control form-control-lg border-warning" placeholder="Đặt con trỏ tại đây và quét mã..." autocomplete="off">
+                                </div>
+                                <div id="scan-status-alert" class="alert d-none mt-2 px-3 py-2" role="alert"></div>
+                            </div>
+                            <hr class="my-4">
+                            <h6 class="fw-bold text-slate-800 mb-3"><i class="bi bi-list-task me-1"></i>Tiến độ quét:</h6>
+                            <div class="row g-3" id="scanPanels"></div>
+                        </div>
                         <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0">
                             <a href="export-ticket?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-x-circle me-1"></i> Hủy</a>
-                            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle-fill me-1"></i> Lưu nháp Phiếu xuất kho</button>
+                            <button type="submit" id="confirm-submit-btn" class="btn btn-secondary px-4" disabled>
+                                <i class="bi bi-box-arrow-right me-1"></i> Xuất kho
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -262,51 +316,213 @@
         }
 
         <% if (selectedReq != null) { %>
+        // Danh sách serial khả dụng theo từng sản phẩm (nạp từ server)
+        const availableSerials = {
+            <%
+            Map<Integer, List<String>> avMap = (Map<Integer, List<String>>) request.getAttribute("availableSerials");
+            if (avMap != null) {
+                for (Map.Entry<Integer, List<String>> entry : avMap.entrySet()) {
+            %>
+            <%= entry.getKey() %>: [
+                <% for (String s : entry.getValue()) { %>"<%= s %>",<% } %>
+            ],
+            <%
+                }
+            }
+            %>
+        };
+
+        const scannedSerials = {};              // { productId: [serial,...] }
+        const allScannedSerialsGlobal = new Set();
+        let requiredByProduct = {};             // { productId: soLuongCanQuet } — chốt ở bước 1
+
         document.addEventListener("DOMContentLoaded", function() {
-            const qtyInputs = document.querySelectorAll(".qty-input");
-            qtyInputs.forEach(input => input.addEventListener("input", function() {
+            // Kẹp số lượng nhập trong khoảng cho phép
+            document.querySelectorAll(".qty-input").forEach(input => input.addEventListener("input", function() {
                 if (this.value !== "") {
                     let val = parseInt(this.value);
                     let max = parseInt(this.getAttribute("max"));
-                    if (!isNaN(val) && !isNaN(max) && val > max) {
-                        this.value = max;
-                    }
+                    if (!isNaN(val) && !isNaN(max) && val > max) this.value = max;
                 }
             }));
         });
 
-        document.getElementById("ginForm").addEventListener("submit", function(e) {
+        // BƯỚC 1 -> 2: kiểm tra số lượng, dựng panel quét theo số lượng vừa nhập
+        function lockAndBuildScan() {
             const qtyInputs = document.querySelectorAll(".qty-input");
             let totalQty = 0;
-            let validationFailed = false;
-
-            qtyInputs.forEach(input => {
+            for (const input of qtyInputs) {
                 const qty = parseInt(input.value) || 0;
-                totalQty += qty;
-                
                 const remaining = parseInt(input.getAttribute("data-remaining")) || 0;
                 const stock = parseInt(input.getAttribute("data-stock")) || 0;
                 const pname = input.getAttribute("data-pname") || "Sản phẩm";
+                if (qty > remaining) { alert("Sản phẩm '" + pname + "': số lượng xuất (" + qty + ") vượt quá số còn lại của yêu cầu (" + remaining + ")."); return; }
+                if (qty > stock) { alert("Sản phẩm '" + pname + "': số lượng xuất (" + qty + ") vượt quá tồn kho khả dụng (" + stock + ")."); return; }
+                totalQty += qty;
+            }
+            if (totalQty <= 0) { alert("Bạn phải chọn xuất ít nhất 1 sản phẩm (số lượng > 0)."); return; }
 
-                if (qty > remaining) {
-                    alert("Lỗi: Đối với sản phẩm '" + pname + "', số lượng thực xuất (" + qty + ") không được vượt quá số lượng yêu cầu còn lại (" + remaining + ").");
-                    validationFailed = true;
-                }
-                
-                if (qty > stock) {
-                    alert("Lỗi: Đối với sản phẩm '" + pname + "', số lượng thực xuất (" + qty + ") không được vượt quá lượng tồn kho thực tế khả dụng (" + stock + ").");
-                    validationFailed = true;
-                }
+            // Dựng panel quét cho các sản phẩm có số lượng > 0
+            requiredByProduct = {};
+            for (const k in scannedSerials) delete scannedSerials[k];
+            allScannedSerialsGlobal.clear();
+            const panels = document.getElementById("scanPanels");
+            panels.innerHTML = "";
+            document.getElementById("hidden-serials-container").innerHTML = "";
+
+            qtyInputs.forEach(input => {
+                const qty = parseInt(input.value) || 0;
+                if (qty <= 0) return;
+                const pid = input.getAttribute("data-pid");
+                const pname = input.getAttribute("data-pname") || "Sản phẩm";
+                const sku = input.getAttribute("data-sku") || "";
+                requiredByProduct[pid] = qty;
+                scannedSerials[pid] = [];
+                const col = document.createElement("div");
+                col.className = "col-md-6";
+                col.innerHTML =
+                    '<div class="border rounded p-3 bg-light" id="prod-panel-' + pid + '">' +
+                      '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                        '<span class="fw-semibold text-slate-800 small text-truncate" style="max-width:70%;" title="' + pname + '">' + pname + '</span>' +
+                        '<span class="badge bg-secondary bg-opacity-10 text-secondary">' + sku + '</span>' +
+                      '</div>' +
+                      '<div class="d-flex justify-content-between align-items-center border-top pt-2">' +
+                        '<span class="text-muted small">Cần xuất: <strong>' + qty + '</strong></span>' +
+                        '<span class="small font-monospace fw-bold scan-progress-text" id="progress-' + pid + '" data-required="' + qty + '">Đã quét: <span class="scanned-count text-danger">0</span>/' + qty + '</span>' +
+                      '</div>' +
+                      '<div class="mt-2 border-top pt-2" style="max-height:120px;overflow-y:auto;">' +
+                        '<ul class="list-group list-group-flush small" id="list-' + pid + '">' +
+                          '<li class="list-group-item bg-transparent text-muted text-center py-1 no-serials-msg">Chưa quét mã nào</li>' +
+                        '</ul>' +
+                      '</div>' +
+                    '</div>';
+                panels.appendChild(col);
             });
 
-            if (validationFailed) {
-                e.preventDefault();
-                return;
-            }
+            document.getElementById("step1Footer").classList.add("d-none");
+            document.getElementById("scanCard").classList.remove("d-none");
+            // Khóa ô số lượng (readonly vẫn gửi lên server, khác disabled)
+            qtyInputs.forEach(input => input.setAttribute("readonly", "readonly"));
+            checkOverallCompletion();
+            const si = document.getElementById("barcode-scanner-input");
+            si.focus();
+        }
 
-            if (totalQty <= 0) {
-                e.preventDefault();
-                alert("Bạn phải chọn xuất ít nhất 1 sản phẩm (số lượng > 0) để lưu Phiếu xuất kho.");
+        function backToQty() {
+            document.getElementById("scanCard").classList.add("d-none");
+            document.getElementById("step1Footer").classList.remove("d-none");
+            document.querySelectorAll(".qty-input").forEach(input => input.removeAttribute("readonly"));
+        }
+
+        function playBeep(isSuccess) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                if (isSuccess) { osc.type='sine'; osc.frequency.setValueAtTime(800, ctx.currentTime); gain.gain.setValueAtTime(0.08, ctx.currentTime); osc.start(); ctx.resume(); setTimeout(()=>{osc.stop();ctx.close();},80); }
+                else { osc.type='sawtooth'; osc.frequency.setValueAtTime(140, ctx.currentTime); gain.gain.setValueAtTime(0.12, ctx.currentTime); osc.start(); ctx.resume(); setTimeout(()=>{osc.stop();ctx.close();},350); }
+            } catch(e) {}
+        }
+
+        function showScanAlert(message, type) {
+            const box = document.getElementById("scan-status-alert");
+            box.className = "alert mt-2 px-3 py-2 " + (type === "success" ? "alert-success" : "alert-danger");
+            box.innerHTML = (type === "success" ? '<i class="bi bi-check-circle-fill me-1"></i>' : '<i class="bi bi-exclamation-triangle-fill me-1"></i>') + message;
+            box.classList.remove("d-none");
+        }
+
+        function processScan(serial) {
+            serial = serial.trim();
+            if (!serial) return;
+            if (allScannedSerialsGlobal.has(serial)) { playBeep(false); showScanAlert("Mã <strong>" + serial + "</strong> đã quét trong phiên này!", "danger"); return; }
+            let foundPid = null;
+            for (const pid in requiredByProduct) {
+                if (availableSerials[pid] && availableSerials[pid].includes(serial)) { foundPid = pid; break; }
+            }
+            if (!foundPid) { playBeep(false); showScanAlert("Mã <strong>" + serial + "</strong> không thuộc sản phẩm nào đang xuất (hoặc không có trong kho).", "danger"); return; }
+            const required = requiredByProduct[foundPid];
+            if (scannedSerials[foundPid].length >= required) { playBeep(false); showScanAlert("Sản phẩm này đã quét đủ số lượng!", "danger"); return; }
+
+            scannedSerials[foundPid].push(serial);
+            allScannedSerialsGlobal.add(serial);
+            playBeep(true);
+            showScanAlert("Đã quét: <strong>" + serial + "</strong>", "success");
+
+            const listEl = document.getElementById("list-" + foundPid);
+            const noMsg = listEl.querySelector(".no-serials-msg"); if (noMsg) noMsg.remove();
+            const li = document.createElement("li");
+            li.className = "list-group-item bg-transparent py-1 px-0 d-flex justify-content-between align-items-center text-slate-700 font-monospace";
+            li.id = "li-" + serial.replace(/[^a-zA-Z0-9]/g, "-");
+            li.innerHTML = '<span><i class="bi bi-check-lg text-success me-1"></i>' + serial + '</span>' +
+                           '<button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" onclick="removeSerial(\'' + foundPid + '\', \'' + serial + '\')"><i class="bi bi-trash"></i></button>';
+            listEl.appendChild(li);
+
+            const c = document.getElementById("hidden-serials-container");
+            const hi = document.createElement("input");
+            hi.type = "hidden"; hi.name = "scanned_serials"; hi.value = serial;
+            hi.id = "hidden-input-" + serial.replace(/[^a-zA-Z0-9]/g, "-");
+            c.appendChild(hi);
+
+            updateProgress(foundPid);
+            checkOverallCompletion();
+        }
+
+        window.removeSerial = function(productId, serial) {
+            if (!scannedSerials[productId]) return;
+            const idx = scannedSerials[productId].indexOf(serial);
+            if (idx > -1) {
+                scannedSerials[productId].splice(idx, 1);
+                allScannedSerialsGlobal.delete(serial);
+                const li = document.getElementById("li-" + serial.replace(/[^a-zA-Z0-9]/g, "-")); if (li) li.remove();
+                const hi = document.getElementById("hidden-input-" + serial.replace(/[^a-zA-Z0-9]/g, "-")); if (hi) hi.remove();
+                const listEl = document.getElementById("list-" + productId);
+                if (scannedSerials[productId].length === 0) listEl.innerHTML = '<li class="list-group-item bg-transparent text-muted text-center py-1 no-serials-msg">Chưa quét mã nào</li>';
+                updateProgress(productId);
+                checkOverallCompletion();
+            }
+        };
+
+        function updateProgress(productId) {
+            const progressEl = document.getElementById("progress-" + productId);
+            const required = parseInt(progressEl.getAttribute("data-required"));
+            const cur = scannedSerials[productId] ? scannedSerials[productId].length : 0;
+            const countEl = progressEl.querySelector(".scanned-count");
+            countEl.textContent = cur;
+            const panel = document.getElementById("prod-panel-" + productId);
+            if (cur === required) { countEl.className = "scanned-count text-success"; panel.className = "border rounded p-3 bg-light border-success"; }
+            else { countEl.className = "scanned-count text-danger"; panel.className = "border rounded p-3 bg-light"; }
+        }
+
+        function checkOverallCompletion() {
+            let allDone = true, totalRequired = 0, totalScanned = 0;
+            for (const pid in requiredByProduct) {
+                const req = requiredByProduct[pid];
+                const scan = scannedSerials[pid] ? scannedSerials[pid].length : 0;
+                totalRequired += req; totalScanned += scan;
+                if (scan < req) allDone = false;
+            }
+            const btn = document.getElementById("confirm-submit-btn");
+            if (btn) {
+                if (allDone && totalScanned === totalRequired && totalRequired > 0) { btn.removeAttribute("disabled"); btn.className = "btn btn-success px-4"; }
+                else { btn.setAttribute("disabled", "true"); btn.className = "btn btn-secondary px-4"; }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const si = document.getElementById("barcode-scanner-input");
+            if (si) {
+                si.addEventListener("keypress", function(e) {
+                    if (e.key === 'Enter') { e.preventDefault(); const v = this.value.trim(); if (v) processScan(v); this.value=""; this.focus(); }
+                });
+            }
+            const form = document.getElementById("ginForm");
+            if (form) {
+                form.addEventListener("submit", function(e) {
+                    // Chỉ cho submit khi đã quét đủ (nút đã bật). Hỏi xác nhận lần cuối.
+                    if (!confirm("Xác nhận XUẤT KHO các sản phẩm vừa quét? Hàng sẽ bị trừ khỏi tồn kho ngay.")) {
+                        e.preventDefault();
+                    }
+                });
             }
         });
         <% } %>
