@@ -96,13 +96,14 @@ public class ProductItemDAO {
 
     public List<ProductItem> getInStockItemsByProductId(int productId, Integer warehouseId, String itemCondition) {
         List<ProductItem> list = new ArrayList<>();
+        String itemStatus = "DAMAGED".equals(itemCondition) ? "QUARANTINE" : "IN_STOCK";
         String query;
         if (warehouseId != null) {
             query = "SELECT i.*, p.product_name, p.sku, p.unit, w.warehouse_name "
                   + "FROM Product_Items i "
                   + "JOIN Products p ON i.product_id = p.id "
                   + "LEFT JOIN Warehouses w ON i.warehouse_id = w.id "
-                  + "WHERE i.product_id = ? AND i.status = 'IN_STOCK' AND i.warehouse_id = ? "
+                  + "WHERE i.product_id = ? AND i.status = ? AND i.warehouse_id = ? "
                   + (itemCondition != null ? "AND i.item_condition = ? " : "")
                   + "ORDER BY i.id ASC";
         } else {
@@ -110,14 +111,15 @@ public class ProductItemDAO {
                   + "FROM Product_Items i "
                   + "JOIN Products p ON i.product_id = p.id "
                   + "LEFT JOIN Warehouses w ON i.warehouse_id = w.id "
-                  + "WHERE i.product_id = ? AND i.status = 'IN_STOCK' "
+                  + "WHERE i.product_id = ? AND i.status = ? "
                   + (itemCondition != null ? "AND i.item_condition = ? " : "")
                   + "ORDER BY i.id ASC";
         }
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setInt(1, productId);
-            int paramIndex = 2;
+            ps.setString(2, itemStatus);
+            int paramIndex = 3;
             if (warehouseId != null) {
                 ps.setInt(paramIndex++, warehouseId);
             }

@@ -71,18 +71,6 @@
                                                 <option value="WARRANTY">WARRANTY — Bảo hành / sửa chữa</option>
                                                 <option value="OTHER">OTHER — Lý do khác</option>
                                             </select>
-                                            <% if (loggedInUser.hasPermission("DISPOSAL_CREATE")) { %>
-                                            <small class="text-muted d-block mt-1">
-                                                <i class="bi bi-info-circle"></i>
-                                                Cần <strong>thanh lý hàng hỏng</strong>?
-                                                <a href="<%= request.getContextPath() %>/warehouse/disposal?action=add">Vào module Thanh lý sản phẩm →</a>
-                                            </small>
-                                            <% } else { %>
-                                            <small class="text-muted d-block mt-1">
-                                                <i class="bi bi-info-circle"></i>
-                                                Hàng bị hỏng cần <strong>thanh lý</strong>? Vui lòng báo cho <em>nhân viên kho / quản lý kho</em> để xử lý.
-                                            </small>
-                                            <% } %>
                                         </div>
                                         <div class="col-md-3">
                                             <label for="expectedDate" class="form-label fw-semibold text-muted small mb-1">Ngày xuất kho dự kiến <span class="text-danger">*</span></label>
@@ -102,6 +90,7 @@
                                             <select class="form-select shadow-sm rounded-3" id="conditionSelect" name="requested_condition" required>
                                                 <option value="NEW" selected>Hàng mới</option>
                                                 <option value="USED">Đã qua sử dụng</option>
+                                                <option value="DAMAGED">Hàng hỏng</option>
                                             </select>
                                         </div>
                                     </div>
@@ -137,7 +126,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- DISPLAY/WARRANTY/DISPOSAL/OTHER: internal destination -->
+                                    <!-- DISPLAY/WARRANTY/OTHER: internal destination -->
                                     <div id="destinationFields" class="row mb-3 d-none">
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold text-muted small mb-1">Điểm đến nội bộ</label>
@@ -251,9 +240,29 @@
             %>
         };
 
+        const warehouseStockDamaged = {
+            <% 
+            java.util.Map<Integer, java.util.Map<Integer, Integer>> stockMapDamaged = 
+                (java.util.Map<Integer, java.util.Map<Integer, Integer>>) request.getAttribute("warehouseProductStockDamaged");
+            if (stockMapDamaged != null) {
+                for (java.util.Map.Entry<Integer, java.util.Map<Integer, Integer>> entry : stockMapDamaged.entrySet()) {
+            %>
+                <%= entry.getKey() %>: {
+                    <% for (java.util.Map.Entry<Integer, Integer> pEntry : entry.getValue().entrySet()) { %>
+                        <%= pEntry.getKey() %>: <%= pEntry.getValue() %>,
+                    <% } %>
+                },
+            <% 
+                }
+            }
+            %>
+        };
+
         function getActiveStockMap() {
             const cond = document.getElementById("conditionSelect").value;
-            return cond === "USED" ? warehouseStockUsed : warehouseStockNew;
+            if (cond === "USED") return warehouseStockUsed;
+            if (cond === "DAMAGED") return warehouseStockDamaged;
+            return warehouseStockNew;
         }
 
         document.addEventListener("DOMContentLoaded", function () {
@@ -335,7 +344,7 @@
             } else if (reason === "CUSTOMER_SALE") {
                 document.getElementById("customerSaleFields").classList.remove("d-none");
                 document.getElementById("customerSelect").setAttribute("required", "required");
-            } else if (reason === "DISPLAY" || reason === "WARRANTY" || reason === "DISPOSAL" || reason === "OTHER") {
+            } else if (reason === "DISPLAY" || reason === "WARRANTY" || reason === "OTHER") {
                 document.getElementById("destinationFields").classList.remove("d-none");
             }
         }

@@ -348,12 +348,32 @@ public class RequestDAO {
             try {
                 Request req = getById(id);
                 if (req == null) { conn.rollback(); return false; }
-                String sql = "UPDATE Requests SET status='CANCELLED', cancelled_by=?, cancelled_at=NOW() WHERE id=?";
+
+                // Khóa dòng yêu cầu để tránh chạy đua với confirm phiếu
+                try (PreparedStatement lock = conn.prepareStatement(
+                        "SELECT id FROM Requests WHERE id = ? FOR UPDATE")) {
+                    lock.setInt(1, id);
+                    lock.executeQuery();
+                }
+
+                // CHỈ được duyệt hủy khi đơn còn APPROVED và thực sự đang có đề nghị hủy chờ.
+                // Nếu đơn đã xuất (PARTIALLY_COMPLETED/COMPLETED) hoặc đã hủy thì executeUpdate = 0 → dừng.
+                String sql = "UPDATE Requests SET status='CANCELLED', cancelled_by=?, cancelled_at=NOW() "
+                        + "WHERE id=? AND status='APPROVED' AND cancel_requested_at IS NOT NULL";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt(1, userId);
                     ps.setInt(2, id);
                     if (ps.executeUpdate() == 0) { conn.rollback(); return false; }
                 }
+
+                // Hủy luôn mọi phiếu còn ở trạng thái nháp của đơn này để trả lại số hàng
+                // bị "giữ chỗ" (view Inventory_Available tính đặt-giữ theo phiếu DRAFT).
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE Tickets SET status='CANCELLED' WHERE request_id=? AND status='DRAFT'")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+
                 auditLogDAO.log(userId, "APPROVE_CANCEL_REQUEST", "Yêu cầu " + req.getRequestCode());
                 String link = req.isIn() ? "/warehouse/import-request?action=detail&id=" + id
                                          : "/warehouse/export-request?action=detail&id=" + id;
@@ -422,13 +442,14 @@ public class RequestDAO {
                 newId = keys.getInt(1);
             }
         }
-        // Sao chép detail từ request OUT
+        // Sao chép detail theo SỐ LƯỢNG THỰC XUẤT của phiếu (Ticket_Details), KHÔNG phải
+        // theo đơn gốc — để khi xuất từng phần, kho đích chỉ kỳ vọng đúng số hàng đang về.
         String copyDet =
             "INSERT INTO Request_Details (request_id, product_id, quantity, unit_price) "
-          + "SELECT ?, product_id, quantity, NULL FROM Request_Details WHERE request_id = ?";
+          + "SELECT ?, product_id, quantity, NULL FROM Ticket_Details WHERE ticket_id = ?";
         try (PreparedStatement ps = conn.prepareStatement(copyDet)) {
             ps.setInt(1, newId);
-            ps.setInt(2, outRequest.getId());
+            ps.setInt(2, outTicketId);
             ps.executeUpdate();
         }
         return newId;
@@ -452,18 +473,30 @@ public class RequestDAO {
         int year = Calendar.getInstance().get(Calendar.YEAR);
         String prefix = "REQ-" + (Request.TYPE_IN.equals(type) ? "IN-" : "OUT-") + year + "-";
         String sql = "SELECT request_code FROM Requests WHERE request_code LIKE ? ORDER BY id DESC LIMIT 1";
+        int next = 1;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, prefix + "%");
             try (ResultSet rs = ps.executeQuery()) {
-                int next = 1;
                 if (rs.next()) {
                     String last = rs.getString(1);
                     try { next = Integer.parseInt(last.substring(prefix.length())) + 1; }
                     catch (Exception ignore) {}
                 }
-                return prefix + String.format("%04d", next);
             }
         }
+        // Nếu mã dự kiến đã tồn tại (2 người tạo cùng lúc), nhảy sang số kế tiếp còn trống.
+        String existsSql = "SELECT 1 FROM Requests WHERE request_code = ?";
+        while (next < 100000) {
+            String candidate = prefix + String.format("%04d", next);
+            try (PreparedStatement ps = conn.prepareStatement(existsSql)) {
+                ps.setString(1, candidate);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) return candidate;
+                }
+            }
+            next++;
+        }
+        throw new Exception("Cannot generate unique request code");
     }
 
     public String generateUniqueCode(String type) {

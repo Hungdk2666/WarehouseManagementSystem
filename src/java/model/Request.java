@@ -23,7 +23,6 @@ public class Request {
     public static final String REASON_DISPLAY        = "DISPLAY";
     public static final String REASON_WARRANTY       = "WARRANTY";
     public static final String REASON_CUSTOMER_SALE  = "CUSTOMER_SALE";
-    public static final String REASON_DISPOSAL       = "DISPOSAL";
     public static final String REASON_OTHER          = "OTHER";
 
     // PartnerType constants
@@ -44,7 +43,7 @@ public class Request {
     private int id;
     private String requestCode;
     private String type;             // IN | OUT
-    private String reason;           // PURCHASE | RETURN | TRANSFER | DISPLAY | WARRANTY | CUSTOMER_SALE | DISPOSAL | OTHER
+    private String reason;           // PURCHASE | RETURN | TRANSFER | DISPLAY | WARRANTY | CUSTOMER_SALE | OTHER
     private int warehouseId;
     private String partnerType;      // SUPPLIER | CUSTOMER | WAREHOUSE | INTERNAL_DEST | NONE
     private Integer partnerId;       // NULL khi partnerType = NONE
