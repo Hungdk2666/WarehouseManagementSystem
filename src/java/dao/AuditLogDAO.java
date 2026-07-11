@@ -11,6 +11,43 @@ import utils.DBUtils;
 
 public class AuditLogDAO {
 
+    /**
+     * Các hành động thuộc NHẬT KÝ HỆ THỐNG (kỹ thuật) — do System Admin (IT) quản.
+     * Mọi hành động KHÁC được coi là NHẬT KÝ NGHIỆP VỤ (của Business Admin).
+     * Danh sách này là hằng số cố định (không phải input người dùng) nên nhúng thẳng vào SQL an toàn.
+     */
+    private static final String[] SYSTEM_ACTIONS = {
+        "USER_ADD", "USER_UPDATE", "USER_TOGGLE",
+        "ROLE_ADD", "ROLE_UPDATE", "ROLE_TOGGLE", "ROLE_PERMISSIONS",
+        "RESET_PASSWORD", "CHANGE_PASSWORD"
+    };
+
+    /** Trả về "'USER_ADD','USER_UPDATE',..." để dùng trong mệnh đề IN (...). */
+    private static String systemActionsSqlList() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < SYSTEM_ACTIONS.length; i++) {
+            if (i > 0) sb.append(",");
+            sb.append("'").append(SYSTEM_ACTIONS[i]).append("'");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Mệnh đề lọc theo nhóm nhật ký.
+     * category = "SYSTEM"  -> chỉ hành động hệ thống.
+     * category = "BUSINESS"-> mọi hành động còn lại (nghiệp vụ).
+     * null/khác            -> không lọc (không dùng cho người dùng cuối).
+     */
+    private static String categoryClause(String category) {
+        if ("SYSTEM".equals(category)) {
+            return "AND l.action IN (" + systemActionsSqlList() + ") ";
+        }
+        if ("BUSINESS".equals(category)) {
+            return "AND l.action NOT IN (" + systemActionsSqlList() + ") ";
+        }
+        return "";
+    }
+
     public void log(Integer userId, String action, String details) {
         String query = "INSERT INTO Audit_Logs (user_id, action, details) VALUES (?, ?, ?)";
         try (Connection conn = DBUtils.getConnection();
@@ -28,7 +65,7 @@ public class AuditLogDAO {
         }
     }
 
-    public List<AuditLog> getLogs(String search, String[] actionFilters, String startDate, String endDate, int page, int pageSize) {
+    public List<AuditLog> getLogs(String category, String search, String[] actionFilters, String startDate, String endDate, int page, int pageSize) {
         List<AuditLog> list = new ArrayList<>();
         List<String> validActions = filterNonEmpty(actionFilters);
         StringBuilder sb = new StringBuilder(
@@ -37,6 +74,7 @@ public class AuditLogDAO {
             "LEFT JOIN Users u ON l.user_id = u.id " +
             "WHERE 1=1 "
         );
+        sb.append(categoryClause(category));
 
         if (search != null && !search.trim().isEmpty()) {
             sb.append("AND (u.username LIKE ? OR u.full_name LIKE ? OR l.details LIKE ?) ");
@@ -95,7 +133,7 @@ public class AuditLogDAO {
         return list;
     }
 
-    public int getLogsCount(String search, String[] actionFilters, String startDate, String endDate) {
+    public int getLogsCount(String category, String search, String[] actionFilters, String startDate, String endDate) {
         List<String> validActions = filterNonEmpty(actionFilters);
         StringBuilder sb = new StringBuilder(
             "SELECT COUNT(*) " +
@@ -103,6 +141,7 @@ public class AuditLogDAO {
             "LEFT JOIN Users u ON l.user_id = u.id " +
             "WHERE 1=1 "
         );
+        sb.append(categoryClause(category));
 
         if (search != null && !search.trim().isEmpty()) {
             sb.append("AND (u.username LIKE ? OR u.full_name LIKE ? OR l.details LIKE ?) ");
@@ -154,9 +193,10 @@ public class AuditLogDAO {
         return result;
     }
 
-    public List<String> getAllUniqueActions() {
+    public List<String> getAllUniqueActions(String category) {
         List<String> actions = new ArrayList<>();
-        String query = "SELECT DISTINCT action FROM Audit_Logs ORDER BY action ASC";
+        String query = "SELECT DISTINCT action FROM Audit_Logs l WHERE 1=1 "
+                + categoryClause(category) + "ORDER BY action ASC";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
