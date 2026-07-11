@@ -74,21 +74,26 @@ public class ExportRequestServlet extends HttpServlet {
                 httpReq.setAttribute("productList",    pService.getAllProducts());
                 httpReq.setAttribute("warehouseList",  warehouses);
                 httpReq.setAttribute("customerList",   new CustomerService().getActiveCustomers());
-                // Map kho -> map product -> available qty (NEW/USED)
+                // Map kho -> map product -> available qty (NEW/USED/DAMAGED)
                 Map<Integer, Map<Integer, Integer>> stockMapNew = new HashMap<>();
                 Map<Integer, Map<Integer, Integer>> stockMapUsed = new HashMap<>();
+                Map<Integer, Map<Integer, Integer>> stockMapDamaged = new HashMap<>();
                 for (Warehouse w : warehouses) {
                     Map<Integer, Integer> wStockNew = new HashMap<>();
                     Map<Integer, Integer> wStockUsed = new HashMap<>();
+                    Map<Integer, Integer> wStockDamaged = new HashMap<>();
                     for (Product p : pService.getAllProducts(w.getId())) {
                         wStockNew.put(p.getId(), p.getAvailableNewQty());
                         wStockUsed.put(p.getId(), p.getAvailableUsedQty());
+                        wStockDamaged.put(p.getId(), p.getDamagedQty());
                     }
                     stockMapNew.put(w.getId(), wStockNew);
                     stockMapUsed.put(w.getId(), wStockUsed);
+                    stockMapDamaged.put(w.getId(), wStockDamaged);
                 }
                 httpReq.setAttribute("warehouseProductStockNew", stockMapNew);
                 httpReq.setAttribute("warehouseProductStockUsed", stockMapUsed);
+                httpReq.setAttribute("warehouseProductStockDamaged", stockMapDamaged);
                 httpReq.getRequestDispatcher("/export_request/request-add.jsp").forward(httpReq, response);
                 break;
             }
@@ -129,13 +134,11 @@ public class ExportRequestServlet extends HttpServlet {
                     if (reasonStr == null || reasonStr.trim().isEmpty()) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoReason"); return;
                     }
-                    // DISPOSAL đã chuyển sang module riêng /warehouse/disposal
-                    if ("DISPOSAL".equals(reasonStr)) {
-                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/disposal?action=add");
-                        return;
-                    }
                     if (requestedCondition == null || requestedCondition.trim().isEmpty()) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoCondition"); return;
+                    }
+                    if (!"NEW".equals(requestedCondition) && !"USED".equals(requestedCondition) && !"DAMAGED".equals(requestedCondition)) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=InvalidCondition"); return;
                     }
 
                     int sourceWh;
@@ -249,7 +252,7 @@ public class ExportRequestServlet extends HttpServlet {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"); return;
                     } else if (Request.STATUS_APPROVED.equals(req.getStatus())) {
                         if (!loggedInUser.hasPermission("REQUEST_REQUEST_CANCEL_OUT")) {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n Ä‘á» xuáº¥t há»§y."); return;
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền đề xuất hủy."); return;
                         }
                         dao.requestCancel(cancelId, loggedInUser.getId(), httpReq.getParameter("reason"));
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=detail&id=" + cancelId); return;
