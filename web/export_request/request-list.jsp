@@ -53,7 +53,7 @@
                 </div>
 
                 <!-- Filters -->
-                <div class="card mb-3" style="position: relative; z-index: 20;">
+                <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
                             <div class="col-12 col-md-3">
@@ -71,7 +71,7 @@
                             <div class="col-6 col-md-2">
                                 <label class="form-label small fw-semibold mb-1">Trạng thái</label>
                                 <div class="dropdown">
-                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal"
+                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal justify-content-between"
                                             data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem;">
                                         <span id="statusLabel">-- Tất cả --</span>
                                     </button>
@@ -188,12 +188,12 @@
                                                 %>
                                             </span>
                                         </td>
-                                        <td><%= r.getExpectedDate() %></td>
+                                        <td class="text-nowrap"><%= r.getExpectedDate() %></td>
                                         <td><%= r.getStaffFullName() %></td>
                                         <td>
                                             <span class="status-chip <%= statusBadge %>"><%= displayStatus %></span>
                                         </td>
-                                        <td class="text-muted small"><%= r.getCreatedAt() %></td>
+                                        <td class="text-muted small text-nowrap"><%= r.getCreatedAt() %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
                                                 <a href="export-request?action=detail&id=<%= r.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết" aria-label="Xem chi tiết yêu cầu xuất">
@@ -250,6 +250,7 @@
     </div>
 
     <!-- Client-Side Pagination & Filter Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             initTableFilterAndPagination();
