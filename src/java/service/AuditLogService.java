@@ -11,16 +11,16 @@ public class AuditLogService {
         this.dao = new AuditLogDAO();
     }
 
-    public List<String> getAllUniqueActions() {
-        return dao.getAllUniqueActions();
+    public List<String> getAllUniqueActions(String category) {
+        return dao.getAllUniqueActions(category);
     }
 
-    public List<AuditLog> getLogs(String search, String[] actionFilters, String startDate, String endDate, int page, int pageSize) {
-        return dao.getLogs(search, actionFilters, startDate, endDate, page, pageSize);
+    public List<AuditLog> getLogs(String category, String search, String[] actionFilters, String startDate, String endDate, int page, int pageSize) {
+        return dao.getLogs(category, search, actionFilters, startDate, endDate, page, pageSize);
     }
 
-    public int getLogsCount(String search, String[] actionFilters, String startDate, String endDate) {
-        return dao.getLogsCount(search, actionFilters, startDate, endDate);
+    public int getLogsCount(String category, String search, String[] actionFilters, String startDate, String endDate) {
+        return dao.getLogsCount(category, search, actionFilters, startDate, endDate);
     }
 
     public void log(Integer arg0, String arg1, String arg2) {
