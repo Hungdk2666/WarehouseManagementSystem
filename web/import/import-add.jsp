@@ -66,12 +66,22 @@
 
                 <% if (error != null) { %>
                 <div class="alert alert-danger rounded-3 mb-4">
-                    <% if ("NoItemsReceived".equals(error)) { %>
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Bạn phải nhận ít nhất 1 sản phẩm (số lượng > 0) để lưu Phiếu nhập kho.
+                    <% if ("NoItemsReceived".equals(error) || "NoItems".equals(error)) { %>
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Bạn phải nhận ít nhất 1 sản phẩm (số lượng > 0) để nhập kho.
                     <% } else if ("RequiresWarehouseAssignment".equals(error)) { %>
                         <i class="bi bi-building-fill me-2"></i> Tài khoản của bạn chưa được gán kho. Liên hệ quản trị viên để gán kho trước khi tạo phiếu nhập.
+                    <% } else if ("InvalidPrice".equals(error)) { %>
+                        <i class="bi bi-cash-coin me-2"></i> Đơn giá thực tế phải lớn hơn 0 đối với hàng nhập mua.
+                    <% } else if ("InvalidSerialFile".equals(error)) { %>
+                        <i class="bi bi-file-earmark-excel me-2"></i> File Excel serial nhà sản xuất không hợp lệ (sai SKU, sai số lượng, hoặc trùng serial). Kiểm tra lại file rồi thử lại.
+                    <% } else if ("WrongWarehouse".equals(error)) { %>
+                        <i class="bi bi-building-fill me-2"></i> Bạn chỉ được nhập kho cho yêu cầu thuộc kho của mình.
+                    <% } else if ("RequestNotApproved".equals(error)) { %>
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Yêu cầu này chưa được duyệt hoặc đang chờ hủy, không thể nhập kho.
+                    <% } else if ("ReceiveFailed".equals(error)) { %>
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Nhập kho thất bại (số lượng vượt yêu cầu, kho đang kiểm kê, hoặc dữ liệu đã thay đổi). Vui lòng tải lại và thử lại.
                     <% } else { %>
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Tạo Phiếu nhập kho thất bại. Vui lòng thử lại.
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Thao tác thất bại. Mã lỗi: <%= error %>. Vui lòng thử lại.
                     <% } %>
                 </div>
                 <% } %>
@@ -113,7 +123,7 @@
                 </div>
 
                 <% if (selectedRequest != null) { %>
-                <form action="import-ticket?action=add" method="POST" id="grnForm">
+                <form action="import-ticket?action=addAndConfirm" method="POST" id="grnForm" enctype="multipart/form-data">
                     <input type="hidden" name="request_id" value="<%= selectedRequest.getId() %>">
                     
                     <div class="card bg-white mb-4">
@@ -187,9 +197,19 @@
                                 </tbody>
                             </table>
                         </div>
+                        <% if (isPurchaseRequest) { %>
+                        <div class="card-body border-top pt-3">
+                            <label for="excelFile" class="form-label fw-semibold text-slate-700 small">
+                                <i class="bi bi-file-earmark-excel text-success me-1"></i>
+                                (Tùy chọn) Đính kèm file Excel serial nhà sản xuất
+                            </label>
+                            <input type="file" class="form-control form-control-sm" id="excelFile" name="excelFile" accept=".xlsx,.xls">
+                            <div class="form-text">Nếu không đính kèm, hệ thống tự sinh serial cho hàng nhập mua.</div>
+                        </div>
+                        <% } %>
                         <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0">
                             <a href="import-ticket?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-x-circle me-1"></i> Hủy</a>
-                            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle-fill me-1"></i> Lưu bản nháp Phiếu nhập kho</button>
+                            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-box-arrow-in-down me-1"></i> Nhập kho</button>
                         </div>
                     </div>
                 </form>
@@ -276,7 +296,11 @@
 
             if (totalQty <= 0) {
                 e.preventDefault();
-                alert("Bạn phải nhận ít nhất 1 sản phẩm (số lượng > 0) để lưu Phiếu nhập kho.");
+                alert("Bạn phải nhận ít nhất 1 sản phẩm (số lượng > 0) để nhập kho.");
+                return;
+            }
+            if (!confirm("Xác nhận NHẬP KHO các sản phẩm này? Hàng sẽ được cộng vào tồn kho ngay.")) {
+                e.preventDefault();
             }
         });
         <% } %>

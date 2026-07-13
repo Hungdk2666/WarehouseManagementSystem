@@ -32,7 +32,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-layout-1">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-grid-20260714">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -41,7 +41,7 @@
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
                 
-                <div class="page-header detail-page-header">
+                <div class="page-header">
                     <div>
                         <h2 class="page-title">Chi tiết Phiếu nhập kho</h2>
                         <p class="page-subtitle">Xem danh sách sản phẩm và xác nhận nhập kho cho Phiếu nhập kho #<%= ticket.getTicketCode() %></p>
@@ -51,21 +51,21 @@
                     </a>
                 </div>
 
-                <div class="card detail-section-card bg-white">
+                <div class="card bg-white mb-4">
                     <div class="card-header bg-transparent py-3 border-bottom">
-                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin phiếu nhập kho</h5>
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin Phiếu nhập kho</h5>
                     </div>
                     <div class="card-body p-4">
-                        <div class="detail-info-grid">
-                            <div class="col-md-4">
+                        <div class="detail-grid">
+                            <div class="detail-item">
                                 <label class="text-muted small d-block">Mã Phiếu nhập kho</label>
                                 <span class="fw-bold text-slate-800">#<%= ticket.getTicketCode() %></span>
                             </div>
-                            <div class="col-md-4">
+                            <div class="detail-item">
                                 <label class="text-muted small d-block">Mã Yêu cầu liên kết</label>
                                 <span class="fw-bold text-slate-800">#<%= ticket.getRequestCode() %></span>
                             </div>
-                            <div class="col-md-4">
+                            <div class="detail-item">
                                 <label class="text-muted small d-block">Trạng thái</label>
                                 <%
                                     String statusChipCls = "chip-muted";
@@ -77,21 +77,21 @@
                                 <span class="status-chip <%= statusChipCls %>"><%= displayTStatus %></span>
                             </div>
                             
-                            <div class="col-md-4 border-top pt-2">
+                            <div class="detail-item">
                                 <label class="text-muted small d-block">Người tạo (Thủ kho)</label>
                                 <span class="text-slate-700"><%= ticket.getKeeperFullName() %></span>
                             </div>
-                            <div class="col-md-4 border-top pt-2">
+                            <div class="detail-item">
                                 <label class="text-muted small d-block">Ngày tạo</label>
                                 <span class="text-slate-700"><%= ticket.getCreatedAt() %></span>
                             </div>
                             
                             <% if (ticket.getConfirmedBy() != null) { %>
-                            <div class="col-md-4 border-top pt-2">
+                            <div class="detail-item">
                                 <label class="text-muted small d-block">Người xác nhận</label>
                                 <span class="text-slate-700"><%= ticket.getConfirmedByFullName() %></span>
                             </div>
-                            <div class="col-md-4 border-top pt-2">
+                            <div class="detail-item">
                                 <label class="text-muted small d-block">Thời gian xác nhận</label>
                                 <span class="text-slate-700"><%= ticket.getConfirmedAt() %></span>
                             </div>
@@ -100,12 +100,11 @@
                     </div>
                 </div>
 
-                <div class="card detail-section-card bg-white">
+                <div class="card bg-white mb-4">
                     <div class="card-header bg-transparent py-3 border-bottom">
                         <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-check me-2 text-primary"></i>Sản phẩm thực nhận</h5>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
                         <table class="table align-middle text-center mb-0">
                             <thead class="table-light">
                                 <tr>
@@ -157,392 +156,8 @@
                                 </tr>
                             </tbody>
                         </table>
-                        </div>
                     </div>
                     
-                    <% if ("DRAFT".equals(ticket.getStatus()) && (canConfirm || canCancel)) { %>
-                    <div class="card-footer detail-actions">
-                        <% if (canCancel) { %>
-                        <form action="import-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy phiếu nhập kho này?');">
-                            <input type="hidden" name="id" value="<%= ticket.getId() %>">
-                            <button type="submit" class="btn btn-outline-danger px-4"><i class="bi bi-x-circle me-1"></i> Hủy Phiếu nhập</button>
-                        </form>
-                        <% } %>
-                        <% if (canConfirm) { %>
-                        <form action="import-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Xác nhận phiếu nhập kho này sẽ cập nhật số lượng tồn kho, giá vốn trung bình và ghi nhận vào sổ kho. Tiến hành?');">
-                            <input type="hidden" name="id" value="<%= ticket.getId() %>">
-                            <div id="hidden-serials-container"></div>
-                            <button type="submit" id="confirm-submit-btn" class="btn btn-success px-4" <%= "RETURN".equals(ticket.getRequestReason()) ? "disabled" : "" %>><i class="bi bi-check-circle-fill me-1"></i> Xác nhận & Nhập kho</button>
-                        </form>
-                        <% } %>
-                    </div>
-                    <% } %>
-
-                    <% if ("DRAFT".equals(ticket.getStatus()) && canConfirm && "PURCHASE".equals(ticket.getRequestReason())) { %>
-                    <div class="card bg-white mb-4 mt-4" id="mfr-serial-card">
-                        <div class="card-header bg-warning bg-opacity-10 py-3 border-0 d-flex align-items-center justify-content-between">
-                            <div>
-                                <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-upc-scan me-2"></i>Nhập Serial nhà sản xuất <span class="fw-normal">(tùy chọn)</span></h5>
-                                <p class="mb-0 mt-1 text-muted small">Có thể dùng một hoặc cả hai phương thức cùng lúc — kết quả được gộp khi xác nhận.</p>
-                            </div>
-                            <span class="badge bg-warning text-dark px-3 py-2 fs-6" id="mfr-total-badge">0 serial đã nhập</span>
-                        </div>
-
-                        <%-- ===== PHƯƠNG PHÁP 1: UPLOAD EXCEL ===== --%>
-                        <div class="border-bottom">
-                            <button class="btn w-100 text-start px-4 py-3 d-flex align-items-center gap-2"
-                                    type="button" data-bs-toggle="collapse" data-bs-target="#mfr-excel-collapse" aria-expanded="true">
-                                <i class="bi bi-file-earmark-spreadsheet fs-5 text-success"></i>
-                                <span class="fw-semibold text-slate-800">Phương thức 1: Upload file Excel</span>
-                                <span class="text-muted small ms-1">— nhà sản xuất cung cấp danh sách serial</span>
-                                <span class="badge bg-success ms-auto" id="excel-count-badge" style="display:none;">0 serial</span>
-                                <i class="bi bi-chevron-down ms-2 text-muted collapse-icon"></i>
-                            </button>
-                            <div class="collapse show" id="mfr-excel-collapse">
-                                <div class="card-body p-4 pt-2" id="mfr-excel-panel">
-                                    <p class="text-muted small mb-3">Upload file Excel với 2 cột: <code>sku</code> và <code>manufacturer_serial</code>. Số lượng serial mỗi SKU phải khớp với SL thực tế nhận.</p>
-                                    <div class="d-flex align-items-center gap-3 mb-3">
-                                        <input type="file" id="mfrExcelFile" accept=".xlsx,.xls" class="form-control" style="max-width: 380px;">
-                                        <button type="button" id="uploadMfrBtn" class="btn btn-success px-4" onclick="uploadMfrExcel()">
-                                            <i class="bi bi-upload me-1"></i> Upload &amp; Validate
-                                        </button>
-                                        <button type="button" id="clearMfrBtn" class="btn btn-outline-secondary px-3 d-none" onclick="clearMfrSerials()">
-                                            <i class="bi bi-x-circle me-1"></i> Xóa
-                                        </button>
-                                    </div>
-                                    <div id="mfr-upload-result"></div>
-                                    <div id="mfr-preview" class="d-none mt-3">
-                                        <h6 class="fw-bold text-success mb-2"><i class="bi bi-check-circle-fill me-1"></i> Serial NSX đã nhận dạng từ Excel</h6>
-                                        <div id="mfr-preview-content" style="max-height: 300px; overflow-y: auto;"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <%-- ===== PHƯƠNG PHÁP 2: QUÉT MÃ VẠCH NSX ===== --%>
-                        <div>
-                            <button class="btn w-100 text-start px-4 py-3 d-flex align-items-center gap-2"
-                                    type="button" data-bs-toggle="collapse" data-bs-target="#mfr-scan-collapse" aria-expanded="false">
-                                <i class="bi bi-barcode fs-5 text-warning"></i>
-                                <span class="fw-semibold text-slate-800">Phương thức 2: Quét mã vạch / Nhập tay</span>
-                                <span class="text-muted small ms-1">— quét từng sản phẩm khi không có file Excel</span>
-                                <span class="badge bg-warning text-dark ms-auto d-none" id="scan-count-badge">0 serial</span>
-                                <i class="bi bi-chevron-down ms-2 text-muted collapse-icon"></i>
-                            </button>
-                            <div class="collapse" id="mfr-scan-collapse">
-                                <div class="card-body p-4 pt-2" id="mfr-scan-panel">
-                                    <div class="mb-3">
-                                        <label for="mfr-scan-input" class="form-label fw-semibold text-slate-700">Quét mã Serial nhà sản xuất (Sử dụng máy quét hoặc nhập tay):</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light text-muted"><i class="bi bi-upc-scan"></i></span>
-                                            <input type="text" id="mfr-scan-input"
-                                                   class="form-control form-control-lg border-warning"
-                                                   placeholder="Để con trỏ tại đây và quét mã vạch..."
-                                                   autocomplete="off">
-                                            <select id="mfr-scan-sku-select" class="form-select" style="max-width: 180px;" title="Chọn SKU">
-                                                <% if (ticket.getDetails() != null) {
-                                                       for (TicketDetail d : ticket.getDetails()) { %>
-                                                <option value="<%= d.getSku() %>" data-product-id="<%= d.getProductId() %>" data-required="<%= d.getQuantity() %>">
-                                                    <%= d.getSku() %>
-                                                </option>
-                                                <% } } %>
-                                            </select>
-                                            <button type="button" class="btn btn-warning" onclick="addMfrScanSerial()">
-                                                <i class="bi bi-plus-lg"></i> Thêm
-                                            </button>
-                                        </div>
-                                        <div id="mfr-scan-alert" class="alert d-none mt-2 px-3 py-2" role="alert"></div>
-                                    </div>
-
-                                    <hr class="my-4">
-
-                                    <h6 class="fw-bold text-slate-800 mb-3"><i class="bi bi-list-task me-1"></i>Tiến độ nhập serial NSX:</h6>
-                                    <div class="row g-3" id="mfr-scan-progress-panels">
-                                        <% if (ticket.getDetails() != null) {
-                                               for (TicketDetail d : ticket.getDetails()) { %>
-                                        <div class="col-md-6">
-                                            <div class="border rounded p-3 bg-light" id="mfr-panel-<%= d.getProductId() %>">
-                                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <span class="fw-semibold text-slate-800 small text-truncate" style="max-width: 70%;" title="<%= d.getProductName() %>"><%= d.getProductName() %></span>
-                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary"><%= d.getSku() %></span>
-                                                </div>
-                                                <div class="d-flex justify-content-between align-items-center border-top pt-2">
-                                                    <span class="text-muted small">Cần nhập: <strong><%= d.getQuantity() %></strong></span>
-                                                    <span class="small font-monospace fw-bold mfr-progress-text"
-                                                          id="mfr-progress-<%= d.getProductId() %>"
-                                                          data-sku="<%= d.getSku() %>"
-                                                          data-required="<%= d.getQuantity() %>">
-                                                        Đã nhập: <span class="mfr-scanned-count text-danger">0</span>/<%= d.getQuantity() %>
-                                                    </span>
-                                                </div>
-                                                <div class="scanned-serials-list mt-2 border-top pt-2" style="max-height: 120px; overflow-y: auto;">
-                                                    <ul class="list-group list-group-flush small" id="mfr-list-<%= d.getProductId() %>">
-                                                        <li class="list-group-item bg-transparent text-muted text-center py-1 mfr-no-serial-msg">Chưa có serial NSX nào được nhập</li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <% } } %>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <script>
-                    // =============================================
-                    // TỔNG SỐ SERIAL (gộp cả Excel + Quét)
-                    // =============================================
-                    let mfrExcelTotal = 0;
-                    let mfrScanTotal = 0;
-
-                    function updateMfrTotalBadge() {
-                        const total = mfrExcelTotal + mfrScanTotal;
-                        const badge = document.getElementById('mfr-total-badge');
-                        badge.textContent = total + ' serial đã nhập';
-                        badge.className = total > 0 ? 'badge bg-success text-white px-3 py-2 fs-6' : 'badge bg-warning text-dark px-3 py-2 fs-6';
-                    }
-
-                    // =============================================
-                    // PHƯƠNG PHÁP 1: UPLOAD EXCEL
-                    // =============================================
-                    function uploadMfrExcel() {
-                        const fileInput = document.getElementById('mfrExcelFile');
-                        if (!fileInput.files || fileInput.files.length === 0) {
-                            showMfrAlert('Vui lòng chọn file Excel.', 'danger');
-                            return;
-                        }
-                        const formData = new FormData();
-                        formData.append('excelFile', fileInput.files[0]);
-                        formData.append('id', '<%= ticket.getId() %>');
-                        formData.append('action', 'uploadSerials');
-
-                        document.getElementById('uploadMfrBtn').disabled = true;
-                        document.getElementById('uploadMfrBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
-
-                        fetch('import-ticket?action=uploadSerials&id=<%= ticket.getId() %>', {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(r => r.json())
-                        .then(data => {
-                            document.getElementById('uploadMfrBtn').disabled = false;
-                            document.getElementById('uploadMfrBtn').innerHTML = '<i class="bi bi-upload me-1"></i> Upload &amp; Validate';
-
-                            if (data.valid) {
-                                mfrExcelTotal = data.totalSerials;
-                                showMfrAlert('Upload thành công! ' + data.totalSerials + ' serial NSX đã được nhận dạng.', 'success');
-                                renderMfrPreview(data.serialsBySku);
-                                document.getElementById('clearMfrBtn').classList.remove('d-none');
-                                const excelBadge = document.getElementById('excel-count-badge');
-                                excelBadge.textContent = data.totalSerials + ' serial';
-                                excelBadge.style.display = '';
-                                updateMfrTotalBadge();
-                            } else {
-                                let errHtml = '<strong>Có lỗi trong file Excel:</strong><ul class="mb-0 mt-1">';
-                                data.errors.forEach(function(e) { errHtml += '<li>' + e + '</li>'; });
-                                errHtml += '</ul>';
-                                showMfrAlert(errHtml, 'danger');
-                                document.getElementById('mfr-preview').classList.add('d-none');
-                            }
-                        })
-                        .catch(function() {
-                            document.getElementById('uploadMfrBtn').disabled = false;
-                            document.getElementById('uploadMfrBtn').innerHTML = '<i class="bi bi-upload me-1"></i> Upload &amp; Validate';
-                            showMfrAlert('Lỗi kết nối server.', 'danger');
-                        });
-                    }
-
-                    function clearMfrSerials() {
-                        fetch('import-ticket?action=clearSerials&id=<%= ticket.getId() %>', { method: 'POST' })
-                        .then(function() {
-                            mfrExcelTotal = 0;
-                            document.getElementById('mfr-preview').classList.add('d-none');
-                            document.getElementById('mfr-upload-result').innerHTML = '';
-                            document.getElementById('clearMfrBtn').classList.add('d-none');
-                            document.getElementById('mfrExcelFile').value = '';
-                            const excelBadge = document.getElementById('excel-count-badge');
-                            excelBadge.style.display = 'none';
-                            updateMfrTotalBadge();
-                        });
-                    }
-
-                    function showMfrAlert(html, type) {
-                        document.getElementById('mfr-upload-result').innerHTML =
-                            '<div class="alert alert-' + type + ' border-0 py-2 px-3 small">' +
-                            (type === 'success' ? '<i class="bi bi-check-circle-fill me-1"></i>' : '<i class="bi bi-exclamation-triangle-fill me-1"></i>') +
-                            html + '</div>';
-                    }
-
-                    function renderMfrPreview(serialsBySku) {
-                        const container = document.getElementById('mfr-preview-content');
-                        let html = '<table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr><th>SKU</th><th>Serial NSX</th></tr></thead><tbody>';
-                        for (const sku in serialsBySku) {
-                            serialsBySku[sku].forEach(function(s, i) {
-                                html += '<tr><td>' + (i === 0 ? '<strong>' + sku + '</strong>' : '') + '</td><td class="font-monospace small">' + s + '</td></tr>';
-                            });
-                        }
-                        html += '</tbody></table>';
-                        container.innerHTML = html;
-                        document.getElementById('mfr-preview').classList.remove('d-none');
-                    }
-
-                    // =============================================
-                    // PHƯƠNG PHÁP 2: QUÉT MÃ VẠCH NSX
-                    // =============================================
-                    const mfrScannedSerials = {};
-                    const mfrAllScanned = new Set();
-
-                    function showMfrScanAlert(msg, type) {
-                        const el = document.getElementById('mfr-scan-alert');
-                        el.className = 'alert mt-2 py-2 px-3 small ' + (type === 'success' ? 'alert-success' : 'alert-danger');
-                        el.innerHTML = (type === 'success' ? '<i class="bi bi-check-circle-fill me-1"></i>' : '<i class="bi bi-exclamation-triangle-fill me-1"></i>') + msg;
-                        el.classList.remove('d-none');
-                        clearTimeout(el._timer);
-                        el._timer = setTimeout(() => el.classList.add('d-none'), 4000);
-                    }
-
-                    function playMfrBeep(ok) {
-                        try {
-                            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                            const osc = ctx.createOscillator();
-                            const gain = ctx.createGain();
-                            osc.connect(gain); gain.connect(ctx.destination);
-                            osc.type = ok ? 'sine' : 'sawtooth';
-                            osc.frequency.setValueAtTime(ok ? 880 : 140, ctx.currentTime);
-                            gain.gain.setValueAtTime(ok ? 0.07 : 0.12, ctx.currentTime);
-                            osc.start(); ctx.resume();
-                            setTimeout(() => { osc.stop(); ctx.close(); }, ok ? 80 : 320);
-                        } catch(e) {}
-                    }
-
-                    function addMfrScanSerial() {
-                        const input = document.getElementById('mfr-scan-input');
-                        const serial = input.value.trim();
-                        input.value = '';
-                        input.focus();
-                        if (!serial) return;
-                        processMfrSerial(serial);
-                    }
-
-                    function processMfrSerial(serial) {
-                        if (mfrAllScanned.has(serial)) {
-                            playMfrBeep(false);
-                            showMfrScanAlert('Serial <strong>' + serial + '</strong> đã được nhập trước đó!', 'danger');
-                            return;
-                        }
-
-                        const skuSelect = document.getElementById('mfr-scan-sku-select');
-                        const selectedOption = skuSelect.options[skuSelect.selectedIndex];
-                        const productId = parseInt(selectedOption.getAttribute('data-product-id'));
-                        const required = parseInt(selectedOption.getAttribute('data-required'));
-
-                        if (!mfrScannedSerials[productId]) mfrScannedSerials[productId] = [];
-                        if (mfrScannedSerials[productId].length >= required) {
-                            playMfrBeep(false);
-                            showMfrScanAlert('SKU <strong>' + skuSelect.value + '</strong> đã đủ số lượng serial!', 'danger');
-                            return;
-                        }
-
-                        mfrScannedSerials[productId].push(serial);
-                        mfrAllScanned.add(serial);
-                        mfrScanTotal++;
-                        playMfrBeep(true);
-                        showMfrScanAlert('Đã nhập serial NSX: <strong>' + serial + '</strong> cho SKU ' + skuSelect.value, 'success');
-
-                        const listEl = document.getElementById('mfr-list-' + productId);
-                        const noMsg = listEl.querySelector('.mfr-no-serial-msg');
-                        if (noMsg) noMsg.remove();
-
-                        const li = document.createElement('li');
-                        li.className = 'list-group-item bg-transparent py-1 px-0 d-flex justify-content-between align-items-center font-monospace text-slate-700';
-                        li.id = 'mfr-li-' + serial.replace(/[^a-zA-Z0-9]/g, '-');
-                        li.innerHTML = '<span><i class="bi bi-check-lg text-success me-1"></i>' + serial + '</span>' +
-                                       '<button type="button" class="btn btn-link btn-sm text-danger p-0" onclick="removeMfrSerial(' + productId + ',\'' + serial + '\')">' +
-                                       '<i class="bi bi-trash"></i></button>';
-                        listEl.appendChild(li);
-
-                        const hiddenContainer = document.getElementById('hidden-serials-container');
-                        const hInput = document.createElement('input');
-                        hInput.type = 'hidden';
-                        hInput.name = 'manufacturer_serial_scan';
-                        hInput.value = skuSelect.value + '|' + serial;
-                        hInput.id = 'mfr-hidden-' + serial.replace(/[^a-zA-Z0-9]/g, '-');
-                        hiddenContainer.appendChild(hInput);
-
-                        updateMfrProgress(productId);
-                        updateScanBadge();
-                        updateMfrTotalBadge();
-
-                        if (mfrScannedSerials[productId].length >= required) {
-                            const opts = skuSelect.options;
-                            for (let i = 0; i < opts.length; i++) {
-                                const pid = parseInt(opts[i].getAttribute('data-product-id'));
-                                const req = parseInt(opts[i].getAttribute('data-required'));
-                                if (!mfrScannedSerials[pid] || mfrScannedSerials[pid].length < req) {
-                                    skuSelect.selectedIndex = i;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    window.removeMfrSerial = function(productId, serial) {
-                        if (!mfrScannedSerials[productId]) return;
-                        const idx = mfrScannedSerials[productId].indexOf(serial);
-                        if (idx > -1) {
-                            mfrScannedSerials[productId].splice(idx, 1);
-                            mfrAllScanned.delete(serial);
-                            mfrScanTotal = Math.max(0, mfrScanTotal - 1);
-                            const li = document.getElementById('mfr-li-' + serial.replace(/[^a-zA-Z0-9]/g, '-'));
-                            if (li) li.remove();
-                            const hi = document.getElementById('mfr-hidden-' + serial.replace(/[^a-zA-Z0-9]/g, '-'));
-                            if (hi) hi.remove();
-                            const listEl = document.getElementById('mfr-list-' + productId);
-                            if (mfrScannedSerials[productId].length === 0) {
-                                listEl.innerHTML = '<li class="list-group-item bg-transparent text-muted text-center py-1 mfr-no-serial-msg">Chưa có serial NSX nào</li>';
-                            }
-                            updateMfrProgress(productId);
-                            updateScanBadge();
-                            updateMfrTotalBadge();
-                            showMfrScanAlert('Đã xóa serial: ' + serial, 'success');
-                        }
-                    };
-
-                    function updateScanBadge() {
-                        const badge = document.getElementById('scan-count-badge');
-                        if (mfrScanTotal > 0) {
-                            badge.textContent = mfrScanTotal + ' serial';
-                            badge.classList.remove('d-none');
-                        } else {
-                            badge.classList.add('d-none');
-                        }
-                    }
-
-                    function updateMfrProgress(productId) {
-                        const el = document.getElementById('mfr-progress-' + productId);
-                        const required = parseInt(el.getAttribute('data-required'));
-                        const current = mfrScannedSerials[productId] ? mfrScannedSerials[productId].length : 0;
-                        el.querySelector('.mfr-scanned-count').textContent = current;
-                        el.querySelector('.mfr-scanned-count').className = 'mfr-scanned-count ' + (current >= required ? 'text-success' : 'text-danger');
-                        const panel = document.getElementById('mfr-panel-' + productId);
-                        panel.className = 'border rounded p-3 bg-light' + (current >= required ? ' border-success' : '');
-                    }
-
-                    // Xử lý Enter trên ô quét
-                    document.getElementById('mfr-scan-input').addEventListener('keypress', function(e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addMfrScanSerial();
-                        }
-                    });
-
-                    // Focus vào ô quét khi mở panel quét
-                    document.getElementById('mfr-scan-collapse').addEventListener('shown.bs.collapse', function() {
-                        document.getElementById('mfr-scan-input').focus();
-                    });
-                    </script>
-                    <% } %>
                 </div>
 
                 <%
@@ -633,303 +248,6 @@
                 </script>
                 <% } %>
 
-                <% if ("DRAFT".equals(ticket.getStatus()) && canConfirm && "RETURN".equals(ticket.getRequestReason())) { %>
-                <!-- Scanning Interface Panel -->
-                <div class="card bg-white mb-4">
-                    <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-barcode me-2"></i>Thực hiện quét mã vạch (Barcode/Serial)</h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="mb-3">
-                            <label for="barcode-scanner-input" class="form-label fw-semibold text-slate-700">Quét mã Serial sản phẩm trả lại (Sử dụng máy quét hoặc nhập tay):</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light text-muted"><i class="bi bi-upc-scan"></i></span>
-                                <input type="text" id="barcode-scanner-input" class="form-control form-control-lg border-warning" placeholder="Để con trỏ tại đây và quét mã vạch..." autofocus autocomplete="off">
-                            </div>
-                            <div id="scan-status-alert" class="alert d-none mt-2 px-3 py-2" role="alert"></div>
-                        </div>
-                        
-                        <hr class="my-4">
-                        
-                        <h6 class="fw-bold text-slate-800 mb-3"><i class="bi bi-list-task me-1"></i>Tiến độ quét mã xác thực:</h6>
-                        <div class="row g-3">
-                            <% 
-                                if (ticket.getDetails() != null) {
-                                    for (TicketDetail d : ticket.getDetails()) {
-                             %>
-                            <div class="col-md-6">
-                                <div class="border rounded p-3 bg-light" id="prod-panel-<%= d.getProductId() %>">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-semibold text-slate-800 small text-truncate" style="max-width: 70%;" title="<%= d.getProductName() %>"><%= d.getProductName() %></span>
-                                        <span class="badge bg-secondary bg-opacity-10 text-secondary sku-badge"><%= d.getSku() %></span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center border-top pt-2">
-                                        <span class="text-muted small">Yêu cầu: <strong><%= d.getQuantity() %></strong></span>
-                                        <span class="small font-monospace fw-bold scan-progress-text" id="progress-<%= d.getProductId() %>" data-required="<%= d.getQuantity() %>">Đã quét: <span class="scanned-count text-danger">0</span>/<%= d.getQuantity() %></span>
-                                    </div>
-                                    <div class="scanned-serials-list mt-2 border-top pt-2" style="max-height: 120px; overflow-y: auto;">
-                                        <ul class="list-group list-group-flush small" id="list-<%= d.getProductId() %>">
-                                            <li class="list-group-item bg-transparent text-muted text-center py-1 no-serials-msg">Chưa có mã serial nào được quét</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <% 
-                                    }
-                                }
-                            %>
-                        </div>
-                    </div>
-                </div>
-
-                <script>
-                    // Available Serials mapping loaded from request
-                    const availableSerials = {
-                        <% 
-                        Map<Integer, List<String>> avMap = (Map<Integer, List<String>>) request.getAttribute("availableSerials");
-                        if (avMap != null) {
-                            for (Map.Entry<Integer, List<String>> entry : avMap.entrySet()) {
-                        %>
-                            <%= entry.getKey() %>: [
-                                <% for (String s : entry.getValue()) { %>
-                                    "<%= s %>",
-                                <% } %>
-                            ],
-                        <% 
-                            }
-                        }
-                        %>
-                    };
-
-                    // Currently scanned serials model
-                    const scannedSerials = {}; // format: { productId: [serial1, serial2, ...] }
-                    
-                    // Track all scanned serials globally for duplicate checks
-                    const allScannedSerialsGlobal = new Set();
-
-                    // Sound synthesis feedback using Web Audio API
-                    function playBeep(isSuccess) {
-                        try {
-                            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                            const oscillator = audioCtx.createOscillator();
-                            const gainNode = audioCtx.createGain();
-                            
-                            oscillator.connect(gainNode);
-                            gainNode.connect(audioCtx.destination);
-                            
-                            if (isSuccess) {
-                                oscillator.type = 'sine';
-                                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // 800Hz
-                                gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                                oscillator.start();
-                                audioCtx.resume();
-                                setTimeout(() => {
-                                    oscillator.stop();
-                                    audioCtx.close();
-                                }, 80);
-                            } else {
-                                oscillator.type = 'sawtooth';
-                                oscillator.frequency.setValueAtTime(140, audioCtx.currentTime); // 140Hz buzzer
-                                gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
-                                oscillator.start();
-                                audioCtx.resume();
-                                setTimeout(() => {
-                                    oscillator.stop();
-                                    audioCtx.close();
-                                }, 350);
-                            }
-                        } catch (e) {
-                            console.error("Audio Context error", e);
-                        }
-                    }
-
-                    // Display scan message alert
-                    function showScanAlert(message, type) {
-                        const alertBox = document.getElementById("scan-status-alert");
-                        alertBox.className = "alert mt-2 px-3 py-2 " + (type === "success" ? "alert-success" : "alert-danger");
-                        alertBox.innerHTML = (type === "success" ? '<i class="bi bi-check-circle-fill me-1"></i>' : '<i class="bi bi-exclamation-triangle-fill me-1"></i>') + message;
-                        alertBox.classList.remove("d-none");
-                    }
-
-                    // DOM element for scan input
-                    const scanInput = document.getElementById("barcode-scanner-input");
-
-                    // Auto focus scanner input
-                    scanInput.focus();
-                    setInterval(function() {
-                        const activeEl = document.activeElement;
-                        if (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA') {
-                            scanInput.focus();
-                        }
-                    }, 2000);
-
-                    // Process scanned serial number
-                    function processScan(serial) {
-                        serial = serial.trim();
-                        if (!serial) return;
-
-                        // 1. Check if already scanned in this session
-                        if (allScannedSerialsGlobal.has(serial)) {
-                            playBeep(false);
-                            showScanAlert("Mã Serial <strong>" + serial + "</strong> đã được quét trong phiên làm việc này!", "danger");
-                            return;
-                        }
-
-                        // 2. Identify which product this serial belongs to
-                        let foundProductId = null;
-                        for (const prodId in availableSerials) {
-                            if (availableSerials[prodId].includes(serial)) {
-                                foundProductId = parseInt(prodId);
-                                break;
-                            }
-                        }
-
-                        if (!foundProductId) {
-                            playBeep(false);
-                            showScanAlert("Mã Serial <strong>" + serial + "</strong> không thuộc lô hàng đã xuất hoặc không khả dụng cho sản phẩm này!", "danger");
-                            return;
-                        }
-
-                        // Initialize scanned list for product if not exists
-                        if (!scannedSerials[foundProductId]) {
-                            scannedSerials[foundProductId] = [];
-                        }
-
-                        // Get required count
-                        const progressEl = document.getElementById("progress-" + foundProductId);
-                        const requiredCount = parseInt(progressEl.getAttribute("data-required"));
-                        const currentCount = scannedSerials[foundProductId].length;
-
-                        // 3. Check if required quantity is already satisfied
-                        if (currentCount >= requiredCount) {
-                            playBeep(false);
-                            showScanAlert("Số lượng yêu cầu của sản phẩm này đã được quét đầy đủ!", "danger");
-                            return;
-                        }
-
-                        // 4. Add serial
-                        scannedSerials[foundProductId].push(serial);
-                        allScannedSerialsGlobal.add(serial);
-                        playBeep(true);
-                        showScanAlert("Đã quét thành công mã Serial: <strong>" + serial + "</strong>", "success");
-
-                        // 5. Update UI list
-                        const listEl = document.getElementById("list-" + foundProductId);
-                        const noMsg = listEl.querySelector(".no-serials-msg");
-                        if (noMsg) noMsg.remove();
-
-                        const li = document.createElement("li");
-                        li.className = "list-group-item bg-transparent py-1 px-0 d-flex justify-content-between align-items-center text-slate-700 font-monospace";
-                        li.id = "li-" + serial.replace(/[^a-zA-Z0-9]/g, "-");
-                        li.innerHTML = '<span><i class="bi bi-check-lg text-success me-1"></i>' + serial + '</span>' +
-                                       '<button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" onclick="removeSerial(' + foundProductId + ', \'' + serial + '\')"><i class="bi bi-trash"></i></button>';
-                        listEl.appendChild(li);
-
-                        // 6. Update hidden inputs in the form
-                        const formContainer = document.getElementById("hidden-serials-container");
-                        const hiddenInput = document.createElement("input");
-                        hiddenInput.type = "hidden";
-                        hiddenInput.name = "scanned_serials";
-                        hiddenInput.value = serial;
-                        hiddenInput.id = "hidden-input-" + serial.replace(/[^a-zA-Z0-9]/g, "-");
-                        formContainer.appendChild(hiddenInput);
-
-                        // 7. Update progress indicators
-                        updateProgress(foundProductId);
-                        checkOverallCompletion();
-                    }
-
-                    // Remove a scanned serial
-                    window.removeSerial = function(productId, serial) {
-                        if (!scannedSerials[productId]) return;
-                        const idx = scannedSerials[productId].indexOf(serial);
-                        if (idx > -1) {
-                            scannedSerials[productId].splice(idx, 1);
-                            allScannedSerialsGlobal.delete(serial);
-                            
-                            // Remove from list UI
-                            const li = document.getElementById("li-" + serial.replace(/[^a-zA-Z0-9]/g, "-"));
-                            if (li) li.remove();
-                            
-                            // Remove hidden input
-                            const hi = document.getElementById("hidden-input-" + serial.replace(/[^a-zA-Z0-9]/g, "-"));
-                            if (hi) hi.remove();
-                            
-                            // Re-add empty message if list empty
-                            const listEl = document.getElementById("list-" + productId);
-                            if (scannedSerials[productId].length === 0) {
-                                listEl.innerHTML = '<li class="list-group-item bg-transparent text-muted text-center py-1 no-serials-msg">Chưa có mã serial nào được quét</li>';
-                            }
-                            
-                            updateProgress(productId);
-                            checkOverallCompletion();
-                            showScanAlert("Đã xóa mã Serial: " + serial, "success");
-                        }
-                    };
-
-                    function updateProgress(productId) {
-                        const progressEl = document.getElementById("progress-" + productId);
-                        const requiredCount = parseInt(progressEl.getAttribute("data-required"));
-                        const currentCount = scannedSerials[productId] ? scannedSerials[productId].length : 0;
-                        
-                        const scannedCountEl = progressEl.querySelector(".scanned-count");
-                        scannedCountEl.textContent = currentCount;
-                        
-                        const panel = document.getElementById("prod-panel-" + productId);
-                        if (currentCount === requiredCount) {
-                            scannedCountEl.className = "scanned-count text-success";
-                            panel.className = "border rounded p-3 bg-light border-success";
-                        } else {
-                            scannedCountEl.className = "scanned-count text-danger";
-                            panel.className = "border rounded p-3 bg-light";
-                        }
-                    }
-
-                    function checkOverallCompletion() {
-                        let allDone = true;
-                        let totalRequired = 0;
-                        let totalScanned = 0;
-                        
-                        document.querySelectorAll(".scan-progress-text").forEach(function(el) {
-                            const req = parseInt(el.getAttribute("data-required"));
-                            const prodId = parseInt(el.id.replace("progress-", ""));
-                            const scan = scannedSerials[prodId] ? scannedSerials[prodId].length : 0;
-                            totalRequired += req;
-                            totalScanned += scan;
-                            if (scan < req) {
-                                allDone = false;
-                            }
-                        });
-                        
-                        const submitBtn = document.getElementById("confirm-submit-btn");
-                        if (submitBtn) {
-                            if (allDone && totalScanned === totalRequired && totalRequired > 0) {
-                                submitBtn.removeAttribute("disabled");
-                                submitBtn.className = "btn btn-success px-4";
-                            } else {
-                                submitBtn.setAttribute("disabled", "true");
-                                submitBtn.className = "btn btn-secondary px-4";
-                            }
-                        }
-                    }
-
-                    // Listen to scanner keypress
-                    scanInput.addEventListener("keypress", function(e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const val = this.value.trim();
-                            if (val) {
-                                processScan(val);
-                            }
-                            this.value = "";
-                            this.focus();
-                        }
-                    });
-
-                    // Run initial completion check (to disable submit btn initially)
-                    checkOverallCompletion();
-                </script>
-                <% } %>
 
             </div>
         </div>

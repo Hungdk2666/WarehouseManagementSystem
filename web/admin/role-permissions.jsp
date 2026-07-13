@@ -35,7 +35,6 @@
         {"Nhập kho", "bi-box-arrow-in-down", "success"},
         {"Xuất kho", "bi-box-arrow-up-right", "warning"},
         {"Tồn kho & Kiểm kê", "bi-clipboard-data-fill", "info"},
-        {"Thanh lý sản phẩm hỏng", "bi-trash3-fill", "dark"},
         {"Báo cáo & Phân tích", "bi-graph-up-arrow", "secondary"},
     };
 
@@ -72,11 +71,7 @@
             {"Tồn kho", "biz", "INVENTORY_VIEW", "INVENTORY_VIEW_ALL", "INVENTORY_EXPORT"},
             {"Kiểm kê", "biz", "STOCKTAKE_VIEW", "STOCKTAKE_CREATE", "STOCKTAKE_COUNT", "STOCKTAKE_SUBMIT", "STOCKTAKE_APPROVE_L1", "STOCKTAKE_REJECT", "STOCKTAKE_APPROVE_L2", "STOCKTAKE_CONFIG"},
         },
-        // Category 5: Thanh lý sản phẩm hỏng
-        {
-            {"Phiếu thanh lý", "biz", "DISPOSAL_VIEW", "DISPOSAL_CREATE", "DISPOSAL_SUBMIT", "DISPOSAL_APPROVE_L1", "DISPOSAL_APPROVE_L2", "DISPOSAL_EXECUTE", "DISPOSAL_CONFIG", "DISPOSAL_EXPORT"},
-        },
-        // Category 6: Báo cáo & Phân tích
+        // Category 5: Báo cáo & Phân tích
         {
             {"Sổ kho", "biz", "STOCK_LEDGER_VIEW"},
             {"Cảnh báo sắp hết hàng", "biz", "LOW_STOCK_ALERT_VIEW"},
@@ -165,8 +160,6 @@
                         actionMeta.put("APPROVE_L1",       new String[]{"Duyệt L1",       "bi-check-circle"});
                         actionMeta.put("APPROVE_L2",       new String[]{"Duyệt L2",       "bi-check-circle-fill"});
                         actionMeta.put("CONFIG",           new String[]{"Cấu hình",       "bi-gear"});
-                        actionMeta.put("EXECUTE",          new String[]{"Thực hiện",      "bi-trash3"});
-
                         for (int ci = 0; ci < categories.length; ci++) {
                             String catLabel = categories[ci][0];
                             String catIcon = categories[ci][1];
@@ -216,8 +209,6 @@
                                                         actionKey = "VIEW_ALL";
                                                     } else if (permName.startsWith("STOCKTAKE_APPROVE_")) {
                                                         actionKey = permName.substring("STOCKTAKE_".length());
-                                                    } else if (permName.startsWith("DISPOSAL_APPROVE_")) {
-                                                        actionKey = permName.substring("DISPOSAL_".length());
                                                     } else {
                                                         actionKey = permName.substring(permName.lastIndexOf("_") + 1);
                                                     }

@@ -52,7 +52,7 @@
                 </div>
 
                 <!-- Filters -->
-                <div class="card mb-3" style="position: relative; z-index: 20;">
+                <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
                             <div class="col-12 col-md-3">
@@ -70,7 +70,7 @@
                             <div class="col-6 col-md-2">
                                 <label class="form-label small fw-semibold mb-1">Trạng thái</label>
                                 <div class="dropdown">
-                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal"
+                                    <button type="button" id="statusDropdownBtn" class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start fw-normal justify-content-between"
                                             data-bs-toggle="dropdown" data-bs-auto-close="outside" style="background:#fff; font-size:0.875rem;">
                                         <span id="statusLabel">-- Tất cả --</span>
                                     </button>
@@ -151,30 +151,14 @@
                                             <span class="status-chip <%= statusBadge %>"><%= displayTStatus %></span>
                                         </td>
                                         <td><%= t.getKeeperFullName() %></td>
-                                        <td class="text-muted small"><%= t.getCreatedAt() %></td>
+                                        <td class="text-muted small text-nowrap"><%= t.getCreatedAt() %></td>
                                         <td><%= t.getConfirmedByFullName() != null ? t.getConfirmedByFullName() : "-" %></td>
-                                        <td class="text-muted small"><%= t.getConfirmedAt() != null ? t.getConfirmedAt() : "-" %></td>
+                                        <td class="text-muted small text-nowrap"><%= t.getConfirmedAt() != null ? t.getConfirmedAt() : "-" %></td>
                                         <td>
                                             <div class="d-flex align-items-center justify-content-center gap-1">
                                                 <a href="import-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết" aria-label="Xem chi tiết phiếu nhập">
                                                     <i class="bi bi-eye" aria-hidden="true"></i>
                                                 </a>
-                                                <% if (canConfirm && "DRAFT".equals(t.getStatus())) { %>
-                                                <form action="import-ticket?action=confirm" method="POST" class="d-inline m-0" onsubmit="return confirm('Xác nhận phiếu nhập kho này sẽ cập nhật số lượng tồn kho, giá vốn trung bình và ghi nhận vào sổ kho. Tiến hành?');">
-                                                    <input type="hidden" name="id" value="<%= t.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1">
-                                                        <i class="bi bi-check-circle"></i> Xác nhận
-                                                    </button>
-                                                </form>
-                                                <% } %>
-                                                <% if (canCancel && "DRAFT".equals(t.getStatus())) { %>
-                                                <form action="import-ticket?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy Phiếu nhập kho này?');">
-                                                    <input type="hidden" name="id" value="<%= t.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1">
-                                                        <i class="bi bi-slash-circle"></i> Hủy
-                                                    </button>
-                                                </form>
-                                                <% } %>
                                             </div>
                                         </td>
                                     </tr>
@@ -214,6 +198,7 @@
         </div>
     </div>
     
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const userWarehouseName = '<%= loggedInUser.getWarehouseName() != null ? loggedInUser.getWarehouseName().replace("'", "\\'") : "" %>';
 

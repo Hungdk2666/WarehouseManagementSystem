@@ -3,12 +3,11 @@ package controller.warehouse;
 import service.RequestService;
 import service.TicketService;
 import service.ProductItemService;
+import service.ProductService;
 import service.ManufacturerSerialExcelService;
+import model.Product;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -75,38 +74,6 @@ public class ImportTicketServlet extends HttpServlet {
                         || Ticket.STATUS_COMPLETED.equals(ticket.getStatus())) {
                     List<ProductItem> serials = new ProductItemService().getItemsByTicketId(id);
                     httpReq.setAttribute("importedSerials", serials);
-                } else if (Ticket.STATUS_DRAFT.equals(ticket.getStatus())
-                        && Request.REASON_RETURN.equals(ticket.getRequestReason()) && ticket.getDetails() != null) {
-                    java.util.Map<Integer, List<String>> availableSerials = new java.util.HashMap<>();
-                    Request req = requestService.getById(ticket.getRequestId());
-                    String expectedSerialsStr = req != null ? req.getExpectedSerials() : null;
-                    List<String> expectedSerialsList = new ArrayList<>();
-                    if (expectedSerialsStr != null && !expectedSerialsStr.trim().isEmpty()) {
-                        for (String s : expectedSerialsStr.split(",")) {
-                            if (s != null && !s.trim().isEmpty()) expectedSerialsList.add(s.trim());
-                        }
-                    }
-                    
-                    for (TicketDetail d : ticket.getDetails()) {
-                        List<String> serials = new ArrayList<>();
-                        for (String s : expectedSerialsList) {
-                            try (java.sql.Connection conn = utils.DBUtils.getConnection();
-                                 PreparedStatement ps = conn.prepareStatement(
-                                         "SELECT COUNT(*) FROM Product_Items WHERE serial_number = ? AND product_id = ?")) {
-                                ps.setString(1, s);
-                                ps.setInt(2, d.getProductId());
-                                try (java.sql.ResultSet rs = ps.executeQuery()) {
-                                    if (rs.next() && rs.getInt(1) > 0) {
-                                        serials.add(s);
-                                    }
-                                }
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                            }
-                        }
-                        availableSerials.put(d.getProductId(), serials);
-                    }
-                    httpReq.setAttribute("availableSerials", availableSerials);
                 }
                 httpReq.setAttribute("ticket", ticket);
                 httpReq.getRequestDispatcher("/import/import-detail.jsp").forward(httpReq, response);
@@ -156,16 +123,9 @@ public class ImportTicketServlet extends HttpServlet {
             return;
         }
 
-        if ("add".equals(action) && !loggedInUser.hasPermission("TICKET_ADD_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo.");
-            return;
-        }
-        if ("confirm".equals(action) && !loggedInUser.hasPermission("TICKET_CONFIRM_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xác nhận.");
-            return;
-        }
-        if ("cancel".equals(action) && !loggedInUser.hasPermission("TICKET_CANCEL_IN")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền hủy.");
+        if ("addAndConfirm".equals(action)
+                && !(loggedInUser.hasPermission("TICKET_ADD_IN") && loggedInUser.hasPermission("TICKET_CONFIRM_IN"))) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền tạo và nhập kho.");
             return;
         }
 
@@ -174,17 +134,16 @@ public class ImportTicketServlet extends HttpServlet {
 
         try {
             switch (action) {
-                case "add": {
+                case "addAndConfirm": {
+                    // GỘP 1 MÀN HÌNH: tạo phiếu nhập + nhập kho trong 1 bước, không để lại phiếu nháp.
                     int reqId = Integer.parseInt(httpReq.getParameter("request_id"));
                     Request req = requestService.getById(reqId);
                     if (req == null || req.getCancelRequestedAt() != null
                             || !(Request.STATUS_APPROVED.equals(req.getStatus())
                                 || Request.STATUS_PARTIALLY_COMPLETED.equals(req.getStatus()))) {
-                        response.sendRedirect(
-                                httpReq.getContextPath() + "/warehouse/import-ticket?action=add&error=RequestNotApproved");
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=add&error=RequestNotApproved");
                         return;
                     }
-                    // Block khi kho đang kiểm kê
                     if (loggedInUser.getWarehouseId() != null) {
                         model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(loggedInUser.getWarehouseId());
                         if (active != null) {
@@ -194,36 +153,36 @@ public class ImportTicketServlet extends HttpServlet {
                         }
                     }
                     if (loggedInUser.getWarehouseId() == null) {
-                        response.sendRedirect(
-                                httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId
-                                        + "&error=RequiresWarehouseAssignment");
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=RequiresWarehouseAssignment");
                         return;
                     }
-                    // Check: user pháº£i cĂ¹ng kho vá»›i Request (Request.warehouseId = kho Ä‘Ă­ch nháº­p
-                    // hĂ ng)
                     if (loggedInUser.getWarehouseId() != req.getWarehouseId()) {
-                        response.sendRedirect(httpReq.getContextPath()
-                                + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=WrongWarehouse");
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=WrongWarehouse");
                         return;
                     }
+
+                    boolean isTransfer = Request.REASON_TRANSFER.equals(req.getReason());
+                    boolean isReturn = Request.REASON_RETURN.equals(req.getReason());
+                    boolean isPurchase = Request.REASON_PURCHASE.equals(req.getReason());
+
                     String[] productIds = httpReq.getParameterValues("product_id");
                     String[] quantities = httpReq.getParameterValues("quantity");
                     String[] unitPrices = httpReq.getParameterValues("unit_price");
-                    String[] conditions = httpReq.getParameterValues("item_condition");
                     if (productIds == null || productIds.length == 0) {
-                        response.sendRedirect(httpReq.getContextPath()
-                                + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=NoItems");
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=NoItems");
                         return;
                     }
                     List<TicketDetail> details = new ArrayList<>();
                     for (int i = 0; i < productIds.length; i++) {
                         int qty = Integer.parseInt(quantities[i]);
-                        if (qty <= 0)
-                            continue;
-                        java.math.BigDecimal price = new java.math.BigDecimal(unitPrices[i]);
-                        if (price.compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                            response.sendRedirect(httpReq.getContextPath()
-                                    + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=InvalidPrice");
+                        if (qty <= 0) continue;
+                        // Giá: chỉ BẮT BUỘC > 0 với nhập MUA (PURCHASE). Chuyển kho/Trả hàng không cần giá.
+                        java.math.BigDecimal price = java.math.BigDecimal.ZERO;
+                        if (unitPrices != null && i < unitPrices.length && unitPrices[i] != null && !unitPrices[i].trim().isEmpty()) {
+                            price = new java.math.BigDecimal(unitPrices[i].trim());
+                        }
+                        if (isPurchase && price.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=InvalidPrice");
                             return;
                         }
                         TicketDetail d = new TicketDetail();
@@ -233,140 +192,55 @@ public class ImportTicketServlet extends HttpServlet {
                         details.add(d);
                     }
                     if (details.isEmpty()) {
-                        response.sendRedirect(httpReq.getContextPath()
-                                + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=NoItemsReceived");
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=NoItemsReceived");
                         return;
                     }
+
+                    // RETURN/TRANSFER: serial được xác định từ hàng đã xuất / đang trên đường (không cần quét ở đây,
+                    // DAO tự lấy). Ở đây chỉ truyền serial nếu người dùng có nhập tay cho RETURN.
+                    String[] scanned = httpReq.getParameterValues("scanned_serials");
+                    List<String> serials = null;
+                    if (scanned != null && scanned.length > 0) {
+                        serials = new ArrayList<>();
+                        for (String s : scanned) if (s != null && !s.trim().isEmpty()) serials.add(s.trim());
+                    }
+
+                    // PURCHASE: (tùy chọn) đính kèm file Excel serial nhà sản xuất — parse ngay tại đây.
+                    Map<String, List<String>> mfrSerials = null;
+                    if (isPurchase) {
+                        Part filePart = null;
+                        try { filePart = httpReq.getPart("excelFile"); } catch (Exception ignore) {}
+                        if (filePart != null && filePart.getSize() > 0) {
+                            Map<String, Integer> expectedBySku = new LinkedHashMap<>();
+                            ProductService pService = new ProductService();
+                            for (TicketDetail d : details) {
+                                Product p = pService.getProductById(d.getProductId(), req.getWarehouseId());
+                                if (p != null) expectedBySku.put(p.getSku(), d.getQuantity());
+                            }
+                            ManufacturerSerialExcelService excelService = new ManufacturerSerialExcelService();
+                            ManufacturerSerialExcelService.ParseResult result;
+                            try (InputStream is = filePart.getInputStream()) {
+                                result = excelService.parseAndValidate(is, expectedBySku);
+                            }
+                            if (!result.isValid()) {
+                                response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=InvalidSerialFile");
+                                return;
+                            }
+                            mfrSerials = result.getSerialsBySku();
+                        }
+                    }
+
                     Ticket ticket = new Ticket();
                     ticket.setType(Ticket.TYPE_IN);
                     ticket.setRequestId(reqId);
                     ticket.setWarehouseId(loggedInUser.getWarehouseId());
                     ticket.setKeeperId(loggedInUser.getId());
-                    if (!ticketService.add(ticket, details)) {
-                        response.sendRedirect(httpReq.getContextPath()
-                                + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=Failed");
+                    boolean ok = ticketService.addAndConfirm(ticket, details, serials, loggedInUser.getId(), mfrSerials);
+                    if (!ok) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=add&request_id=" + reqId + "&error=ReceiveFailed");
                         return;
                     }
                     break;
-                }
-                case "confirm": {
-                    int confirmId = Integer.parseInt(httpReq.getParameter("id"));
-                    // Block khi kho đang kiểm kê
-                    {
-                        Ticket ticketForConfirm = ticketService.getById(confirmId);
-                        if (ticketForConfirm != null) {
-                            model.Stocktake active = new service.StocktakeService().getActiveStocktakeForWarehouse(ticketForConfirm.getWarehouseId());
-                            if (active != null) {
-                                response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-ticket?action=detail&id=" + confirmId
-                                        + "&error=WarehouseFrozen&stk=" + active.getStocktakeCode());
-                                return;
-                            }
-                        }
-                    }
-                    String[] scannedSerials = httpReq.getParameterValues("scanned_serials");
-                    List<String> serials = null;
-                    if (scannedSerials != null && scannedSerials.length > 0) {
-                        serials = new ArrayList<>();
-                        for (String s : scannedSerials) {
-                            if (s != null && !s.trim().isEmpty())
-                                serials.add(s.trim());
-                        }
-                    }
-                    @SuppressWarnings("unchecked")
-                    Map<String, List<String>> mfrSerials = (Map<String, List<String>>) session.getAttribute("mfrSerials_" + confirmId);
-
-                    // Nếu chưa có Excel serials trong session, kiểm tra xem người dùng có quét mã vạch NSX không
-                    if (mfrSerials == null) {
-                        String[] scanParams = httpReq.getParameterValues("manufacturer_serial_scan");
-                        if (scanParams != null && scanParams.length > 0) {
-                            mfrSerials = new LinkedHashMap<>();
-                            for (String param : scanParams) {
-                                if (param == null || !param.contains("|")) continue;
-                                int sep = param.indexOf('|');
-                                String sku = param.substring(0, sep).trim();
-                                String serial = param.substring(sep + 1).trim();
-                                if (!sku.isEmpty() && !serial.isEmpty()) {
-                                    mfrSerials.computeIfAbsent(sku, k -> new ArrayList<>()).add(serial);
-                                }
-                            }
-                            if (mfrSerials.isEmpty()) mfrSerials = null;
-                        }
-                    }
-
-                    ticketService.confirm(confirmId, loggedInUser.getId(), serials, mfrSerials);
-                    session.removeAttribute("mfrSerials_" + confirmId);
-                    break;
-                }
-                case "cancel":
-                    ticketService.cancel(Integer.parseInt(httpReq.getParameter("id")));
-                    break;
-                case "uploadSerials": {
-                    int ticketId = Integer.parseInt(httpReq.getParameter("id"));
-                    Ticket ticket = ticketService.getById(ticketId);
-                    response.setContentType("application/json;charset=UTF-8");
-                    PrintWriter out = response.getWriter();
-
-                    if (ticket == null || !Ticket.STATUS_DRAFT.equals(ticket.getStatus())) {
-                        out.print("{\"valid\":false,\"errors\":[\"Phiếu không tồn tại hoặc không ở trạng thái DRAFT.\"]}");
-                        return;
-                    }
-                    if (!Request.REASON_PURCHASE.equals(ticket.getRequestReason())) {
-                        out.print("{\"valid\":false,\"errors\":[\"Upload serial NSX chỉ áp dụng cho phiếu nhập mua hàng (PURCHASE).\"]}");
-                        return;
-                    }
-
-                    Part filePart = httpReq.getPart("excelFile");
-                    if (filePart == null || filePart.getSize() == 0) {
-                        out.print("{\"valid\":false,\"errors\":[\"Chưa chọn file.\"]}");
-                        return;
-                    }
-
-                    Map<String, Integer> expectedBySku = new LinkedHashMap<>();
-                    if (ticket.getDetails() != null) {
-                        for (TicketDetail d : ticket.getDetails()) {
-                            expectedBySku.put(d.getSku(), d.getQuantity());
-                        }
-                    }
-
-                    ManufacturerSerialExcelService excelService = new ManufacturerSerialExcelService();
-                    ManufacturerSerialExcelService.ParseResult result;
-                    try (InputStream is = filePart.getInputStream()) {
-                        result = excelService.parseAndValidate(is, expectedBySku);
-                    }
-
-                    if (result.isValid()) {
-                        session.setAttribute("mfrSerials_" + ticketId, result.getSerialsBySku());
-                    }
-
-                    StringBuilder json = new StringBuilder();
-                    json.append("{\"valid\":").append(result.isValid());
-                    json.append(",\"totalSerials\":").append(result.getTotalSerials());
-                    json.append(",\"errors\":[");
-                    for (int i = 0; i < result.getErrors().size(); i++) {
-                        if (i > 0) json.append(",");
-                        json.append("\"").append(result.getErrors().get(i).replace("\"", "\\\"")).append("\"");
-                    }
-                    json.append("],\"serialsBySku\":{");
-                    int skuIdx = 0;
-                    for (Map.Entry<String, List<String>> entry : result.getSerialsBySku().entrySet()) {
-                        if (skuIdx++ > 0) json.append(",");
-                        json.append("\"").append(entry.getKey()).append("\":[");
-                        for (int i = 0; i < entry.getValue().size(); i++) {
-                            if (i > 0) json.append(",");
-                            json.append("\"").append(entry.getValue().get(i).replace("\"", "\\\"")).append("\"");
-                        }
-                        json.append("]");
-                    }
-                    json.append("}}");
-                    out.print(json);
-                    return;
-                }
-                case "clearSerials": {
-                    int ticketId = Integer.parseInt(httpReq.getParameter("id"));
-                    session.removeAttribute("mfrSerials_" + ticketId);
-                    response.setContentType("application/json;charset=UTF-8");
-                    response.getWriter().print("{\"ok\":true}");
-                    return;
                 }
             }
         } catch (Exception e) {

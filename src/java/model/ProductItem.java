@@ -110,7 +110,6 @@ public class ProductItem {
     }
 
     private String warehouseName;
-    private double unitCost;
 
     public String getWarehouseName() {
         return warehouseName;
@@ -118,14 +117,6 @@ public class ProductItem {
 
     public void setWarehouseName(String warehouseName) {
         this.warehouseName = warehouseName;
-    }
-
-    public double getUnitCost() {
-        return unitCost;
-    }
-
-    public void setUnitCost(double unitCost) {
-        this.unitCost = unitCost;
     }
 
     public String getManufacturerSerial() {

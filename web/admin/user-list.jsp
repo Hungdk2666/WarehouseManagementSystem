@@ -126,18 +126,18 @@
                                         <td class="text-center">
                                             <div class="d-flex align-items-center justify-content-center gap-1">
                                                 <a href="user?action=info&id=<%= u.getId() %>" class="btn btn-table btn-outline-secondary" title="Chi tiết">
-                                                    <i class="bi bi-eye"></i> Chi tiết
+                                                    <i class="bi bi-eye"></i>
                                                 </a>
                                                 <% if (loggedInUser.hasPermission("USER_EDIT")) { %>
                                                 <a href="user?action=update&id=<%= u.getId() %>" class="btn btn-table btn-outline-primary" title="Sửa">
-                                                    <i class="bi bi-pencil-square"></i> Sửa
+                                                    <i class="bi bi-pencil-square"></i>
                                                 </a>
                                                 <% } %>
                                                 <% if (loggedInUser.hasPermission("USER_TOGGLE")) { %>
                                                 <form action="user?action=toggle" method="POST" style="display:inline;" class="m-0">
                                                     <input type="hidden" name="id" value="<%= u.getId() %>">
                                                     <button type="submit" class="btn btn-table <%= u.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= u.isStatus() ? "Vô hiệu hóa tài khoản" : "Kích hoạt tài khoản" %>">
-                                                        <i class="bi bi-power"></i> <%= u.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
+                                                        <i class="bi bi-power"></i>
                                                     </button>
                                                 </form>
                                                 <% } %>
