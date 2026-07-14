@@ -47,7 +47,7 @@
                     </div>
                 </div>
 
-                <!-- Filters -->
+                
                 <div class="card mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
@@ -109,7 +109,7 @@
                                     <th>Phạm vi kiểm kê</th>
                                     <th>Hình thức kiểm</th>
                                     <th>Trạng thái</th>
-                                    <th>Chênh lệch (%)</th>
+                                    <th>Tỷ lệ chênh lệch</th>
                                     <th>Người tạo</th>
                                     <th>Ngày tạo</th>
                                     <th class="text-center">Thao tác</th>
@@ -156,8 +156,8 @@
                                     <td><%= s.getCreatedAt() %></td>
                                     <td class="text-center">
                                         <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=detail&id=<%= s.getId() %>"
-                                           class="btn btn-table btn-outline-secondary">
-                                            <i class="bi bi-eye"></i> Xem
+                                           class="btn btn-table btn-outline-secondary" title="Xem chi tiết" aria-label="Xem chi tiết phiếu kiểm kê">
+                                            <i class="bi bi-eye" aria-hidden="true"></i>
                                         </a>
                                     </td>
                                 </tr>
@@ -186,7 +186,7 @@
     document.addEventListener("DOMContentLoaded", function() {
         initPagination("stocktakeTable", "paginationContainer", "entriesPerPage", "stocktakeSearch");
 
-        // Multi-select trạng thái
+
         function getSelectedStatuses() {
             return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(function(cb) { return cb.value; });
         }

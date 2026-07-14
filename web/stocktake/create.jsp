@@ -63,15 +63,15 @@
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">Phạm vi kiểm kê <span class="text-danger">*</span></label>
                                     <select class="form-select" name="scope" id="scope" required>
-                                        <option value="PARTIAL">Một phần (chọn vài SKU)</option>
-                                        <option value="FULL">Toàn kho (tất cả SKU)</option>
+                                        <option value="PARTIAL">Một phần</option>
+                                        <option value="FULL">Toàn kho</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">Hình thức kiểm <span class="text-danger">*</span></label>
                                     <select class="form-select" name="count_mode" required>
-                                        <option value="QUANTITY">Theo số lượng (nhập số đếm)</option>
-                                        <option value="SERIAL">Quét mã serial (chính xác hơn)</option>
+                                        <option value="QUANTITY">Nhập số lượng</option>
+                                        <option value="SERIAL">Quét mã serial</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
@@ -91,8 +91,14 @@
                             <div class="mb-2">
                                 <input type="text" id="prodSearch" class="form-control form-control-sm" placeholder="Tìm sản phẩm theo tên/SKU...">
                             </div>
-                            <div style="max-height:400px;overflow-y:auto;">
-                                <table class="table table-sm table-hover align-middle mb-0">
+                            <div class="table-responsive" style="max-height:400px;overflow-y:auto;">
+                                <table class="table table-sm table-hover align-middle mb-0 editable-table" style="min-width: 640px;">
+                                    <colgroup>
+                                        <col style="width:6%">
+                                        <col style="width:50%">
+                                        <col style="width:24%">
+                                        <col style="width:20%">
+                                    </colgroup>
                                     <thead class="table-light sticky-top">
                                         <tr>
                                             <th width="40"><input type="checkbox" id="selectAll"></th>

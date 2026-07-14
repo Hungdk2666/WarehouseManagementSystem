@@ -9,7 +9,9 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import model.Stocktake;
 import model.StocktakeConfig;
 import model.StocktakeDetail;
@@ -35,13 +37,15 @@ public class StocktakeDAO {
         + "u1.full_name AS created_by_name, "
         + "u2.full_name AS counted_by_name, "
         + "u3.full_name AS l1_name, "
-        + "u4.full_name AS l2_name "
+        + "u4.full_name AS l2_name, "
+        + "u5.full_name AS verified_by_name "
         + "FROM Stocktakes s "
         + "JOIN Warehouses w ON w.id = s.warehouse_id "
         + "JOIN Users u1 ON u1.id = s.created_by "
         + "LEFT JOIN Users u2 ON u2.id = s.counted_by "
         + "LEFT JOIN Users u3 ON u3.id = s.l1_approved_by "
-        + "LEFT JOIN Users u4 ON u4.id = s.l2_approved_by ";
+        + "LEFT JOIN Users u4 ON u4.id = s.l2_approved_by "
+        + "LEFT JOIN Users u5 ON u5.id = s.verified_by ";
 
     private Stocktake mapRow(ResultSet rs) throws Exception {
         Stocktake s = new Stocktake();
@@ -56,6 +60,9 @@ public class StocktakeDAO {
         s.setVarianceValue(rs.getBigDecimal("variance_value"));
         s.setNotes(rs.getString("notes"));
         s.setRejectReason(rs.getString("reject_reason"));
+        s.setVerificationStatus(rs.getString("verification_status"));
+        s.setVerifiedBy((Integer) rs.getObject("verified_by"));
+        s.setVerifiedAt(rs.getTimestamp("verified_at"));
         s.setCreatedAt(rs.getTimestamp("created_at"));
         s.setCreatedBy(rs.getInt("created_by"));
         s.setCountedBy((Integer) rs.getObject("counted_by"));
@@ -71,6 +78,7 @@ public class StocktakeDAO {
         s.setCountedByFullName(rs.getString("counted_by_name"));
         s.setL1ApprovedByFullName(rs.getString("l1_name"));
         s.setL2ApprovedByFullName(rs.getString("l2_name"));
+        s.setVerifiedByFullName(rs.getString("verified_by_name"));
         return s;
     }
 
@@ -100,6 +108,7 @@ public class StocktakeDAO {
         it.setScannedStatus(rs.getString("scanned_status"));
         it.setNewCondition(rs.getString("new_condition"));
         it.setNote(rs.getString("note"));
+        it.setPhase(rs.getString("phase"));
         it.setCreatedAt(rs.getTimestamp("created_at"));
         it.setProductName(rs.getString("product_name"));
         it.setSku(rs.getString("sku"));
@@ -135,7 +144,7 @@ public class StocktakeDAO {
                 if (rs.next()) {
                     Stocktake s = mapRow(rs);
                     s.setDetails(getDetailsByStocktakeId(id));
-                    if (s.isSerialMode()) s.setItems(getItemsByStocktakeId(id));
+                    s.setItems(getItemsByStocktakeId(id));
                     return s;
                 }
             }
@@ -254,8 +263,8 @@ public class StocktakeDAO {
                 auditLogDAO.log(s.getCreatedBy(), "STOCKTAKE_CREATE",
                         "Stocktake " + s.getStocktakeCode() + " — kho " + s.getWarehouseId());
 
-                // Thông báo cho Warehouse Staff (role 4) trong kho này
-                notificationDAO.createNotificationForRole(4,
+                // Thông báo cho Warehouse Staff (role 4) ĐÚNG kho này (không gửi lan sang kho khác)
+                notificationDAO.createNotificationForWarehouseRole(s.getWarehouseId(), 4,
                         "Có phiếu kiểm kê mới",
                         "Phiếu " + s.getStocktakeCode() + " đang chờ đếm",
                         "/warehouse/stocktake?action=detail&id=" + newId, conn);
@@ -279,13 +288,21 @@ public class StocktakeDAO {
      * Khi nhân viên bắt đầu đếm → status DRAFT → COUNTING + set counted_by.
      */
     public boolean startCounting(int stocktakeId, int userId) {
-        String sql = "UPDATE Stocktakes SET status = 'COUNTING', counted_by = ?, counted_at = NOW() "
+        String sql = "UPDATE Stocktakes SET status = 'COUNTING', counted_by = ?, counted_at = NOW(), "
+                   + "verification_status = 'NONE', verified_by = NULL, verified_at = NULL "
                    + "WHERE id = ? AND status IN ('DRAFT','COUNTING','REJECTED')";
-        try (Connection conn = DBUtils.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            ps.setInt(2, stocktakeId);
-            return ps.executeUpdate() > 0;
+        try (Connection conn = DBUtils.getConnection()) {
+            // Xóa VERIFY items cũ khi bắt đầu đếm lại
+            try (PreparedStatement del = conn.prepareStatement(
+                    "DELETE FROM Stocktake_Items WHERE stocktake_id = ? AND phase = 'VERIFY'")) {
+                del.setInt(1, stocktakeId);
+                del.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, userId);
+                ps.setInt(2, stocktakeId);
+                return ps.executeUpdate() > 0;
+            }
         } catch (Exception e) { e.printStackTrace(); return false; }
     }
 
@@ -384,7 +401,12 @@ public class StocktakeDAO {
                 if (s.isSerialMode()) {
                     autoFillMissingSerials(stocktakeId, s.getWarehouseId(), conn);
                     rollupSerialCounts(stocktakeId, conn);
-                    // Reload để có actual_qty/damaged_qty mới
+                    s = getById(stocktakeId);
+                }
+
+                // QUANTITY mode + đã xác minh serial: đảm bảo rollup lại từ VERIFY items
+                if (s.isQuantityMode() && s.isVerificationCompleted()) {
+                    rollupVerificationCounts(stocktakeId, conn);
                     s = getById(stocktakeId);
                 }
 
@@ -426,8 +448,8 @@ public class StocktakeDAO {
                         "STOCKTAKE_SUBMIT",
                         "Stocktake " + s.getStocktakeCode() + " — variance " + percent + "% / " + totalValue + "đ");
 
-                // Notify Warehouse Manager (role 3) duyệt L1
-                notificationDAO.createNotificationForRole(3,
+                // Thông báo Warehouse Manager (role 3) ĐÚNG kho này duyệt L1
+                notificationDAO.createNotificationForWarehouseRole(s.getWarehouseId(), 3,
                         "Có phiếu kiểm kê chờ duyệt",
                         "Phiếu " + s.getStocktakeCode() + " chênh lệch " + percent + "%"
                                 + (needsL2 ? " (cần duyệt 2 cấp)" : ""),
@@ -600,9 +622,8 @@ public class StocktakeDAO {
         String selInv = "SELECT quantity, quarantine_quantity FROM Inventories WHERE warehouse_id = ? AND product_id = ? FOR UPDATE";
         String upsertInv = "INSERT INTO Inventories (warehouse_id, product_id, quantity, quarantine_quantity) "
                          + "VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), quarantine_quantity = VALUES(quarantine_quantity)";
-        String insLedger = "INSERT INTO Product_Ledger "
-                         + "(product_id, transaction_type, reference_id, change_quantity, balance_quantity, warehouse_id, created_by) "
-                         + "VALUES (?,?,?,?,?,?,?)";
+        Map<Integer, int[]> oldConditionBalances = new HashMap<>();
+        Map<Integer, Integer> physicalChanges = new HashMap<>();
 
         for (StocktakeDetail d : details) {
             int newGoodQty = Math.max(0, d.getActualQty() - d.getDamagedQty());
@@ -619,6 +640,8 @@ public class StocktakeDAO {
                     }
                 }
             }
+            oldConditionBalances.put(d.getProductId(),
+                    getConditionBalances(d.getProductId(), s.getWarehouseId(), conn));
             int newQuarantineQty = oldQuarantineQty + d.getDamagedQty();
 
             try (PreparedStatement ps = conn.prepareStatement(upsertInv)) {
@@ -629,25 +652,23 @@ public class StocktakeDAO {
                 ps.executeUpdate();
             }
 
-            int change = newGoodQty - oldGoodQty;
-            if (change != 0 || d.getDamagedQty() != 0) {
-                try (PreparedStatement ps = conn.prepareStatement(insLedger)) {
-                    ps.setInt(1, d.getProductId());
-                    ps.setString(2, "STOCKTAKE");
-                    ps.setInt(3, s.getId());
-                    ps.setInt(4, change);
-                    ps.setInt(5, newGoodQty);
-                    ps.setInt(6, s.getWarehouseId());
-                    ps.setInt(7, actorId);
-                    ps.executeUpdate();
-                }
-            }
+            int change = (newGoodQty + newQuarantineQty) - (oldGoodQty + oldQuarantineQty);
+            physicalChanges.put(d.getProductId(), change);
         }
 
-        // 2. Nếu SERIAL mode → xử lý từng serial
-        if (s.isSerialMode()) {
+        // 2. Xử lý serial: SERIAL mode hoặc QUANTITY mode có verification
+        boolean hasVerifyItems = s.isQuantityMode() && s.isVerificationCompleted();
+        if (s.isSerialMode() || hasVerifyItems) {
             List<StocktakeItem> items = s.getItems();
             if (items != null) {
+                // QUANTITY+VERIFY: chỉ xử lý VERIFY-phase items; SERIAL: xử lý tất cả
+                if (hasVerifyItems) {
+                    List<StocktakeItem> verifyOnly = new ArrayList<>();
+                    for (StocktakeItem vi : items) {
+                        if ("VERIFY".equals(vi.getPhase())) verifyOnly.add(vi);
+                    }
+                    items = verifyOnly;
+                }
                 String updItemLost     = "UPDATE Product_Items SET status = 'LOST' WHERE id = ?";
                 String updItemDamaged  = "UPDATE Product_Items SET status = 'QUARANTINE', item_condition = 'DAMAGED' WHERE id = ?";
                 String insNewItem      = "INSERT INTO Product_Items (product_id, serial_number, status, item_condition, warehouse_id) "
@@ -709,40 +730,41 @@ public class StocktakeDAO {
                     }
                 }
             }
-        } else {
-            // QUANTITY mode + damaged_qty > 0: tự chuyển đủ số DAMAGED serial vào QUARANTINE
-            String selSerials = "SELECT id FROM Product_Items "
-                              + "WHERE product_id = ? AND warehouse_id = ? AND status = 'IN_STOCK' AND item_condition = 'NEW' "
-                              + "ORDER BY id LIMIT ?";
-            String updDam = "UPDATE Product_Items SET status = 'QUARANTINE', item_condition = 'DAMAGED' WHERE id = ?";
-            String insMov = "INSERT INTO Product_Item_Movements "
-                          + "(product_item_id, ticket_id, action, from_warehouse_id, to_warehouse_id, condition_at_time, created_by) "
-                          + "VALUES (?,NULL,'STOCKTAKE_ADJUST',?,?,'DAMAGED',?)";
+        }
 
-            for (StocktakeDetail d : details) {
-                if (d.getDamagedQty() <= 0) continue;
-                List<Integer> ids = new ArrayList<>();
-                try (PreparedStatement ps = conn.prepareStatement(selSerials)) {
-                    ps.setInt(1, d.getProductId());
-                    ps.setInt(2, s.getWarehouseId());
-                    ps.setInt(3, d.getDamagedQty());
-                    try (ResultSet rs = ps.executeQuery()) {
-                        while (rs.next()) ids.add(rs.getInt(1));
-                    }
-                }
-                for (int itemId : ids) {
-                    try (PreparedStatement ps = conn.prepareStatement(updDam)) {
-                        ps.setInt(1, itemId);
-                        ps.executeUpdate();
-                    }
-                    try (PreparedStatement ps = conn.prepareStatement(insMov)) {
-                        ps.setInt(1, itemId);
-                        ps.setInt(2, s.getWarehouseId());
-                        ps.setInt(3, s.getWarehouseId());
-                        ps.setInt(4, actorId);
-                        ps.executeUpdate();
-                    }
-                }
+        // Ghi một snapshot ledger sau khi cả tồn tổng và trạng thái serial đã được cập nhật.
+        // Delta theo tình trạng giúp báo cáo phân biệt tái phân loại với nhập/xuất thật.
+        String insLedger = "INSERT INTO Product_Ledger "
+                + "(product_id, transaction_type, reference_id, change_quantity, balance_quantity, "
+                + "change_new_quantity, change_used_quantity, change_damaged_quantity, "
+                + "balance_new_quantity, balance_used_quantity, balance_damaged_quantity, "
+                + "warehouse_id, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        for (StocktakeDetail d : details) {
+            int productId = d.getProductId();
+            int physicalChange = physicalChanges.getOrDefault(productId, 0);
+            int[] oldBalances = oldConditionBalances.getOrDefault(productId, new int[] {0, 0, 0});
+            int[] newBalances = getConditionBalances(productId, s.getWarehouseId(), conn);
+            int changeNew = newBalances[0] - oldBalances[0];
+            int changeUsed = newBalances[1] - oldBalances[1];
+            int changeDamaged = newBalances[2] - oldBalances[2];
+
+            if (physicalChange == 0 && changeNew == 0 && changeUsed == 0 && changeDamaged == 0) continue;
+
+            try (PreparedStatement ps = conn.prepareStatement(insLedger)) {
+                ps.setInt(1, productId);
+                ps.setString(2, "STOCKTAKE");
+                ps.setInt(3, s.getId());
+                ps.setInt(4, physicalChange);
+                ps.setInt(5, newBalances[0] + newBalances[1] + newBalances[2]);
+                ps.setInt(6, changeNew);
+                ps.setInt(7, changeUsed);
+                ps.setInt(8, changeDamaged);
+                ps.setInt(9, newBalances[0]);
+                ps.setInt(10, newBalances[1]);
+                ps.setInt(11, newBalances[2]);
+                ps.setInt(12, s.getWarehouseId());
+                ps.setInt(13, actorId);
+                ps.executeUpdate();
             }
         }
 
@@ -830,17 +852,250 @@ public class StocktakeDAO {
     }
 
     // ============================================================
+    // VERIFICATION — quét serial xác minh khi đếm số lượng bị lệch
+    // ============================================================
+
+    /**
+     * Kiểm tra phiếu QUANTITY có dòng chênh lệch hay không.
+     * Nếu có → đặt verification_status = REQUIRED.
+     * Nếu không → verification_status = NONE (cho phép gửi duyệt bình thường).
+     * Gọi sau khi saveQuantityCounts.
+     */
+    public boolean checkAndSetVerificationRequired(int stocktakeId) {
+        try (Connection conn = DBUtils.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                boolean needsVerification = false;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT COUNT(*) FROM Stocktake_Details "
+                      + "WHERE stocktake_id = ? AND (actual_qty <> theoretical_qty OR damaged_qty > 0)")) {
+                    ps.setInt(1, stocktakeId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) needsVerification = rs.getInt(1) > 0;
+                    }
+                }
+
+                String newStatus = needsVerification ? "REQUIRED" : "NONE";
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE Stocktakes SET verification_status = ? WHERE id = ?")) {
+                    ps.setString(1, newStatus);
+                    ps.setInt(2, stocktakeId);
+                    ps.executeUpdate();
+                }
+
+                conn.commit();
+                return needsVerification;
+            } catch (Exception ex) {
+                conn.rollback();
+                ex.printStackTrace();
+                return false;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) { e.printStackTrace(); return false; }
+    }
+
+    /**
+     * Lưu kết quả quét serial xác minh (chỉ cho các SKU lệch, trong phiếu QUANTITY).
+     * Xóa item VERIFY cũ (nếu quét lại) → insert items mới với phase=VERIFY
+     * → autoFillMissing CHỈ cho SKU lệch → rollup lại actual_qty cho SKU đã xác minh
+     * → đánh dấu verification_status=COMPLETED.
+     */
+    public boolean saveVerificationCounts(int stocktakeId, List<StocktakeItem> items, int userId) {
+        try (Connection conn = DBUtils.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // Xóa item VERIFY cũ
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "DELETE FROM Stocktake_Items WHERE stocktake_id = ? AND phase = 'VERIFY'")) {
+                    ps.setInt(1, stocktakeId);
+                    ps.executeUpdate();
+                }
+
+                // Insert items mới với phase=VERIFY
+                String ins = "INSERT INTO Stocktake_Items "
+                    + "(stocktake_id, product_item_id, product_id, serial_number, scanned_status, new_condition, note, phase) "
+                    + "VALUES (?,?,?,?,?,?,?,'VERIFY')";
+                try (PreparedStatement ps = conn.prepareStatement(ins)) {
+                    for (StocktakeItem it : items) {
+                        ps.setInt(1, stocktakeId);
+                        if (it.getProductItemId() != null) ps.setInt(2, it.getProductItemId());
+                        else ps.setNull(2, Types.INTEGER);
+                        ps.setInt(3, it.getProductId());
+                        ps.setString(4, it.getSerialNumber());
+                        ps.setString(5, it.getScannedStatus());
+                        if (it.getNewCondition() != null) ps.setString(6, it.getNewCondition());
+                        else ps.setNull(6, Types.VARCHAR);
+                        if (it.getNote() != null) ps.setString(7, it.getNote());
+                        else ps.setNull(7, Types.VARCHAR);
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                // Auto-fill MISSING CHỈ cho các SKU lệch (trong phiếu QUANTITY)
+                Stocktake s = getById(stocktakeId);
+                if (s != null) {
+                    autoFillMissingForVerification(stocktakeId, s.getWarehouseId(), conn);
+                }
+
+                // Rollup actual_qty cho các SKU đã xác minh (đè lên số đếm tay)
+                rollupVerificationCounts(stocktakeId, conn);
+
+                // Đánh dấu COMPLETED
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE Stocktakes SET verification_status = 'COMPLETED', "
+                      + "verified_by = ?, verified_at = NOW() WHERE id = ?")) {
+                    ps.setInt(1, userId);
+                    ps.setInt(2, stocktakeId);
+                    ps.executeUpdate();
+                }
+
+                conn.commit();
+                return true;
+            } catch (Exception ex) {
+                conn.rollback();
+                ex.printStackTrace();
+                return false;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) { e.printStackTrace(); return false; }
+    }
+
+    /**
+     * Auto-fill MISSING serial CHỈ cho các SKU có chênh lệch (dùng trong verification).
+     * Tìm serial IN_STOCK của SKU lệch mà chưa được quét trong phase=VERIFY → thêm MISSING.
+     */
+    private void autoFillMissingForVerification(int stocktakeId, int warehouseId, Connection conn) throws Exception {
+        String sql =
+            "INSERT INTO Stocktake_Items "
+          + "(stocktake_id, product_item_id, product_id, serial_number, scanned_status, note, phase) "
+          + "SELECT ?, pi.id, pi.product_id, pi.serial_number, 'MISSING', 'Auto: không tìm thấy khi xác minh', 'VERIFY' "
+          + "FROM Product_Items pi "
+          + "JOIN Stocktake_Details sd ON sd.product_id = pi.product_id AND sd.stocktake_id = ? "
+          + "WHERE pi.warehouse_id = ? "
+          + "  AND pi.status = 'IN_STOCK' "
+          + "  AND sd.actual_qty <> sd.theoretical_qty "
+          + "  AND pi.id NOT IN ("
+          + "        SELECT product_item_id FROM Stocktake_Items "
+          + "        WHERE stocktake_id = ? AND phase = 'VERIFY' AND product_item_id IS NOT NULL"
+          + "  )";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, stocktakeId);
+            ps.setInt(2, stocktakeId);
+            ps.setInt(3, warehouseId);
+            ps.setInt(4, stocktakeId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Rollup: cập nhật actual_qty / damaged_qty CHỈ cho các SKU đã xác minh (có item phase=VERIFY).
+     * Các SKU không lệch (không xác minh) giữ nguyên số đếm tay.
+     */
+    private void rollupVerificationCounts(int stocktakeId, Connection conn) throws Exception {
+        String varianceSql =
+            "UPDATE Stocktake_Details d "
+          + "SET d.actual_qty = ("
+          + "    SELECT COUNT(*) FROM Stocktake_Items i "
+          + "    WHERE i.stocktake_id = d.stocktake_id AND i.product_id = d.product_id "
+          + "      AND i.phase = 'VERIFY' AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA')"
+          + "), "
+          + "d.damaged_qty = ("
+          + "    SELECT COUNT(*) FROM Stocktake_Items i "
+          + "    WHERE i.stocktake_id = d.stocktake_id AND i.product_id = d.product_id "
+          + "      AND i.phase = 'VERIFY' AND i.scanned_status = 'DAMAGED'"
+          + ") "
+          + "WHERE d.stocktake_id = ? "
+          + "  AND d.actual_qty <> d.theoretical_qty "
+          + "  AND EXISTS ("
+          + "    SELECT 1 FROM Stocktake_Items i2 "
+          + "    WHERE i2.stocktake_id = d.stocktake_id AND i2.product_id = d.product_id AND i2.phase = 'VERIFY'"
+          + "  )";
+        try (PreparedStatement ps = conn.prepareStatement(varianceSql)) {
+            ps.setInt(1, stocktakeId);
+            ps.executeUpdate();
+        }
+
+        String damagedOnlySql =
+            "UPDATE Stocktake_Details d "
+          + "SET d.damaged_qty = ("
+          + "    SELECT COUNT(*) FROM Stocktake_Items i "
+          + "    WHERE i.stocktake_id = d.stocktake_id AND i.product_id = d.product_id "
+          + "      AND i.phase = 'VERIFY' AND i.scanned_status = 'DAMAGED'"
+          + ") "
+          + "WHERE d.stocktake_id = ? "
+          + "  AND d.actual_qty = d.theoretical_qty "
+          + "  AND d.damaged_qty > 0 "
+          + "  AND EXISTS ("
+          + "    SELECT 1 FROM Stocktake_Items i2 "
+          + "    WHERE i2.stocktake_id = d.stocktake_id AND i2.product_id = d.product_id AND i2.phase = 'VERIFY'"
+          + "  )";
+        try (PreparedStatement ps = conn.prepareStatement(damagedOnlySql)) {
+            ps.setInt(1, stocktakeId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Lấy danh sách product_id có chênh lệch trong phiếu (dùng để hiện UI xác minh).
+     */
+    public List<Integer> getVarianceProductIds(int stocktakeId) {
+        List<Integer> ids = new ArrayList<>();
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                "SELECT product_id FROM Stocktake_Details "
+              + "WHERE stocktake_id = ? AND actual_qty <> theoretical_qty")) {
+            ps.setInt(1, stocktakeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) ids.add(rs.getInt(1));
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return ids;
+    }
+
+    public List<Integer> getVerificationProductIds(int stocktakeId) {
+        List<Integer> ids = new ArrayList<>();
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                "SELECT product_id FROM Stocktake_Details "
+              + "WHERE stocktake_id = ? AND (actual_qty <> theoretical_qty OR damaged_qty > 0)")) {
+            ps.setInt(1, stocktakeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) ids.add(rs.getInt(1));
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return ids;
+    }
+
+    public List<Integer> getDamagedOnlyProductIds(int stocktakeId) {
+        List<Integer> ids = new ArrayList<>();
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                "SELECT product_id FROM Stocktake_Details "
+              + "WHERE stocktake_id = ? AND actual_qty = theoretical_qty AND damaged_qty > 0")) {
+            ps.setInt(1, stocktakeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) ids.add(rs.getInt(1));
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return ids;
+    }
+
+    // ============================================================
     // Warehouse freeze check
     // ============================================================
     /**
      * Trả về phiếu kiểm kê đang "khóa" kho (status chưa kết thúc), null nếu kho rảnh.
-     * Các status được coi là đang chạy: DRAFT, COUNTING, SUBMITTED, L1_APPROVED, APPROVED, REJECTED.
-     * Chỉ ADJUSTED và CANCELLED mới được coi là kho mở lại.
+     * Các status được coi là đang chạy: DRAFT, COUNTING, SUBMITTED, L1_APPROVED, APPROVED.
+     * ADJUSTED, CANCELLED và REJECTED được coi là đã kết thúc → kho mở lại
+     * (REJECTED: phiếu bị bác bỏ coi như xong, không giam kho vô thời hạn).
      */
     public Stocktake getActiveStocktakeForWarehouse(int warehouseId) {
         String sql = BASE_SELECT
                    + " WHERE s.warehouse_id = ? "
-                   + "   AND s.status NOT IN ('ADJUSTED','CANCELLED') "
+                   + "   AND s.status NOT IN ('ADJUSTED','CANCELLED','REJECTED') "
                    + " ORDER BY s.id DESC LIMIT 1";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -860,6 +1115,28 @@ public class StocktakeDAO {
     // ============================================================
     // Helpers — auto-fill MISSING + rollup
     // ============================================================
+    private int[] getConditionBalances(int productId, int warehouseId, Connection conn) throws Exception {
+        String sql = "SELECT inv.quantity, inv.quarantine_quantity, "
+                + "COALESCE(SUM(CASE WHEN pi.status = 'IN_STOCK' AND pi.item_condition = 'USED' THEN 1 ELSE 0 END), 0) AS used_qty "
+                + "FROM Inventories inv "
+                + "LEFT JOIN Product_Items pi ON pi.product_id = inv.product_id AND pi.warehouse_id = inv.warehouse_id "
+                + "WHERE inv.product_id = ? AND inv.warehouse_id = ? "
+                + "GROUP BY inv.quantity, inv.quarantine_quantity";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            ps.setInt(2, warehouseId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int goodQty = rs.getInt("quantity");
+                    int usedQty = Math.min(goodQty, rs.getInt("used_qty"));
+                    return new int[] { Math.max(0, goodQty - usedQty), usedQty,
+                            rs.getInt("quarantine_quantity") };
+                }
+            }
+        }
+        return new int[] {0, 0, 0};
+    }
+
     /**
      * Với mỗi SKU trong phiếu, tìm các serial IN_STOCK trong kho mà chưa được scan
      * → tự thêm vào Stocktake_Items với scanned_status='MISSING'.

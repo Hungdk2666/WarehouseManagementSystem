@@ -7,7 +7,7 @@ package model;
  *   damagedQty     = trong số đếm được, có bao nhiêu cái hỏng (tách riêng để chuyển sang quarantine)
  *
  * Chênh lệch = actualQty - theoreticalQty
- *   < 0 → thiếu (LOST)
+ *   &lt; 0 → thiếu (LOST)
  *   > 0 → thừa (FOUND)
  *   = 0 → khớp
  */

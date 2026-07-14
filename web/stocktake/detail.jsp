@@ -1,4 +1,4 @@
-﻿<%@page import="model.Stocktake"%>
+<%@page import="model.Stocktake"%>
 <%@page import="model.StocktakeDetail"%>
 <%@page import="model.StocktakeItem"%>
 <%@page import="model.StocktakeConfig"%>
@@ -35,6 +35,7 @@
     }
     List<StocktakeDetail> details = s.getDetails();
     List<StocktakeItem> items = s.getItems();
+    boolean hasBeenCounted = s.getCountedAt() != null;
 %>
 <!DOCTYPE html>
 <html>
@@ -96,7 +97,7 @@
                     </div>
                 <% } %>
 
-                <!-- Thông tin chung -->
+                
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <div class="card">
@@ -119,19 +120,19 @@
                             <div class="card-body">
                                 <h6 class="text-muted small fw-semibold mb-3">CHÊNH LỆCH</h6>
                                 <% if (s.getVariancePercent() == null) { %>
-                                    <p class="text-muted mb-0">Chưa có (chưa nộp duyệt)</p>
+                                    <p class="text-muted mb-0">Chưa nộp duyệt</p>
                                 <% } else { %>
                                     <dl class="row mb-0 small">
                                         <dt class="col-5">% chênh lệch:</dt>
                                         <dd class="col-7"><strong><%= s.getVariancePercent() %>%</strong>
                                             <% if (cfg != null) { %>
-                                                <small class="text-muted">(ngưỡng <%= cfg.getThresholdPercent() %>%)</small>
+                                                <small class="text-muted">· Ngưỡng <%= cfg.getThresholdPercent() %>%</small>
                                             <% } %>
                                         </dd>
                                         <dt class="col-5">Giá trị chênh:</dt>
                                         <dd class="col-7"><strong><%= s.getVarianceValue() %>đ</strong>
                                             <% if (cfg != null) { %>
-                                                <small class="text-muted">(ngưỡng <%= cfg.getThresholdValue() %>đ)</small>
+                                                <small class="text-muted">· Ngưỡng <%= cfg.getThresholdValue() %>đ</small>
                                             <% } %>
                                         </dd>
                                     </dl>
@@ -141,13 +142,19 @@
                     </div>
                 </div>
 
-                <!-- Lịch sử duyệt -->
-                <% if (s.getL1ApprovedAt() != null || s.getL2ApprovedAt() != null || s.getRejectReason() != null) { %>
+                
+                <% if (s.getL1ApprovedAt() != null || s.getL2ApprovedAt() != null || s.getRejectReason() != null || s.isVerificationCompleted()) { %>
                     <div class="card mb-4">
                         <div class="card-header bg-light">
                             <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Lịch sử duyệt</h6>
                         </div>
                         <ul class="list-group list-group-flush small">
+                            <% if (s.isVerificationCompleted()) { %>
+                                <li class="list-group-item">
+                                    <i class="bi bi-upc-scan text-warning"></i>
+                                    <strong>Xác minh serial:</strong> <%= s.getVerifiedByFullName() %> — <%= s.getVerifiedAt() %>
+                                </li>
+                            <% } %>
                             <% if (s.getL1ApprovedAt() != null) { %>
                                 <li class="list-group-item">
                                     <i class="bi bi-check-circle-fill text-primary"></i>
@@ -161,7 +168,7 @@
                                 </li>
                             <% } else if (s.isL1Approved()) { %>
                                 <li class="list-group-item text-warning">
-                                    <i class="bi bi-hourglass-split"></i> <strong>Chờ cấp 2 duyệt (Business Admin)</strong>
+                                    <i class="bi bi-hourglass-split"></i> <strong>Chờ Quản trị nghiệp vụ duyệt</strong>
                                 </li>
                             <% } %>
                             <% if (s.getRejectReason() != null && !s.getRejectReason().isEmpty()) { %>
@@ -178,7 +185,7 @@
                     </div>
                 <% } %>
 
-                <!-- Bảng chi tiết -->
+                
                 <div class="card mb-4">
                     <div class="card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-ul me-2 text-primary"></i>Chi tiết kiểm kê</h5>
@@ -200,16 +207,16 @@
                             <tbody>
                             <% if (details != null) for (StocktakeDetail d : details) {
                                 int diff = d.getVariance();
-                                String diffCls = diff < 0 ? "text-danger" : (diff > 0 ? "text-warning" : "text-muted");
+                                String diffCls = !hasBeenCounted ? "text-muted" : (diff < 0 ? "text-danger" : (diff > 0 ? "text-warning" : "text-muted"));
                             %>
                                 <tr>
                                     <td><%= d.getProductName() %></td>
                                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= d.getSku() %></span></td>
                                     <td class="text-end"><%= d.getTheoreticalQty() %></td>
-                                    <td class="text-end"><strong><%= d.getActualQty() %></strong></td>
-                                    <td class="text-end"><%= d.getDamagedQty() %></td>
-                                    <td class="text-end <%= diffCls %>"><strong><%= diff > 0 ? "+" + diff : diff %></strong></td>
-                                    <td><%= d.getVarianceReason() %></td>
+                                    <td class="text-end"><strong><%= hasBeenCounted ? String.valueOf(d.getActualQty()) : "—" %></strong></td>
+                                    <td class="text-end"><%= hasBeenCounted ? String.valueOf(d.getDamagedQty()) : "—" %></td>
+                                    <td class="text-end <%= diffCls %>"><strong><%= hasBeenCounted ? (diff > 0 ? "+" + diff : String.valueOf(diff)) : "—" %></strong></td>
+                                    <td><%= hasBeenCounted ? d.getVarianceReason() : "—" %></td>
                                     <td><%= d.getNote() == null ? "" : d.getNote() %></td>
                                 </tr>
                             <% } %>
@@ -218,16 +225,157 @@
                     </div>
                 </div>
 
-                <!-- Serial items (nếu SERIAL mode) -->
+                
+                <% if (s.isQuantityMode() && s.isVerificationCompleted() && items != null && !items.isEmpty()) {
+
+                    java.util.List<StocktakeItem> verifyItems = new java.util.ArrayList<>();
+                    java.util.Set<Integer> damagedOnlyPids = new java.util.HashSet<>();
+                    java.util.Set<Integer> variancePids = new java.util.HashSet<>();
+                    if (details != null) {
+                        for (StocktakeDetail d : details) {
+                            if (d.getVariance() != 0) variancePids.add(d.getProductId());
+                            else if (d.getDamagedQty() > 0) damagedOnlyPids.add(d.getProductId());
+                        }
+                    }
+                    for (StocktakeItem it : items) {
+                        if ("VERIFY".equals(it.getPhase())) verifyItems.add(it);
+                    }
+                    if (!verifyItems.isEmpty()) {
+                %>
+                <div class="card mb-4">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-upc me-2"></i>Kết quả xác minh serial · <%= verifyItems.size() %>
+                            <small class="text-muted fw-normal ms-2">Người xác minh: <%= s.getVerifiedByFullName() %> · <%= s.getVerifiedAt() %></small>
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="p-3 border-bottom">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-4">
+                                    <label for="verificationSearch" class="form-label small fw-semibold mb-1">Tìm kiếm</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                        <input type="search" id="verificationSearch" class="form-control" placeholder="Serial, sản phẩm, SKU, ghi chú...">
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label for="verificationTypeFilter" class="form-label small fw-semibold mb-1">Loại xác minh</label>
+                                    <select id="verificationTypeFilter" class="form-select form-select-sm">
+                                        <option value="">Tất cả</option>
+                                        <option value="VARIANCE">Chênh lệch</option>
+                                        <option value="DAMAGED_ONLY">Hỏng</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label for="verificationStatusFilter" class="form-label small fw-semibold mb-1">Tình trạng quét</label>
+                                    <select id="verificationStatusFilter" class="form-select form-select-sm">
+                                        <option value="">Tất cả</option>
+                                        <option value="FOUND">Tìm thấy</option>
+                                        <option value="MISSING">Thiếu</option>
+                                        <option value="DAMAGED">Hàng hỏng</option>
+                                        <option value="EXTRA">Phát hiện thêm</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label for="verificationConditionFilter" class="form-label small fw-semibold mb-1">Tình trạng vật lý</label>
+                                    <select id="verificationConditionFilter" class="form-select form-select-sm">
+                                        <option value="">Tất cả</option>
+                                        <option value="NEW">Mới</option>
+                                        <option value="USED">Hàng cũ</option>
+                                        <option value="DAMAGED">Lỗi</option>
+                                        <option value="NONE">Chưa ghi nhận</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-2 d-flex gap-2">
+                                    <button type="button" id="verificationFilterBtn" class="btn btn-warning btn-sm flex-grow-1">
+                                        <i class="bi bi-funnel-fill me-1"></i>Lọc
+                                    </button>
+                                    <button type="button" id="verificationResetBtn" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc" aria-label="Đặt lại bộ lọc">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="verificationResultTable" class="table table-sm mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr><th>Serial</th><th>Sản phẩm</th><th>Loại xác minh</th><th>Tình trạng quét</th><th>Tình trạng vật lý</th><th>Ghi chú</th></tr>
+                                </thead>
+                                <tbody>
+                            <% for (StocktakeItem vit : verifyItems) {
+                                String vb = "chip-muted";
+                                if ("FOUND".equals(vit.getScannedStatus())) vb = "chip-success";
+                                else if ("MISSING".equals(vit.getScannedStatus())) vb = "chip-warning";
+                                else if ("DAMAGED".equals(vit.getScannedStatus())) vb = "chip-danger";
+                                else if ("EXTRA".equals(vit.getScannedStatus())) vb = "chip-info";
+
+                                String verifyType = "GENERAL";
+                                if (damagedOnlyPids.contains(vit.getProductId())) verifyType = "DAMAGED_ONLY";
+                                else if (variancePids.contains(vit.getProductId())) verifyType = "VARIANCE";
+
+                                String verificationCondition = vit.getNewCondition() == null ? "NONE" : vit.getNewCondition();
+                            %>
+                                <tr data-verification-type="<%= verifyType %>" data-scan-status="<%= vit.getScannedStatus() %>" data-physical-condition="<%= verificationCondition %>"<%= "MISSING".equals(vit.getScannedStatus()) ? " class=\"table-warning\"" : "" %>>
+                                    <td><strong><%= vit.getSerialNumber() %></strong></td>
+                                    <td><%= vit.getProductName() %> <span class="badge bg-secondary bg-opacity-10 text-secondary"><%= vit.getSku() %></span></td>
+                                    <td>
+                                        <% if (damagedOnlyPids.contains(vit.getProductId())) { %>
+                                            <span class="status-chip chip-danger">Hỏng</span>
+                                        <% } else if (variancePids.contains(vit.getProductId())) { %>
+                                            <span class="status-chip chip-warning">Toàn bộ</span>
+                                        <% } else { %>
+                                            <span class="status-chip chip-muted">Toàn bộ</span>
+                                        <% } %>
+                                    </td>
+                                    <td><span class="status-chip <%= vb %>"><%
+                                        if ("FOUND".equals(vit.getScannedStatus())) out.print("Tìm thấy");
+                                        else if ("MISSING".equals(vit.getScannedStatus())) out.print("Thiếu");
+                                        else if ("DAMAGED".equals(vit.getScannedStatus())) out.print("Hàng hỏng");
+                                        else if ("EXTRA".equals(vit.getScannedStatus())) out.print("Phát hiện thêm");
+                                        else out.print(vit.getScannedStatus());
+                                    %></span></td>
+                                    <td><%
+                                        String vcondVn = vit.getNewCondition();
+                                        if (vcondVn == null) vcondVn = "—";
+                                        else if ("NEW".equals(vcondVn)) vcondVn = "Mới";
+                                        else if ("USED".equals(vcondVn)) vcondVn = "Hàng cũ";
+                                        else if ("DAMAGED".equals(vcondVn)) vcondVn = "Hàng hỏng";
+                                    %><%= vcondVn %></td>
+                                    <td><%= vit.getNote() == null ? "" : vit.getNote() %></td>
+                                </tr>
+                            <% } %>
+                                <tr id="verificationNoResults" class="d-none">
+                                    <td colspan="6" class="text-center text-muted py-4">Không tìm thấy kết quả xác minh phù hợp.</td>
+                                </tr>
+                            </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <label for="verificationEntriesPerPage" class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
+                            <select id="verificationEntriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="text-muted small">dòng</span>
+                        </div>
+                        <div id="verificationPaginationContainer" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto"></div>
+                    </div>
+                </div>
+                <% } } %>
+
+                
                 <% if (s.isSerialMode() && items != null && !items.isEmpty()) { %>
                 <div class="card mb-4">
                     <div class="card-header bg-info bg-opacity-10">
-                        <h5 class="mb-0 fw-bold text-info"><i class="bi bi-upc me-2"></i>Chi tiết serial (<%= items.size() %>)</h5>
+                        <h5 class="mb-0 fw-bold text-info"><i class="bi bi-upc me-2"></i>Chi tiết serial · <%= items.size() %></h5>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0 align-middle">
                             <thead class="table-light">
-                                <tr><th>Serial</th><th>Sản phẩm</th><th>Tình trạng scan</th><th>Tình trạng vật lý</th><th>Ghi chú</th></tr>
+                                <tr><th>Serial</th><th>Sản phẩm</th><th>Tình trạng quét</th><th>Tình trạng vật lý</th><th>Ghi chú</th></tr>
                             </thead>
                             <tbody>
                             <% for (StocktakeItem it : items) {
@@ -243,7 +391,7 @@
                                     <td><span class="status-chip <%= b %>"><%
                                         if ("FOUND".equals(it.getScannedStatus())) out.print("Tìm thấy");
                                         else if ("MISSING".equals(it.getScannedStatus())) out.print("Thiếu");
-                                        else if ("DAMAGED".equals(it.getScannedStatus())) out.print("Hàng lỗi");
+                                        else if ("DAMAGED".equals(it.getScannedStatus())) out.print("Hàng hỏng");
                                         else if ("EXTRA".equals(it.getScannedStatus())) out.print("Phát hiện thêm");
                                         else out.print(it.getScannedStatus());
                                     %></span></td>
@@ -251,8 +399,8 @@
                                         String condVn = it.getNewCondition();
                                         if (condVn == null) condVn = "—";
                                         else if ("NEW".equals(condVn)) condVn = "Mới";
-                                        else if ("USED".equals(condVn)) condVn = "Đã dùng";
-                                        else if ("DAMAGED".equals(condVn)) condVn = "Lỗi";
+                                        else if ("USED".equals(condVn)) condVn = "Hàng cũ";
+                                        else if ("DAMAGED".equals(condVn)) condVn = "Hàng hỏng";
                                     %><%= condVn %></td>
                                     <td><%= it.getNote() == null ? "" : it.getNote() %></td>
                                 </tr>
@@ -263,13 +411,18 @@
                 </div>
                 <% } %>
 
-                <!-- Action buttons -->
+                
                 <div class="card mb-4">
                     <div class="card-body d-flex flex-wrap gap-2">
                     <% if ((s.isDraft() || s.isCounting() || s.isRejected()) && canCount) { %>
                         <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=count&id=<%= s.getId() %>" class="btn btn-primary">
                             <i class="bi bi-input-cursor-text"></i> <%= s.isDraft() ? "Bắt đầu kiểm" : (s.isRejected() ? "Kiểm lại" : "Tiếp tục kiểm") %>
                         </a>
+                        <% if (s.isCounting() && s.isQuantityMode() && s.isVerificationRequired()) { %>
+                            <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=verify&id=<%= s.getId() %>" class="btn btn-warning">
+                                <i class="bi bi-upc-scan"></i> Xác minh serial
+                            </a>
+                        <% } %>
                     <% } %>
 
                     <% if (s.isSubmitted() && canApproveL1) { %>
@@ -313,7 +466,7 @@
         </div>
     </div>
 
-    <!-- Reject modal -->
+    
     <div class="modal fade" id="rejectModal" tabindex="-1">
         <div class="modal-dialog">
             <form action="<%= request.getContextPath() %>/warehouse/stocktake" method="POST" class="modal-content">
@@ -335,5 +488,119 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var table = document.getElementById("verificationResultTable");
+            if (!table) return;
+
+            var tbody = table.querySelector("tbody");
+            var rows = Array.from(tbody.querySelectorAll("tr[data-verification-type]"));
+            var noResultsRow = document.getElementById("verificationNoResults");
+            var searchInput = document.getElementById("verificationSearch");
+            var typeFilter = document.getElementById("verificationTypeFilter");
+            var statusFilter = document.getElementById("verificationStatusFilter");
+            var conditionFilter = document.getElementById("verificationConditionFilter");
+            var entriesSelect = document.getElementById("verificationEntriesPerPage");
+            var paginationContainer = document.getElementById("verificationPaginationContainer");
+            var currentPage = 1;
+            var pageSize = parseInt(entriesSelect.value, 10) || 10;
+
+            function matchingRows() {
+                var query = (searchInput.value || "").toLowerCase().trim();
+                return rows.filter(function(row) {
+                    return (!query || row.textContent.toLowerCase().includes(query))
+                        && (!typeFilter.value || row.dataset.verificationType === typeFilter.value)
+                        && (!statusFilter.value || row.dataset.scanStatus === statusFilter.value)
+                        && (!conditionFilter.value || row.dataset.physicalCondition === conditionFilter.value);
+                });
+            }
+
+            function createPageButton(label, page, disabled, active, ariaLabel) {
+                var item = document.createElement("li");
+                item.className = "page-item" + (disabled ? " disabled" : "") + (active ? " active" : "");
+                var button = document.createElement("button");
+                button.type = "button";
+                button.className = "page-link border-0 rounded-2 shadow-none px-2 py-1";
+                button.innerHTML = label;
+                if (ariaLabel) button.setAttribute("aria-label", ariaLabel);
+                button.disabled = disabled;
+                button.addEventListener("click", function() {
+                    if (!disabled) {
+                        currentPage = page;
+                        updateTable();
+                    }
+                });
+                item.appendChild(button);
+                return item;
+            }
+
+            function renderPagination(totalRows, totalPages) {
+                paginationContainer.innerHTML = "";
+                var firstRow = totalRows === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+                var lastRow = Math.min(firstRow + pageSize - 1, totalRows);
+                var info = document.createElement("div");
+                info.className = "text-muted small my-2 my-sm-0";
+                info.textContent = "Hiển thị " + firstRow + " đến " + lastRow + " của " + totalRows + " dòng";
+                paginationContainer.appendChild(info);
+
+                if (totalPages <= 1) return;
+
+                var nav = document.createElement("nav");
+                nav.setAttribute("aria-label", "Phân trang kết quả xác minh");
+                var list = document.createElement("ul");
+                list.className = "pagination pagination-sm mb-0 gap-1";
+                list.appendChild(createPageButton('<i class="bi bi-chevron-left"></i>', currentPage - 1, currentPage === 1, false, "Trang trước"));
+
+                var startPage = Math.max(1, currentPage - 2);
+                var endPage = Math.min(totalPages, startPage + 4);
+                if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+                for (var page = startPage; page <= endPage; page++) {
+                    list.appendChild(createPageButton(String(page), page, false, currentPage === page, "Trang " + page));
+                }
+
+                list.appendChild(createPageButton('<i class="bi bi-chevron-right"></i>', currentPage + 1, currentPage === totalPages, false, "Trang sau"));
+                nav.appendChild(list);
+                paginationContainer.appendChild(nav);
+            }
+
+            function updateTable() {
+                var filteredRows = matchingRows();
+                var totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                var firstIndex = (currentPage - 1) * pageSize;
+                var lastIndex = firstIndex + pageSize;
+                rows.forEach(function(row) { row.style.display = "none"; });
+                filteredRows.slice(firstIndex, lastIndex).forEach(function(row) { row.style.display = ""; });
+                noResultsRow.classList.toggle("d-none", filteredRows.length !== 0);
+                renderPagination(filteredRows.length, totalPages);
+            }
+
+            function applyFilters() {
+                currentPage = 1;
+                updateTable();
+            }
+
+            searchInput.addEventListener("input", applyFilters);
+            [typeFilter, statusFilter, conditionFilter].forEach(function(filter) {
+                filter.addEventListener("change", applyFilters);
+            });
+            document.getElementById("verificationFilterBtn").addEventListener("click", applyFilters);
+            document.getElementById("verificationResetBtn").addEventListener("click", function() {
+                searchInput.value = "";
+                typeFilter.value = "";
+                statusFilter.value = "";
+                conditionFilter.value = "";
+                applyFilters();
+            });
+            entriesSelect.addEventListener("change", function() {
+                pageSize = parseInt(entriesSelect.value, 10) || 10;
+                currentPage = 1;
+                updateTable();
+            });
+
+            updateTable();
+        });
+    </script>
 </body>
 </html>

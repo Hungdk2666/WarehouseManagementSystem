@@ -18,6 +18,9 @@ public class StocktakeItem {
     public static final String STATUS_DAMAGED = "DAMAGED";
     public static final String STATUS_EXTRA   = "EXTRA";
 
+    public static final String PHASE_COUNT  = "COUNT";
+    public static final String PHASE_VERIFY = "VERIFY";
+
     private int id;
     private int stocktakeId;
     private Integer productItemId;       // NULL khi scannedStatus=EXTRA
@@ -26,6 +29,7 @@ public class StocktakeItem {
     private String scannedStatus;
     private String newCondition;         // NULL hoặc NEW/USED/DAMAGED
     private String note;
+    private String phase;                // COUNT | VERIFY
     private Timestamp createdAt;
 
     // Join
@@ -66,4 +70,7 @@ public class StocktakeItem {
 
     public String getSku() { return sku; }
     public void setSku(String v) { this.sku = v; }
+
+    public String getPhase() { return phase; }
+    public void setPhase(String v) { this.phase = v; }
 }

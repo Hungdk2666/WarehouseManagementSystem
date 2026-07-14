@@ -19,6 +19,11 @@ public class StocktakeService {
     public boolean startCounting(int id, int userId) { return dao.startCounting(id, userId); }
     public boolean saveQuantityCounts(int id, List<StocktakeDetail> details) { return dao.saveQuantityCounts(id, details); }
     public boolean saveSerialCounts(int id, List<StocktakeItem> items) { return dao.saveSerialCounts(id, items); }
+    public boolean checkAndSetVerificationRequired(int id) { return dao.checkAndSetVerificationRequired(id); }
+    public boolean saveVerificationCounts(int id, List<StocktakeItem> items, int userId) { return dao.saveVerificationCounts(id, items, userId); }
+    public List<Integer> getVarianceProductIds(int id) { return dao.getVarianceProductIds(id); }
+    public List<Integer> getVerificationProductIds(int id) { return dao.getVerificationProductIds(id); }
+    public List<Integer> getDamagedOnlyProductIds(int id) { return dao.getDamagedOnlyProductIds(id); }
     public boolean submit(int id) { return dao.submit(id); }
     public boolean approveL1(int id, int approverId) { return dao.approveL1(id, approverId); }
     public boolean approveL2(int id, int approverId) { return dao.approveL2(id, approverId); }

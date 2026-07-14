@@ -35,6 +35,11 @@ public class Stocktake {
     public static final String STATUS_ADJUSTED     = "ADJUSTED";
     public static final String STATUS_CANCELLED    = "CANCELLED";
 
+    // Verification status (QUANTITY mode: ép quét serial khi chênh lệch)
+    public static final String VERIFY_NONE      = "NONE";
+    public static final String VERIFY_REQUIRED  = "REQUIRED";
+    public static final String VERIFY_COMPLETED = "COMPLETED";
+
     private int id;
     private String stocktakeCode;
     private int warehouseId;
@@ -46,6 +51,9 @@ public class Stocktake {
     private BigDecimal varianceValue;
     private String notes;
     private String rejectReason;
+    private String verificationStatus;   // NONE | REQUIRED | COMPLETED
+    private Integer verifiedBy;
+    private Timestamp verifiedAt;
 
     private Timestamp createdAt;
     private int createdBy;
@@ -59,6 +67,7 @@ public class Stocktake {
     private Timestamp adjustedAt;
 
     // Join fields
+    private String verifiedByFullName;
     private String warehouseName;
     private String createdByFullName;
     private String countedByFullName;
@@ -81,6 +90,9 @@ public class Stocktake {
     public boolean isSerialMode()   { return MODE_SERIAL.equals(countMode); }
     public boolean isQuantityMode() { return MODE_QUANTITY.equals(countMode); }
     public boolean isFullScope()    { return SCOPE_FULL.equals(scope); }
+    public boolean isVerificationRequired()  { return VERIFY_REQUIRED.equals(verificationStatus); }
+    public boolean isVerificationCompleted() { return VERIFY_COMPLETED.equals(verificationStatus); }
+    public boolean isVerificationNone()      { return verificationStatus == null || VERIFY_NONE.equals(verificationStatus); }
 
     // ===== Getters/Setters =====
     public int getId() { return id; }
@@ -166,4 +178,16 @@ public class Stocktake {
 
     public List<StocktakeItem> getItems() { return items; }
     public void setItems(List<StocktakeItem> v) { this.items = v; }
+
+    public String getVerificationStatus() { return verificationStatus; }
+    public void setVerificationStatus(String v) { this.verificationStatus = v; }
+
+    public Integer getVerifiedBy() { return verifiedBy; }
+    public void setVerifiedBy(Integer v) { this.verifiedBy = v; }
+
+    public Timestamp getVerifiedAt() { return verifiedAt; }
+    public void setVerifiedAt(Timestamp v) { this.verifiedAt = v; }
+
+    public String getVerifiedByFullName() { return verifiedByFullName; }
+    public void setVerifiedByFullName(String v) { this.verifiedByFullName = v; }
 }
