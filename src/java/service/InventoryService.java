@@ -27,8 +27,17 @@ public class InventoryService {
         return dao.getKpi(warehouseId);
     }
 
+    private static final List<String> IN_STOCK_STATUSES = java.util.Arrays.asList("IN_STOCK", "QUARANTINE");
+    private static final List<String> GONE_STATUSES = java.util.Arrays.asList("EXPORTED", "IN_TRANSIT", "LOST");
+
+    /** Serial còn thực sự nằm trong kho (đang dùng được hoặc đang cách ly). */
     public List<ProductItem> getSerials(int warehouseId, int productId) {
-        return dao.getSerialsByWarehouseProduct(warehouseId, productId);
+        return dao.getSerialsByWarehouseProduct(warehouseId, productId, IN_STOCK_STATUSES);
+    }
+
+    /** Serial đã rời khỏi kho này: đã xuất, đang chuyển đi kho khác, hoặc đã mất. */
+    public List<ProductItem> getExportedOrLostSerials(int warehouseId, int productId) {
+        return dao.getSerialsByWarehouseProduct(warehouseId, productId, GONE_STATUSES);
     }
 
     public List<InventoryDAO.LedgerEntry> getRecentLedger(int warehouseId, int productId) {
@@ -55,6 +64,8 @@ public class InventoryService {
                 g.setAverageCost(r.getAverageCost());
                 map.put(r.getProductId(), g);
             }
+            g.setTotalNew(g.getTotalNew() + r.getNewQuantity());
+            g.setTotalUsed(g.getTotalUsed() + r.getUsedQuantity());
             g.setTotalQuantity(g.getTotalQuantity() + r.getQuantity());
             g.setTotalQuarantine(g.getTotalQuarantine() + r.getQuarantineQuantity());
             g.setTotalInTransit(g.getTotalInTransit() + r.getInTransitQuantity());
