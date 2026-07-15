@@ -22,7 +22,7 @@ public class RequestDAO {
     private final AuditLogDAO auditLogDAO = new AuditLogDAO();
 
     private static final String BASE_SELECT =
-        "SELECT r.*, w.warehouse_name, "
+        "SELECT r.*, w.warehouse_name, rt.ticket_code AS ref_ticket_code, "
         + "u.full_name AS staff_name, "
         + "a.full_name AS approver_name, "
         + "cr.full_name AS cancel_requested_name, "
@@ -35,6 +35,7 @@ public class RequestDAO {
         + "  ELSE NULL END AS partner_name "
         + "FROM Requests r "
         + "JOIN Warehouses w ON w.id = r.warehouse_id "
+        + "LEFT JOIN Tickets rt ON rt.id = r.ref_ticket_id "
         + "JOIN Users u  ON u.id  = r.staff_id "
         + "LEFT JOIN Users a  ON a.id  = r.approved_by "
         + "LEFT JOIN Users cr ON cr.id = r.cancel_requested_by "
@@ -50,6 +51,7 @@ public class RequestDAO {
         r.setPartnerType(rs.getString("partner_type"));
         r.setPartnerId((Integer) rs.getObject("partner_id"));
         r.setRefTicketId((Integer) rs.getObject("ref_ticket_id"));
+        r.setRefTicketCode(rs.getString("ref_ticket_code"));
         r.setReturnReason(rs.getString("return_reason"));
         r.setShippingAddress(rs.getString("shipping_address"));
         r.setExpectedSerials(rs.getString("expected_serials"));
@@ -304,14 +306,14 @@ public class RequestDAO {
     // CANCEL workflows
     // ============================================================
     public boolean cancelRequest(int id, int userId) {
-        String sql = "UPDATE Requests SET status = 'CANCELLED', cancelled_by = ?, cancelled_at = NOW() "
+        String sql = "UPDATE Requests SET status = 'REVOKED', cancelled_by = ?, cancelled_at = NOW() "
                    + "WHERE id = ? AND status = 'PENDING'";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ps.setInt(2, id);
             boolean ok = ps.executeUpdate() > 0;
-            if (ok) auditLogDAO.log(userId, "CANCEL_REQUEST", "Yêu cầu id=" + id);
+            if (ok) auditLogDAO.log(userId, "REVOKE_REQUEST", "Thu hồi yêu cầu id=" + id + " trước duyệt");
             return ok;
         } catch (Exception e) { e.printStackTrace(); return false; }
     }
@@ -321,8 +323,20 @@ public class RequestDAO {
             conn.setAutoCommit(false);
             try {
                 Request req = getById(id);
-                if (req == null || !Request.STATUS_APPROVED.equals(req.getStatus())) { conn.rollback(); return false; }
-                String sql = "UPDATE Requests SET cancel_requested_by = ?, cancel_requested_at = NOW(), cancel_reason = ? WHERE id = ?";
+                if (req == null) { conn.rollback(); return false; }
+
+                // Khóa dòng yêu cầu để tránh chạy đua với confirm phiếu (giống approveCancel).
+                try (PreparedStatement lock = conn.prepareStatement(
+                        "SELECT id FROM Requests WHERE id = ? FOR UPDATE")) {
+                    lock.setInt(1, id);
+                    lock.executeQuery();
+                }
+
+                // Sau khi xử lý một phần, thao tác này có nghĩa là đóng phần còn
+                // lại; riêng transfer sẽ tiếp tục qua trạng thái vận chuyển/trả hàng.
+                String sql = "UPDATE Requests SET cancel_requested_by = ?, cancel_requested_at = NOW(), cancel_reason = ? "
+                        + "WHERE id = ? AND status IN ('APPROVED','PARTIALLY_COMPLETED') "
+                        + "AND cancel_requested_at IS NULL";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt(1, userId);
                     ps.setString(2, reason);
@@ -350,20 +364,59 @@ public class RequestDAO {
                 if (req == null) { conn.rollback(); return false; }
 
                 // Khóa dòng yêu cầu để tránh chạy đua với confirm phiếu
+                String lockedStatus;
                 try (PreparedStatement lock = conn.prepareStatement(
-                        "SELECT id FROM Requests WHERE id = ? FOR UPDATE")) {
+                        "SELECT status FROM Requests WHERE id = ? FOR UPDATE")) {
                     lock.setInt(1, id);
-                    lock.executeQuery();
+                    try (ResultSet rs = lock.executeQuery()) {
+                        if (!rs.next()) { conn.rollback(); return false; }
+                        lockedStatus = rs.getString("status");
+                    }
                 }
 
-                // CHỈ được duyệt hủy khi đơn còn APPROVED và thực sự đang có đề nghị hủy chờ.
-                // Nếu đơn đã xuất (PARTIALLY_COMPLETED/COMPLETED) hoặc đã hủy thì executeUpdate = 0 → dừng.
-                String sql = "UPDATE Requests SET status='CANCELLED', cancelled_by=?, cancelled_at=NOW() "
-                        + "WHERE id=? AND status='APPROVED' AND cancel_requested_at IS NOT NULL";
+                boolean wasPartial = Request.STATUS_PARTIALLY_COMPLETED.equals(lockedStatus);
+                boolean inboundTransfer = req.isIn() && Request.REASON_TRANSFER.equals(req.getReason())
+                        && req.getRefTicketId() != null;
+
+                // Hủy yêu cầu nhận transfer luôn sinh chứng từ nhập trả nguồn.
+                Integer transferReturnRequestId = null;
+                if (inboundTransfer) {
+                    transferReturnRequestId = createTransferReturnInRequest(req, userId, conn);
+                    if (transferReturnRequestId == null) { conn.rollback(); return false; }
+                }
+
+                String newStatus;
+                if (inboundTransfer) {
+                    newStatus = Request.STATUS_RETURNING;
+                } else if (wasPartial && req.isOut() && Request.REASON_TRANSFER.equals(req.getReason())) {
+                    newStatus = Request.STATUS_PARTIALLY_IN_TRANSIT;
+                } else if (wasPartial) {
+                    newStatus = Request.STATUS_PARTIALLY_CLOSED;
+                } else {
+                    newStatus = Request.STATUS_CANCELLED;
+                }
+
+                String sql = "UPDATE Requests SET status=?, cancelled_by=?, cancelled_at=NOW() "
+                        + "WHERE id=? AND cancel_requested_at IS NOT NULL "
+                        + "AND status IN ('APPROVED','PARTIALLY_COMPLETED')";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt(1, userId);
-                    ps.setInt(2, id);
+                    ps.setString(1, newStatus);
+                    ps.setInt(2, userId);
+                    ps.setInt(3, id);
                     if (ps.executeUpdate() == 0) { conn.rollback(); return false; }
+                }
+
+                // Đánh dấu yêu cầu xuất nguồn đang trên đường trả. Chứng từ xuất
+                // chỉ thành RETURNED sau khi kho nguồn quét nhận đủ serial.
+                if (inboundTransfer) {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "UPDATE Requests r JOIN Tickets t ON t.request_id=r.id "
+                                    + "SET r.status='RETURNING' WHERE t.id=? "
+                                    + "AND r.type='OUT' AND r.reason='TRANSFER' "
+                                    + "AND r.status IN ('IN_TRANSIT','PARTIALLY_IN_TRANSIT','PARTIALLY_COMPLETED')")) {
+                        ps.setInt(1, req.getRefTicketId());
+                        ps.executeUpdate();
+                    }
                 }
 
                 // Hủy luôn mọi phiếu còn ở trạng thái nháp của đơn này để trả lại số hàng
@@ -374,11 +427,18 @@ public class RequestDAO {
                     ps.executeUpdate();
                 }
 
-                auditLogDAO.log(userId, "APPROVE_CANCEL_REQUEST", "Yêu cầu " + req.getRequestCode());
+                auditLogDAO.log(userId, "APPROVE_CANCEL_REQUEST",
+                        "Yêu cầu " + req.getRequestCode() + " → " + newStatus);
                 String link = req.isIn() ? "/warehouse/import-request?action=detail&id=" + id
                                          : "/warehouse/export-request?action=detail&id=" + id;
                 notificationDAO.createNotification(req.getStaffId(),
                         "Yêu cầu hủy " + req.getRequestCode() + " được chấp thuận", "", link, conn);
+                if (transferReturnRequestId != null) {
+                    notificationDAO.createNotificationForWarehouse(req.getPartnerId(),
+                            "Cần nhận lại hàng chuyển kho",
+                            "Yêu cầu nhập ở kho đích đã hủy. Hãy quét serial thực nhận để nhập trả cho phiếu xuất liên kết.",
+                            "/warehouse/import-request?action=detail&id=" + transferReturnRequestId, conn);
+                }
                 conn.commit();
                 return true;
             } catch (Exception ex) { conn.rollback(); ex.printStackTrace(); return false; }
@@ -419,8 +479,8 @@ public class RequestDAO {
         String code = generateUniqueCode(Request.TYPE_IN, conn);
         String sql = "INSERT INTO Requests "
             + "(request_code, type, reason, warehouse_id, partner_type, partner_id, ref_ticket_id, "
-            + " expected_date, staff_id, requested_condition, status, approved_by, approved_at) "
-            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, NOW())";
+            + " expected_date, staff_id, requested_condition, status, approved_by, approved_at, auto_approved) "
+            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, NOW(), TRUE)";
         int newId;
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, code);
@@ -452,6 +512,116 @@ public class RequestDAO {
             ps.setInt(2, outTicketId);
             ps.executeUpdate();
         }
+        return newId;
+    }
+
+    /**
+     * Tạo yêu cầu nhập trả tự động tại kho nguồn khi kho đích hủy yêu cầu
+     * nhận hàng. Hỗ trợ cả serial còn IN_TRANSIT lẫn serial đã được kho đích
+     * nhận; serial đã nhận chỉ bị giảm tồn ở kho đích khi kho nguồn thực sự
+     * quét xác nhận nhập trả.
+     *
+     * @return id yêu cầu nhập trả, hoặc {@code null} nếu trạng thái vật lý không hợp lệ.
+     */
+    private Integer createTransferReturnInRequest(Request cancelledInbound, int userId,
+            Connection conn) throws Exception {
+        int outTicketId = cancelledInbound.getRefTicketId();
+        int sourceWarehouseId;
+        int destinationWarehouseId;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT t.warehouse_id AS source_warehouse_id, r.partner_id AS destination_warehouse_id "
+                        + "FROM Tickets t JOIN Requests r ON r.id=t.request_id "
+                        + "WHERE t.id=? AND t.type='OUT' AND t.status='IN_TRANSIT' "
+                        + "AND r.reason='TRANSFER' FOR UPDATE")) {
+            ps.setInt(1, outTicketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                sourceWarehouseId = rs.getInt("source_warehouse_id");
+                destinationWarehouseId = rs.getInt("destination_warehouse_id");
+            }
+        }
+        if (cancelledInbound.getWarehouseId() != destinationWarehouseId
+                || cancelledInbound.getPartnerId() == null
+                || cancelledInbound.getPartnerId() != sourceWarehouseId) return null;
+
+        int transferred = 0;
+        int returnable = 0;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT COUNT(*) AS transferred, COALESCE(SUM(pi.status='IN_TRANSIT' "
+                        + "OR (pi.warehouse_id=? AND pi.status IN ('IN_STOCK','QUARANTINE'))),0) AS returnable "
+                        + "FROM Product_Items pi JOIN Product_Item_Movements m ON m.product_item_id=pi.id "
+                        + "WHERE m.ticket_id=? AND m.action='TRANSFER_OUT' FOR UPDATE")) {
+            ps.setInt(1, destinationWarehouseId);
+            ps.setInt(2, outTicketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    transferred = rs.getInt("transferred");
+                    returnable = rs.getInt("returnable");
+                }
+            }
+        }
+        if (transferred == 0 || transferred != returnable) return null;
+
+        // Chống duyệt hủy hai lần tạo hai yêu cầu trả cho cùng một phiếu xuất.
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT id FROM Requests WHERE type='IN' AND reason='TRANSFER' "
+                        + "AND warehouse_id=? AND ref_ticket_id=? AND expected_serials IS NOT NULL "
+                        + "AND status IN ('APPROVED','PARTIALLY_COMPLETED') FOR UPDATE")) {
+            ps.setInt(1, sourceWarehouseId);
+            ps.setInt(2, outTicketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return null;
+            }
+        }
+
+        List<String> expectedSerials = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT pi.serial_number FROM Product_Items pi "
+                        + "JOIN Product_Item_Movements m ON m.product_item_id=pi.id "
+                        + "WHERE m.ticket_id=? AND m.action='TRANSFER_OUT' AND (pi.status='IN_TRANSIT' "
+                        + "OR (pi.warehouse_id=? AND pi.status IN ('IN_STOCK','QUARANTINE'))) ORDER BY pi.id")) {
+            ps.setInt(1, outTicketId);
+            ps.setInt(2, destinationWarehouseId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) expectedSerials.add(rs.getString(1));
+            }
+        }
+        if (expectedSerials.isEmpty()) return null;
+
+        String code = generateUniqueCode(Request.TYPE_IN, conn);
+        int newId;
+        String insert = "INSERT INTO Requests "
+                + "(request_code,type,reason,warehouse_id,partner_type,partner_id,ref_ticket_id,expected_serials,"
+                + "staff_id,requested_condition,status,approved_by,approved_at,auto_approved) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,NOW(),TRUE)";
+        try (PreparedStatement ps = conn.prepareStatement(insert, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, code);
+            ps.setString(2, Request.TYPE_IN);
+            ps.setString(3, Request.REASON_TRANSFER);
+            ps.setInt(4, sourceWarehouseId);
+            ps.setString(5, Request.PARTNER_WAREHOUSE);
+            ps.setInt(6, destinationWarehouseId);
+            ps.setInt(7, outTicketId);
+            ps.setString(8, String.join(",", expectedSerials));
+            ps.setInt(9, userId);
+            ps.setString(10, "NEW");
+            ps.setString(11, Request.STATUS_APPROVED);
+            ps.setInt(12, userId);
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (!keys.next()) return null;
+                newId = keys.getInt(1);
+            }
+        }
+        try (PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO Request_Details (request_id,product_id,quantity,unit_price) "
+                        + "SELECT ?,product_id,quantity,NULL FROM Ticket_Details WHERE ticket_id=?")) {
+            ps.setInt(1, newId);
+            ps.setInt(2, outTicketId);
+            ps.executeUpdate();
+        }
+        auditLogDAO.log(conn, userId, "CREATE_TRANSFER_RETURN_REQUEST",
+                "Yêu cầu nhập trả " + code + " cho phiếu xuất #" + outTicketId);
         return newId;
     }
 

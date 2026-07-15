@@ -23,7 +23,6 @@ public class Request {
     public static final String REASON_DISPLAY        = "DISPLAY";
     public static final String REASON_WARRANTY       = "WARRANTY";
     public static final String REASON_CUSTOMER_SALE  = "CUSTOMER_SALE";
-    public static final String REASON_OTHER          = "OTHER";
 
     // PartnerType constants
     public static final String PARTNER_SUPPLIER      = "SUPPLIER";
@@ -36,18 +35,31 @@ public class Request {
     public static final String STATUS_PENDING              = "PENDING";
     public static final String STATUS_APPROVED             = "APPROVED";
     public static final String STATUS_PARTIALLY_COMPLETED  = "PARTIALLY_COMPLETED";
+    /** Đã xuất một phần chuyển kho, đóng phần còn lại, hàng đã xuất vẫn đang đi. */
+    public static final String STATUS_PARTIALLY_IN_TRANSIT = "PARTIALLY_IN_TRANSIT";
+    /** Hàng chuyển kho đã xuất đủ ở kho nguồn, chờ kho đích nhận hoặc trả về. */
+    public static final String STATUS_IN_TRANSIT           = "IN_TRANSIT";
     public static final String STATUS_COMPLETED            = "COMPLETED";
+    /** Đã xử lý một phần và đóng vĩnh viễn phần còn lại. */
+    public static final String STATUS_PARTIALLY_CLOSED     = "PARTIALLY_CLOSED";
+    /** Hủy nhận/chuyển kho sau khi hàng rời nguồn; hàng đang được trả về. */
+    public static final String STATUS_RETURNING            = "RETURNING";
+    /** Toàn bộ số hàng thực xuất đã được kho nguồn nhận trả. */
+    public static final String STATUS_RETURNED             = "RETURNED";
     public static final String STATUS_REJECTED             = "REJECTED";
+    /** Người tạo thu hồi yêu cầu khi yêu cầu vẫn đang chờ duyệt. */
+    public static final String STATUS_REVOKED              = "REVOKED";
     public static final String STATUS_CANCELLED            = "CANCELLED";
 
     private int id;
     private String requestCode;
     private String type;             // IN | OUT
-    private String reason;           // PURCHASE | RETURN | TRANSFER | DISPLAY | WARRANTY | CUSTOMER_SALE | OTHER
+    private String reason;           // PURCHASE | RETURN | TRANSFER | DISPLAY | WARRANTY | CUSTOMER_SALE
     private int warehouseId;
     private String partnerType;      // SUPPLIER | CUSTOMER | WAREHOUSE | INTERNAL_DEST | NONE
     private Integer partnerId;       // NULL khi partnerType = NONE
     private Integer refTicketId;     // RETURN: trỏ Ticket OUT gốc | IN-TRANSFER: trỏ Ticket OUT đối ứng
+    private String refTicketCode;    // mã hiển thị của phiếu xuất tham chiếu
     private String returnReason;
     private String shippingAddress;
     private String expectedSerials;
@@ -80,20 +92,6 @@ public class Request {
     public boolean isIn()  { return TYPE_IN.equals(type); }
     public boolean isOut() { return TYPE_OUT.equals(type); }
 
-    /** Kho đích nhận hàng — tùy type khác nhau */
-    public Integer getDestWarehouseId() {
-        if (isIn()) return warehouseId;
-        if (isOut() && PARTNER_WAREHOUSE.equals(partnerType)) return partnerId;
-        return null;
-    }
-
-    /** Kho nguồn xuất hàng */
-    public Integer getSrcWarehouseId() {
-        if (isOut()) return warehouseId;
-        if (isIn() && PARTNER_WAREHOUSE.equals(partnerType)) return partnerId;
-        return null;
-    }
-
     // ===== Getters/Setters =====
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -118,6 +116,9 @@ public class Request {
 
     public Integer getRefTicketId() { return refTicketId; }
     public void setRefTicketId(Integer refTicketId) { this.refTicketId = refTicketId; }
+
+    public String getRefTicketCode() { return refTicketCode; }
+    public void setRefTicketCode(String refTicketCode) { this.refTicketCode = refTicketCode; }
 
     public String getReturnReason() { return returnReason; }
     public void setReturnReason(String returnReason) { this.returnReason = returnReason; }

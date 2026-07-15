@@ -39,7 +39,7 @@
                     </div>
                 </div>
 
-                <!-- Filters -->
+                
                 <div class="card mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
@@ -66,6 +66,12 @@
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ duyệt"> Chờ duyệt</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã duyệt"> Đã duyệt</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ hủy"> Chờ hủy</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang nhập dở"> Đang nhập dở</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ đóng phần còn lại"> Chờ đóng phần còn lại</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã đóng một phần"> Đã đóng một phần</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang trả về nguồn"> Đang trả về nguồn</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã trả về nguồn"> Đã trả về nguồn</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã thu hồi"> Đã thu hồi</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Từ chối"> Từ chối</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Hoàn thành"> Hoàn thành</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã hủy"> Đã hủy</label></li>
@@ -80,6 +86,8 @@
                                     <option value="">-- Tất cả --</option>
                                     <option value="MUA HÀNG">MUA HÀNG</option>
                                     <option value="TRẢ HÀNG">TRẢ HÀNG</option>
+                                    <option value="CHUYỂN KHO">CHUYỂN KHO</option>
+                                    <option value="NHẬP TRẢ CHUYỂN KHO">NHẬP TRẢ CHUYỂN KHO</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-auto ms-md-auto d-flex gap-2">
@@ -135,6 +143,21 @@
                                                         statusBadge = "chip-success";
                                                         displayStatus = "Đã duyệt";
                                                     }
+                                                } else if ("PARTIALLY_COMPLETED".equals(r.getStatus())) {
+                                                    statusBadge = "chip-info";
+                                                    displayStatus = r.getCancelRequestedAt() != null ? "Chờ đóng phần còn lại" : "Đang nhập dở";
+                                                } else if ("PARTIALLY_CLOSED".equals(r.getStatus())) {
+                                                    statusBadge = "chip-muted";
+                                                    displayStatus = "Đã đóng một phần";
+                                                } else if ("RETURNING".equals(r.getStatus())) {
+                                                    statusBadge = "chip-warning";
+                                                    displayStatus = "Đang trả về nguồn";
+                                                } else if ("RETURNED".equals(r.getStatus())) {
+                                                    statusBadge = "chip-primary";
+                                                    displayStatus = "Đã trả về nguồn";
+                                                } else if ("REVOKED".equals(r.getStatus())) {
+                                                    statusBadge = "chip-muted";
+                                                    displayStatus = "Đã thu hồi";
                                                 } else if ("REJECTED".equals(r.getStatus())) {
                                                     statusBadge = "chip-danger";
                                                     displayStatus = "Từ chối";
@@ -145,8 +168,12 @@
                                                     statusBadge = "chip-muted";
                                                     displayStatus = "Đã hủy";
                                                 }
-                                                String typeBadge = "RETURN".equals(r.getReason()) ? "bg-warning text-warning" : "bg-info text-info";
-                                                String displayType = "RETURN".equals(r.getReason()) ? "TRẢ HÀNG" : "MUA HÀNG";
+                                                boolean isTransferReturn = "TRANSFER".equals(r.getReason())
+                                                        && r.getExpectedSerials() != null && !r.getExpectedSerials().trim().isEmpty();
+                                                String typeBadge = "RETURN".equals(r.getReason()) || isTransferReturn ? "bg-warning text-warning" : "bg-info text-info";
+                                                String displayType = "RETURN".equals(r.getReason()) ? "TRẢ HÀNG"
+                                                        : (isTransferReturn ? "NHẬP TRẢ CHUYỂN KHO"
+                                                        : ("TRANSFER".equals(r.getReason()) ? "CHUYỂN KHO" : "MUA HÀNG"));
                                     %>
                                     <tr>
                                         <td class="fw-bold text-slate-800">#<%= r.getRequestCode() %></td>
@@ -239,7 +266,7 @@
             });
             const typeFilter   = document.getElementById("typeFilter");
 
-            // Multi-select trạng thái
+
             function getSelectedStatuses() {
                 return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(cb => cb.value);
             }

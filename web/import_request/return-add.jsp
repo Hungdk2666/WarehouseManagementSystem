@@ -1,4 +1,4 @@
-﻿<%@page import="model.User"%>
+<%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
@@ -12,7 +12,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Tạo Yêu cầu trả hàng (RMA) - WMS</title>
+    <title>Tạo yêu cầu trả hàng - WMS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -29,7 +29,7 @@
  
                 <div class="page-header">
                     <div>
-                        <h2 class="page-title">Tạo Yêu cầu trả hàng (RMA)</h2>
+                        <h2 class="page-title">Tạo yêu cầu trả hàng</h2>
                         <p class="page-subtitle">Tạo yêu cầu nhập lại hàng trả từ khách hàng bằng mã Serial</p>
                     </div>
                     <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
@@ -40,10 +40,10 @@
                 <div class="row">
                     <div class="col-12">
                         <form action="<%= request.getContextPath() %>/warehouse/import-request?action=addReturn" method="POST" id="reqForm">
-                            <!-- Hidden input for locked Export Ticket -->
+                            
                             <input type="hidden" name="ref_ticket_id" id="refTicketId" value="">
 
-                            <!-- Customer Info (Dynamically populated & shown) -->
+                            
                             <div class="card bg-white mb-4 d-none" id="customerInfoCard">
                                 <div class="card-header bg-light py-3 border-0">
                                     <h5 class="mb-0 fw-bold text-success"><i class="bi bi-person-check-fill me-2"></i>Thông tin đối chiếu đơn xuất gốc</h5>
@@ -62,7 +62,7 @@
                                 </div>
                             </div>
 
-                            <!-- Form settings -->
+                            
                             <div class="card card-overflow-visible bg-white mb-4" style="overflow: visible;">
                                 <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
                                     <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-info-circle-fill me-2"></i>Cấu hình Yêu cầu trả</h5>
@@ -110,14 +110,14 @@
                                             <label for="requestedCondition" class="form-label">Tình trạng hàng trả về <span class="text-danger">*</span></label>
                                             <select class="form-select" id="requestedCondition" name="requested_condition" required>
                                                 <option value="NEW">Hàng mới</option>
-                                                <option value="DAMAGED">Hàng lỗi</option>
+                                                <option value="DAMAGED">Hàng hỏng</option>
                                             </select>
                                         </div>
                                     </div>
                                 </div>
                             </div>
  
-                            <!-- Serial Input & Table -->
+                            
                             <div class="card card-overflow-visible bg-white mb-4" style="overflow: visible;">
                                 <div class="card-header bg-warning bg-opacity-10 py-3 border-0">
                                     <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-qr-code-scan me-2"></i>Quét/Nhập mã Serial sản phẩm</h5>
@@ -199,7 +199,7 @@
         expectedDateInput.setAttribute('min', localToday);
 
         function validateDateInput(input) {
-            // Chỉ validate khi đã nhập đủ ngày tháng năm (10 ký tự YYYY-MM-DD)
+
             if (input.value && input.value.length === 10 && input.value < localToday) {
                 input.classList.add("is-invalid");
                 let errEl = document.getElementById("expectedDateError");
@@ -222,16 +222,16 @@
             }
         }
 
-        // Chỉ validate khi người dùng đã chọn xong (change = nhấp xong calendar picker)
+
         expectedDateInput.addEventListener("change", function() {
             validateDateInput(this);
         });
-        // Với input tay: chỉ validate khi đã nhập đủ 10 ký tự
+
         expectedDateInput.addEventListener("input", function() {
             if (this.value.length === 10) validateDateInput(this);
         });
 
-        // Press Enter in serial input
+
         serialInput.addEventListener("keypress", function(e) {
             if (e.key === "Enter") {
                 e.preventDefault();
@@ -244,7 +244,7 @@
             if (!serial) { alert("Vui lòng nhập số Serial."); return; }
             if (addedSerials.has(serial)) { alert("Mã Serial này đã được thêm vào danh sách."); return; }
  
-            // Call API to verify serial
+
             fetch("<%= request.getContextPath() %>/warehouse/import-request?action=lookupSerial&serial=" + encodeURIComponent(serial))
                 .then(response => response.json())
                 .then(res => {
@@ -261,7 +261,7 @@
                         return;
                     }
                     
-                    // Lock form to this export ticket on first item
+
                     if (!currentLockedTicket) {
                         refTicketIdInput.value = res.ticketId;
                         infoPartnerName.innerText = res.partnerName ? res.partnerName : "Khách vãng lai";
@@ -269,7 +269,7 @@
                         customerInfoCard.classList.remove("d-none");
                     }
                     
-                    // Add row to table
+
                     if (emptyRow && emptyRow.style.display !== "none") {
                         emptyRow.style.display = "none";
                     }
@@ -312,7 +312,7 @@
                 customerInfoCard.classList.add("d-none");
                 if (emptyRow) emptyRow.style.display = "";
             } else {
-                // Re-index row numbers
+
                 let index = 1;
                 itemsBody.querySelectorAll("tr").forEach(tr => {
                     if (tr.id !== "emptyRow" && tr.style.display !== "none") {

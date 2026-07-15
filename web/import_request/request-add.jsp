@@ -100,7 +100,7 @@
                                                 <option value=""></option>
                                                 <% if (productList != null) { for (Product p : productList) { if (p.isStatus()) { %>
                                                 <option value="<%= p.getId() %>" data-sku="<%= p.getSku() %>" data-unit="<%= p.getUnit() %>" data-cost="<%= new java.math.BigDecimal(String.valueOf(p.getAverageCost())).toPlainString() %>">
-                                                    <%= p.getProductName() %> (SKU: <%= p.getSku() %>)
+                                                    <%= p.getProductName() %> — <%= p.getSku() %>
                                                 </option>
                                                 <% } } } %>
                                             </select>
@@ -113,14 +113,23 @@
                                     </div>
  
                                     <div class="table-responsive">
-                                        <table class="table align-middle text-center" id="itemsTable">
+                                        <table class="table align-middle text-center editable-table" id="itemsTable" style="min-width: 980px;">
+                                            <colgroup>
+                                                <col style="width:26%">
+                                                <col style="width:12%">
+                                                <col style="width:8%">
+                                                <col style="width:12%">
+                                                <col style="width:17%">
+                                                <col style="width:18%">
+                                                <col style="width:7%">
+                                            </colgroup>
                                             <thead class="table-light">
                                                 <tr>
                                                     <th class="text-start ps-4">Tên sản phẩm</th>
                                                     <th>SKU</th>
                                                     <th>Đơn vị</th>
                                                     <th style="width: 15%;">Số lượng</th>
-                                                    <th style="width: 20%;">Đơn giá nhập (VND)</th>
+                                                    <th style="width: 20%;">Đơn giá nhập · VND</th>
                                                     <th>Thành tiền</th>
                                                     <th>Xóa</th>
                                                 </tr>
@@ -183,7 +192,7 @@
         expectedDateInput.setAttribute('min', localToday);
 
         function validateDateInput(input) {
-            // Chỉ validate khi đã nhập đủ ngày tháng năm (10 ký tự YYYY-MM-DD)
+
             if (input.value && input.value.length === 10 && input.value < localToday) {
                 input.classList.add("is-invalid");
                 let errEl = document.getElementById("expectedDateError");
@@ -206,11 +215,11 @@
             }
         }
 
-        // Chỉ validate khi người dùng đã chọn xong (change = nhấp xong calendar picker)
+
         expectedDateInput.addEventListener("change", function() {
             validateDateInput(this);
         });
-        // Với input tay: chỉ validate khi đã nhập đủ 10 ký tự
+
         expectedDateInput.addEventListener("input", function() {
             if (this.value.length === 10) validateDateInput(this);
         });
@@ -221,7 +230,7 @@
             if (addedProducts.has(productId)) { alert("Sản phẩm này đã được thêm."); return; }
 
             const opt = productSelect.querySelector('option[value="' + productId + '"]');
-            const productName = opt.text.split(" (SKU:")[0];
+            const productName = opt.text.split(" — ")[0];
             const sku = opt.dataset.sku;
             const unit = opt.dataset.unit;
             const defaultCost = opt.dataset.cost || 0;
