@@ -29,7 +29,7 @@
     <title>Tồn kho - WMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=inventory-layout-3">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=inventory-layout-20260714">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -45,65 +45,45 @@
                     </div>
                 </div>
 
-                <!-- KPI cards -->
+                
                 <% if (kpi != null) { %>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-3 col-sm-6">
-                        <div class="card h-100">
-                            <div class="card-body p-3 stat-tile">
-                                <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-boxes"></i></div>
-                                <div>
-                                    <div class="stat-label">Tổng SKU</div>
-                                    <h3 class="stat-value"><%= kpi.totalSkus %></h3>
-                                </div>
-                            </div>
-                        </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="card h-100 border-0 shadow-sm"><div class="card-body p-3 stat-tile">
+                            <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-boxes"></i></div>
+                            <div><div class="stat-label">Tổng hàng trong kho</div><h3 class="stat-value"><%= kpi.totalOnHand %></h3></div>
+                        </div></div>
                     </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="card h-100">
-                            <div class="card-body p-3 stat-tile">
-                                <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                                <div>
-                                    <div class="stat-label">Sắp hết hàng</div>
-                                    <h3 class="stat-value"><%= kpi.lowStockSkus %></h3>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="card h-100 border-0 shadow-sm"><div class="card-body p-3 stat-tile">
+                            <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-box-seam"></i></div>
+                            <div><div class="stat-label">Hàng mới</div><h3 class="stat-value"><%= kpi.totalNew %></h3></div>
+                        </div></div>
                     </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="card h-100">
-                            <div class="card-body p-3 stat-tile">
-                                <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-x-octagon-fill"></i></div>
-                                <div>
-                                    <div class="stat-label">Hàng lỗi</div>
-                                    <h3 class="stat-value"><%= kpi.totalQuarantine %></h3>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="card h-100 border-0 shadow-sm"><div class="card-body p-3 stat-tile">
+                            <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-arrow-repeat"></i></div>
+                            <div><div class="stat-label">Hàng cũ</div><h3 class="stat-value"><%= kpi.totalUsed %></h3></div>
+                        </div></div>
                     </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="card h-100">
-                            <div class="card-body p-3 stat-tile">
-                                <div class="stat-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-dash-circle-fill"></i></div>
-                                <div>
-                                    <div class="stat-label">Thất thoát</div>
-                                    <h3 class="stat-value"><%= kpi.totalLost %></h3>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-xl-3 col-sm-6">
+                        <div class="card h-100 border-0 shadow-sm"><div class="card-body p-3 stat-tile">
+                            <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-shield-exclamation"></i></div>
+                            <div><div class="stat-label">Hàng hỏng</div><h3 class="stat-value"><%= kpi.totalQuarantine %></h3></div>
+                        </div></div>
                     </div>
-                    <% if (kpi.totalValue != null) { %>
                     <div class="col-12">
-                        <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 bg-primary bg-opacity-10 text-primary small fw-semibold">
-                            <i class="bi bi-cash-stack"></i>
-                            Tổng giá trị tồn kho (hàng bán được): <strong><%= kpi.totalValue %>đ</strong>
+                        <div class="d-flex flex-wrap align-items-center gap-3 px-3 py-2 rounded-3 bg-light border small">
+                            <span class="text-warning-emphasis"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sắp hết: <strong><%= kpi.lowStockSkus %> SKU</strong></span>
+                            <span class="text-secondary"><i class="bi bi-dash-circle-fill me-1"></i>Thất thoát: <strong><%= kpi.totalLost %></strong></span>
+                            <% if (kpi.totalValue != null) { %>
+                            <span class="ms-xl-auto text-primary"><i class="bi bi-cash-stack me-1"></i>Giá trị hàng mới và cũ: <strong><%= kpi.totalValue %>đ</strong></span>
+                            <% } %>
                         </div>
                     </div>
-                    <% } %>
                 </div>
                 <% } %>
-
-                <!-- Filters -->
+                
                 <div class="card mb-3">
                     <div class="card-body">
                         <form method="GET" action="<%= request.getContextPath() %>/warehouse/inventory" class="row g-2">
@@ -133,7 +113,7 @@
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="has_damaged" value="1" id="hasDmg" <%= filterDmg ? "checked" : "" %>>
-                                    <label class="form-check-label small" for="hasDmg">Có hàng lỗi</label>
+                                    <label class="form-check-label small" for="hasDmg">Có hàng hỏng</label>
                                 </div>
                             </div>
                             <div class="col-md-3 d-flex align-items-end gap-1">
@@ -144,79 +124,70 @@
                     </div>
                 </div>
 
-                <!-- Table -->
-                <div class="card">
+                
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <div><h5 class="mb-1 fw-bold">Ma trận tồn kho</h5><div class="small text-muted">Tổng hàng = hàng mới + hàng cũ + hàng hỏng</div></div>
+                        <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-grid-3x3-gap me-1"></i>Theo tình trạng</span>
+                    </div>
                     <div class="card-body p-0 table-responsive">
                     <% if (isGroupedView) { %>
-                        <!-- Grouped view: tất cả kho -->
-                        <table id="inventoryTable" class="table table-hover mb-0 align-middle inventory-table inventory-grouped-table">
-                            <colgroup><col class="inventory-col-product"><col class="inventory-col-sku"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-alert"></colgroup>
+                        <table id="inventoryTable" class="table table-hover mb-0 align-middle inventory-table" style="min-width:1120px">
                             <thead class="table-light">
                                 <tr>
                                     <th>Sản phẩm</th>
                                     <th>SKU</th>
-                                    <th class="text-end">Tồn tốt</th>
-                                    <th class="text-end">Hàng lỗi</th>
+                                    <th class="text-end">Hàng mới</th>
+                                    <th class="text-end">Hàng cũ</th>
+                                    <th class="text-end">Hàng hỏng</th>
+                                    <th class="text-end">Tổng hàng</th>
                                     <th class="text-end">Đang chuyển</th>
                                     <th class="text-end">Thất thoát</th>
                                     <th>Cảnh báo</th>
+                                    <th class="text-center">Chi tiết</th>
                                 </tr>
                             </thead>
                             <tbody>
                             <% if (groupedRows.isEmpty()) { %>
-                                <tr><td colspan="7" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Không có dữ liệu tồn kho phù hợp.</p></div></td></tr>
+                                <tr><td colspan="10" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Không có dữ liệu tồn kho phù hợp.</p></div></td></tr>
                             <% } else { int idx = 0; for (InventoryGroupedRow g : groupedRows) { idx++; %>
                                 <tr class="grouped-row" style="cursor:pointer" onclick="toggleDetail(<%= idx %>)">
                                     <td>
                                         <i class="bi bi-chevron-right text-muted me-1 toggle-icon" id="icon-<%= idx %>" style="transition:transform .2s; font-size:.75rem"></i>
                                         <strong><%= g.getProductName() %></strong>
-                                        <% if (g.getCategoryName() != null) { %>
-                                            <br><small class="text-muted ms-3"><%= g.getCategoryName() %><%= g.getBrandName() != null ? " · " + g.getBrandName() : "" %></small>
-                                        <% } %>
+                                        <% if (g.getCategoryName() != null) { %><br><small class="text-muted ms-3"><%= g.getCategoryName() %><%= g.getBrandName() != null ? " · " + g.getBrandName() : "" %></small><% } %>
                                     </td>
                                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= g.getSku() %></span></td>
-                                    <td class="text-end fw-bold"><%= g.getTotalQuantity() %></td>
+                                    <td class="text-end text-success fw-semibold"><%= g.getTotalNew() %></td>
+                                    <td class="text-end text-info-emphasis fw-semibold"><%= g.getTotalUsed() %></td>
                                     <td class="text-end <%= g.getTotalQuarantine() > 0 ? "text-danger fw-bold" : "text-muted" %>"><%= g.getTotalQuarantine() %></td>
+                                    <td class="text-end fw-bold"><%= g.getTotalOnHand() %> <small class="text-muted"><%= g.getUnit() %></small></td>
                                     <td class="text-end text-muted"><%= g.getTotalInTransit() %></td>
                                     <td class="text-end text-muted"><%= g.getTotalLost() %></td>
                                     <td>
                                         <% if (g.isAnyLowStock()) { %><span class="status-chip chip-warning">Sắp hết</span><% } %>
-                                        <% if (g.hasAnyDamaged()) { %><span class="status-chip chip-danger ms-1">Có lỗi</span><% } %>
+                                        <% if (g.hasAnyDamaged()) { %><span class="status-chip chip-danger ms-1">Có hỏng</span><% } %>
                                         <% if (g.hasAnyInTransit()) { %><span class="status-chip chip-info ms-1">Đang chuyển</span><% } %>
                                     </td>
+                                    <td></td>
                                 </tr>
-                                <!-- Breakdown per warehouse -->
                                 <tr id="detail-<%= idx %>" style="display:none">
-                                    <td colspan="7" class="p-0">
-                                        <div class="inventory-breakdown">
-                                            <table class="table table-sm mb-0 align-middle inventory-table inventory-breakdown-table" style="font-size:.85rem">
-                                                <colgroup><col class="inventory-col-product"><col class="inventory-col-sku"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-alert"></colgroup>
-                                                <thead>
-                                                    <tr class="text-muted">
-                                                        <th style="font-weight:500"><i class="bi bi-building me-1"></i>Kho</th>
-                                                        <th aria-label="SKU"></th>
-                                                        <th class="text-end" style="font-weight:500">Tồn tốt</th>
-                                                        <th class="text-end" style="font-weight:500">Hàng lỗi</th>
-                                                        <th class="text-end" style="font-weight:500">Chuyển kho</th>
-                                                        <th class="text-end" style="font-weight:500">Thất thoát</th>
-                                                        <th style="font-weight:500">Trạng thái</th>
-                                                    </tr>
-                                                </thead>
+                                    <td colspan="10" class="p-0">
+                                        <div class="bg-light py-1">
+                                            <table class="table table-sm mb-0 align-middle inventory-breakdown">
                                                 <tbody>
                                                 <% for (InventoryRow w : g.getWarehouses()) { %>
                                                     <tr>
-                                                        <td><%= w.getWarehouseName() %></td>
+                                                        <td><i class="bi bi-building me-2 text-slate-400"></i><%= w.getWarehouseName() %></td>
                                                         <td></td>
-                                                        <td class="text-end <%= w.isLowStock() ? "text-warning fw-bold" : "" %>"><%= w.getQuantity() %></td>
+                                                        <td class="text-end text-success"><%= w.getNewQuantity() %></td>
+                                                        <td class="text-end text-info-emphasis"><%= w.getUsedQuantity() %></td>
                                                         <td class="text-end <%= w.getQuarantineQuantity() > 0 ? "text-danger" : "text-muted" %>"><%= w.getQuarantineQuantity() %></td>
+                                                        <td class="text-end fw-semibold"><%= w.getTotalQuantity() %></td>
                                                         <td class="text-end text-muted"><%= w.getInTransitQuantity() %></td>
                                                         <td class="text-end text-muted"><%= w.getLostQuantity() %></td>
-                                                        <td>
-                                                            <% if (w.isLowStock()) { %><span class="status-chip chip-warning" style="font-size:.68rem">Thấp</span>
-                                                            <% } else { %><span class="status-chip chip-success" style="font-size:.68rem">OK</span><% } %>
-                                                            <a href="<%= request.getContextPath() %>/warehouse/inventory?action=detail&warehouse_id=<%= w.getWarehouseId() %>&product_id=<%= w.getProductId() %>"
-                                                               class="btn btn-table btn-outline-primary float-end" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
-                                                        </td>
+                                                        <td><% if (w.isLowStock()) { %><span class="status-chip chip-warning">Sắp hết</span><% } %></td>
+                                                        <td class="text-center"><a href="<%= request.getContextPath() %>/warehouse/inventory?action=detail&warehouse_id=<%= w.getWarehouseId() %>&product_id=<%= w.getProductId() %>" class="btn btn-table btn-outline-primary" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
                                                     </tr>
                                                 <% } %>
                                                 </tbody>
@@ -228,53 +199,36 @@
                             </tbody>
                         </table>
                     <% } else { %>
-                        <!-- Flat view: 1 kho cụ thể -->
-                        <table id="inventoryTable" class="table table-hover mb-0 align-middle inventory-table inventory-flat-table">
-                            <colgroup><col class="inventory-col-product"><col class="inventory-col-sku"><col class="inventory-col-warehouse"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-quantity"><col class="inventory-col-alert"><col class="inventory-col-action"></colgroup>
+                        <table id="inventoryTable" class="table table-hover mb-0 align-middle" style="min-width:1180px">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Sản phẩm</th>
-                                    <th>SKU</th>
-                                    <th>Kho</th>
-                                    <th class="text-end">Tồn tốt</th>
-                                    <th class="text-end">Hàng lỗi</th>
-                                    <th class="text-end">Đang chuyển</th>
-                                    <th class="text-end">Thất thoát</th>
-                                    <th>Cảnh báo</th>
-                                    <th></th>
+                                    <th>Sản phẩm</th><th>SKU</th><th>Kho</th>
+                                    <th class="text-end">Hàng mới</th><th class="text-end">Hàng cũ</th><th class="text-end">Hàng hỏng</th><th class="text-end">Tổng hàng</th>
+                                    <th class="text-end">Đang chuyển</th><th class="text-end">Thất thoát</th><th>Cảnh báo</th><th></th>
                                 </tr>
                             </thead>
                             <tbody>
                             <% if (rows == null || rows.isEmpty()) { %>
-                                <tr><td colspan="9" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Không có dữ liệu tồn kho phù hợp.</p></div></td></tr>
+                                <tr><td colspan="11" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Không có dữ liệu tồn kho phù hợp.</p></div></td></tr>
                             <% } else { for (InventoryRow r : rows) { %>
                                 <tr>
-                                    <td><strong><%= r.getProductName() %></strong>
-                                        <% if (r.getCategoryName() != null) { %>
-                                            <br><small class="text-muted"><%= r.getCategoryName() %><%= r.getBrandName() != null ? " · " + r.getBrandName() : "" %></small>
-                                        <% } %>
-                                    </td>
+                                    <td><strong><%= r.getProductName() %></strong><% if (r.getCategoryName() != null) { %><br><small class="text-muted"><%= r.getCategoryName() %><%= r.getBrandName() != null ? " · " + r.getBrandName() : "" %></small><% } %></td>
                                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= r.getSku() %></span></td>
                                     <td><%= r.getWarehouseName() %></td>
-                                    <td class="text-end <%= r.isLowStock() ? "text-warning fw-bold" : "" %>"><%= r.getQuantity() %></td>
+                                    <td class="text-end text-success fw-semibold"><%= r.getNewQuantity() %></td>
+                                    <td class="text-end text-info-emphasis fw-semibold"><%= r.getUsedQuantity() %></td>
                                     <td class="text-end <%= r.getQuarantineQuantity() > 0 ? "text-danger fw-bold" : "text-muted" %>"><%= r.getQuarantineQuantity() %></td>
+                                    <td class="text-end fw-bold"><%= r.getTotalQuantity() %> <small class="text-muted"><%= r.getUnit() %></small></td>
                                     <td class="text-end text-muted"><%= r.getInTransitQuantity() %></td>
                                     <td class="text-end text-muted"><%= r.getLostQuantity() %></td>
-                                    <td>
-                                        <% if (r.isLowStock()) { %><span class="status-chip chip-warning">Sắp hết</span><% } %>
-                                        <% if (r.hasDamaged()) { %><span class="status-chip chip-danger ms-1">Có lỗi</span><% } %>
-                                    </td>
-                                    <td>
-                                        <a href="<%= request.getContextPath() %>/warehouse/inventory?action=detail&warehouse_id=<%= r.getWarehouseId() %>&product_id=<%= r.getProductId() %>"
-                                           class="btn btn-table btn-outline-primary" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
-                                    </td>
+                                    <td><% if (r.isLowStock()) { %><span class="status-chip chip-warning">Sắp hết</span><% } %><% if (r.hasDamaged()) { %><span class="status-chip chip-danger ms-1">Có hỏng</span><% } %></td>
+                                    <td><a href="<%= request.getContextPath() %>/warehouse/inventory?action=detail&warehouse_id=<%= r.getWarehouseId() %>&product_id=<%= r.getProductId() %>" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
                                 </tr>
                             <% } } %>
                             </tbody>
                         </table>
                     <% } %>
-                    </div>
-                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
+                    </div>                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
                         <div class="d-flex align-items-center gap-2">
                             <label class="text-muted small mb-0 flex-shrink-0">Hiển thị</label>
                             <select id="entriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width: 80px; border-radius: 8px;">

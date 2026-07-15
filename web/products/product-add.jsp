@@ -18,14 +18,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Thêm sản phẩm mới - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -65,7 +65,7 @@
 
                         <div class="col-md-6">
                             <label for="sku" class="form-label">Mã SKU <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="sku" name="sku" placeholder="Nhập SKU duy nhất (ví dụ: PANA-9000)" required>
+                            <input type="text" class="form-control" id="sku" name="sku" placeholder="Ví dụ: PANA-9000" required>
                         </div>
 
                         <div class="col-md-6">
@@ -74,7 +74,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="minStock" class="form-label">Mức tồn kho tối thiểu (Ngưỡng an toàn) <span class="text-danger">*</span></label>
+                            <label for="minStock" class="form-label">Ngưỡng tồn kho an toàn <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="minStock" name="min_stock" min="1" value="5" onkeydown="if(!/^[0-9]$/.test(event.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'].includes(event.key) && !event.ctrlKey && !event.metaKey) event.preventDefault();" required>
                         </div>
 
@@ -118,16 +118,21 @@
                                 </button>
                             </div>
                             <div class="table-responsive border rounded bg-white p-3">
-                                <table class="table table-hover align-middle mb-0" id="specsTable" style="font-size: 0.9rem;">
+                                <table class="table table-hover align-middle mb-0 editable-table" id="specsTable" style="font-size: 0.9rem; min-width: 640px;">
+                                    <colgroup>
+                                        <col style="width:45%">
+                                        <col style="width:45%">
+                                        <col style="width:10%">
+                                    </colgroup>
                                     <thead>
                                         <tr class="table-light">
-                                            <th style="width: 45%;">Tên thông số (Ví dụ: Công suất, Dung tích)</th>
-                                            <th style="width: 45%;">Giá trị thông số (Ví dụ: 9000 BTU, 236 Lít)</th>
+                                            <th style="width: 45%;">Tên thông số</th>
+                                            <th style="width: 45%;">Giá trị thông số</th>
                                             <th style="width: 10%;" class="text-center">Hành động</th>
                                         </tr>
                                     </thead>
                                     <tbody id="specsContainer">
-                                        <!-- Dòng thông số động sẽ được thêm ở đây -->
+                                        
                                     </tbody>
                                 </table>
                                 <div id="noSpecsMsg" class="text-center text-muted py-4">
@@ -149,7 +154,7 @@
         </div>
     </div>
 
-    <!-- Bootstrap Bundle JS -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -181,7 +186,7 @@
                     '    </button>' +
                     '</td>';
 
-                // Add delete event
+
                 tr.querySelector(".btn-delete-spec").addEventListener("click", function() {
                     tr.remove();
                     checkEmptyState();
@@ -204,7 +209,7 @@
                 createSpecRow();
             });
 
-            // Initialize with empty state
+
             checkEmptyState();
         });
     </script>

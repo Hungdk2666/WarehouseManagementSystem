@@ -11,11 +11,18 @@ import utils.DBUtils;
 public class InventoryHistoryDAO {
 
     private static final String BASE_SELECT =
-        "SELECT l.id, l.transaction_type, l.change_quantity, l.balance_quantity, l.created_at, "
+        "SELECT l.id, l.transaction_type, l.change_quantity, "
+      + "       l.change_new_quantity, l.change_used_quantity, l.change_damaged_quantity, l.created_at, "
+      // "Tồn sau GD" hiển thị nhất quán = tổng vật lý (mới+cũ+hỏng) khi có cột granular;
+      // nếu bút toán cũ chưa có granular thì giữ balance_quantity như trước.
+      + "       CASE WHEN l.balance_new_quantity IS NULL AND l.balance_used_quantity IS NULL AND l.balance_damaged_quantity IS NULL "
+      + "            THEN l.balance_quantity "
+      + "            ELSE COALESCE(l.balance_new_quantity,0)+COALESCE(l.balance_used_quantity,0)+COALESCE(l.balance_damaged_quantity,0) END AS balance_quantity, "
       + "       l.reference_id, l.product_id, l.warehouse_id, "
       + "       p.product_name, p.sku, "
       + "       w.warehouse_name, "
       + "       t.ticket_code, t.type AS ticket_type, "
+      + "       st.stocktake_code, "
       + "       r.request_code, r.reason AS request_reason, "
       + "       COALESCE(s.supplier_name, cust.customer_name, w2.warehouse_name, dest.destination_name) AS partner_name, "
       + "       u.full_name AS created_by_name, "
@@ -24,7 +31,8 @@ public class InventoryHistoryDAO {
       + "FROM Product_Ledger l "
       + "JOIN Products p ON p.id = l.product_id "
       + "JOIN Warehouses w ON w.id = l.warehouse_id "
-      + "LEFT JOIN Tickets t ON t.id = l.reference_id "
+      + "LEFT JOIN Tickets t ON t.id = l.reference_id AND l.transaction_type <> 'STOCKTAKE' "
+      + "LEFT JOIN Stocktakes st ON st.id = l.reference_id AND l.transaction_type = 'STOCKTAKE' "
       + "LEFT JOIN Requests r ON r.id = t.request_id "
       + "LEFT JOIN Suppliers s ON r.partner_type = 'SUPPLIER' AND s.id = r.partner_id "
       + "LEFT JOIN Customers cust ON r.partner_type = 'CUSTOMER' AND cust.id = r.partner_id "
@@ -39,7 +47,8 @@ public class InventoryHistoryDAO {
       + "FROM Product_Ledger l "
       + "JOIN Products p ON p.id = l.product_id "
       + "JOIN Warehouses w ON w.id = l.warehouse_id "
-      + "LEFT JOIN Tickets t ON t.id = l.reference_id "
+      + "LEFT JOIN Tickets t ON t.id = l.reference_id AND l.transaction_type <> 'STOCKTAKE' "
+      + "LEFT JOIN Stocktakes st ON st.id = l.reference_id AND l.transaction_type = 'STOCKTAKE' "
       + "LEFT JOIN Requests r ON r.id = t.request_id ";
 
     public List<HistoryEntry> getHistory(String search, String transactionType,
@@ -124,8 +133,10 @@ public class InventoryHistoryDAO {
             params.add(endDate.trim() + " 23:59:59");
         }
         if (search != null && !search.trim().isEmpty()) {
-            sql.append("AND (p.product_name LIKE ? OR p.sku LIKE ? OR t.ticket_code LIKE ? OR r.request_code LIKE ?) ");
+            sql.append("AND (p.product_name LIKE ? OR p.sku LIKE ? OR t.ticket_code LIKE ? "
+                    + "OR st.stocktake_code LIKE ? OR r.request_code LIKE ?) ");
             String pattern = "%" + search.trim() + "%";
+            params.add(pattern);
             params.add(pattern);
             params.add(pattern);
             params.add(pattern);
@@ -138,6 +149,9 @@ public class InventoryHistoryDAO {
         e.setId(rs.getInt("id"));
         e.setTransactionType(rs.getString("transaction_type"));
         e.setChangeQuantity(rs.getInt("change_quantity"));
+        e.setChangeNewQuantity((Integer) rs.getObject("change_new_quantity"));
+        e.setChangeUsedQuantity((Integer) rs.getObject("change_used_quantity"));
+        e.setChangeDamagedQuantity((Integer) rs.getObject("change_damaged_quantity"));
         e.setBalanceQuantity(rs.getInt("balance_quantity"));
         e.setCreatedAt(rs.getTimestamp("created_at"));
         e.setReferenceId(rs.getInt("reference_id"));
@@ -147,6 +161,7 @@ public class InventoryHistoryDAO {
         e.setSku(rs.getString("sku"));
         e.setWarehouseName(rs.getString("warehouse_name"));
         e.setTicketCode(rs.getString("ticket_code"));
+        e.setStocktakeCode(rs.getString("stocktake_code"));
         e.setTicketType(rs.getString("ticket_type"));
         e.setRequestCode(rs.getString("request_code"));
         e.setRequestReason(rs.getString("request_reason"));

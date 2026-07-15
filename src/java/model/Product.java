@@ -19,11 +19,15 @@ public class Product {
     private int quantity; // physical inventory level
     private int physicalQty;
     private int availableQty;
+    private int newQty;
+    private int usedQty;
     private int availableNewQty;
     private int availableUsedQty;
+    private int availableDamagedQty;
     private int reservedQty;
     private int reservedNewQty;
     private int reservedUsedQty;
+    private int reservedDamagedQty;
     private int damagedQty;
 
     public Product() {
@@ -179,6 +183,29 @@ public class Product {
         this.damagedQty = damagedQty;
     }
 
+    public int getNewQty() {
+        return newQty;
+    }
+
+    public void setNewQty(int newQty) {
+        this.newQty = newQty;
+    }
+
+    public int getUsedQty() {
+        return usedQty;
+    }
+
+    public void setUsedQty(int usedQty) {
+        this.usedQty = usedQty;
+    }
+
+    public int getAvailableDamagedQty() {
+        return availableDamagedQty;
+    }
+
+    public void setAvailableDamagedQty(int availableDamagedQty) {
+        this.availableDamagedQty = availableDamagedQty;
+    }
     public int getAvailableNewQty() {
         return availableNewQty;
     }
@@ -195,6 +222,13 @@ public class Product {
         this.availableUsedQty = availableUsedQty;
     }
 
+    public int getReservedDamagedQty() {
+        return reservedDamagedQty;
+    }
+
+    public void setReservedDamagedQty(int reservedDamagedQty) {
+        this.reservedDamagedQty = reservedDamagedQty;
+    }
     public int getReservedNewQty() {
         return reservedNewQty;
     }

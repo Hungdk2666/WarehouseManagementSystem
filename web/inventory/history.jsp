@@ -45,7 +45,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Lịch sử xuất nhập kho - WMS</title>
+    <title>Lịch sử biến động kho - WMS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -61,8 +61,8 @@
             <div class="col-md-9 col-lg-10">
                 <div class="page-header">
                     <div>
-                        <h2 class="page-title">Lịch sử xuất nhập kho</h2>
-                        <p class="page-subtitle">Theo dõi toàn bộ giao dịch nhập, xuất, chuyển kho và truy vết lịch sử hàng hóa</p>
+                        <h2 class="page-title">Lịch sử biến động kho</h2>
+                        <p class="page-subtitle">Theo dõi nhập, xuất, chuyển kho và điều chỉnh kiểm kê</p>
                     </div>
                     <a href="<%= request.getContextPath() %>/warehouse/inventory-history?action=export<%= filterParams %>"
                        class="btn btn-success btn-sm d-inline-flex align-items-center gap-1">
@@ -70,7 +70,7 @@
                     </a>
                 </div>
 
-                <!-- Filters -->
+                
                 <div class="card mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <form id="filterForm" action="inventory-history" method="GET" class="row g-2 align-items-end">
@@ -88,6 +88,8 @@
                                     <option value="EXPORT" <%= "EXPORT".equals(transactionType) ? "selected" : "" %>>Xuất bán</option>
                                     <option value="TRANSFER_IN" <%= "TRANSFER_IN".equals(transactionType) ? "selected" : "" %>>Nhận chuyển kho</option>
                                     <option value="TRANSFER_OUT" <%= "TRANSFER_OUT".equals(transactionType) ? "selected" : "" %>>Chuyển kho đi</option>
+                                    <option value="TRANSFER_RETURN" <%= "TRANSFER_RETURN".equals(transactionType) ? "selected" : "" %>>Nhập trả chuyển kho</option>
+                                    <option value="TRANSFER_RETURN_OUT" <%= "TRANSFER_RETURN_OUT".equals(transactionType) ? "selected" : "" %>>Xuất trả chuyển kho</option>
                                     <option value="RETURN" <%= "RETURN".equals(transactionType) ? "selected" : "" %>>Trả hàng</option>
                                     <option value="STOCKTAKE" <%= "STOCKTAKE".equals(transactionType) ? "selected" : "" %>>Kiểm kê điều chỉnh</option>
                                 </select>
@@ -122,7 +124,7 @@
                     </div>
                 </div>
 
-                <!-- Summary Cards -->
+                
                 <% if (entries != null && !entries.isEmpty()) {
                     int totalIn = 0, totalOut = 0, totalTransfer = 0, totalReturn = 0, totalStocktake = 0;
                     for (HistoryEntry e : entries) {
@@ -144,11 +146,11 @@
                 </div>
                 <% } %>
 
-                <!-- Table -->
+                
                 <div class="card bg-white">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                         <span class="fw-bold text-slate-800">
-                            <i class="bi bi-clock-history me-2 text-primary"></i>Lịch sử giao dịch (<%= totalCount %> bản ghi)
+                            <i class="bi bi-clock-history me-2 text-primary"></i>Lịch sử giao dịch · <%= totalCount %> bản ghi
                         </span>
                     </div>
                     <div class="card-body p-0">
@@ -172,12 +174,14 @@
                                     <%
                                         if (entries != null && !entries.isEmpty()) {
                                             for (HistoryEntry e : entries) {
-                                                String ticketUrl = "";
-                                                if (e.getTicketCode() != null) {
+                                                String documentUrl = "";
+                                                if ("STOCKTAKE".equals(e.getTransactionType()) && e.getStocktakeCode() != null) {
+                                                    documentUrl = request.getContextPath() + "/warehouse/stocktake?action=detail&id=" + e.getReferenceId();
+                                                } else if (e.getTicketCode() != null) {
                                                     if ("IN".equals(e.getTicketType())) {
-                                                        ticketUrl = request.getContextPath() + "/warehouse/import-ticket?action=detail&id=" + e.getReferenceId();
+                                                        documentUrl = request.getContextPath() + "/warehouse/import-ticket?action=detail&id=" + e.getReferenceId();
                                                     } else if ("OUT".equals(e.getTicketType())) {
-                                                        ticketUrl = request.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + e.getReferenceId();
+                                                        documentUrl = request.getContextPath() + "/warehouse/export-ticket?action=detail&id=" + e.getReferenceId();
                                                     }
                                                 }
                                     %>
@@ -189,8 +193,8 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <% if (!ticketUrl.isEmpty()) { %>
-                                            <a href="<%= ticketUrl %>" class="text-decoration-none fw-semibold font-monospace small"><%= e.getTicketCode() %></a>
+                                            <% if (!documentUrl.isEmpty()) { %>
+                                            <a href="<%= documentUrl %>" class="text-decoration-none fw-semibold font-monospace small"><%= e.getDocumentCode() %></a>
                                             <% } else { %>
                                             <span class="text-muted small">-</span>
                                             <% } %>
@@ -208,6 +212,9 @@
                                         </td>
                                         <td class="text-center fw-bold <%= e.getChangeQuantity() > 0 ? "text-success" : e.getChangeQuantity() < 0 ? "text-danger" : "" %>">
                                             <%= e.getChangeQuantity() > 0 ? "+" : "" %><%= e.getChangeQuantity() %>
+                                            <% if ("STOCKTAKE".equals(e.getTransactionType()) && !e.getConditionChangeSummary().isEmpty()) { %>
+                                            <div class="text-muted fw-normal mt-1" style="font-size: 0.7rem;"><%= e.getConditionChangeSummary() %></div>
+                                            <% } %>
                                         </td>
                                         <td class="text-center small"><%= e.getBalanceQuantity() %></td>
                                         <td class="small"><%= e.getWarehouseName() != null ? e.getWarehouseName() : "" %></td>

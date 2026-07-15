@@ -18,6 +18,8 @@ public class InventoryGroupedRow {
     private String brandName;
     private BigDecimal averageCost;
 
+    private int totalNew;
+    private int totalUsed;
     private int totalQuantity;
     private int totalQuarantine;
     private int totalInTransit;
@@ -60,6 +62,14 @@ public class InventoryGroupedRow {
 
     public BigDecimal getAverageCost() { return averageCost; }
     public void setAverageCost(BigDecimal v) { this.averageCost = v; }
+
+    public int getTotalNew() { return totalNew; }
+    public void setTotalNew(int v) { this.totalNew = v; }
+
+    public int getTotalUsed() { return totalUsed; }
+    public void setTotalUsed(int v) { this.totalUsed = v; }
+
+    public int getTotalOnHand() { return totalNew + totalUsed + totalQuarantine; }
 
     public int getTotalQuantity() { return totalQuantity; }
     public void setTotalQuantity(int v) { this.totalQuantity = v; }

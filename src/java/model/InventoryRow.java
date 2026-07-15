@@ -10,8 +10,10 @@ public class InventoryRow {
 
     private int warehouseId;
     private int productId;
+    private int newQuantity;
+    private int usedQuantity;
     private int quantity;             // tồn bán được (NEW)
-    private int quarantineQuantity;   // hàng cách ly (DAMAGED, chưa xuất bảo hành)
+    private int quarantineQuantity;   // hàng hỏng đang cách ly (DAMAGED, chưa xuất bảo hành)
     private int inTransitQuantity;    // hàng đang chuyển kho (đi/đến) — denormalize từ Product_Items
     private int lostQuantity;         // hàng đã đánh dấu LOST
 
@@ -27,7 +29,7 @@ public class InventoryRow {
 
     public InventoryRow() {}
 
-    public int getTotalQuantity() { return quantity + quarantineQuantity; }
+    public int getTotalQuantity() { return newQuantity + usedQuantity + quarantineQuantity; }
     public BigDecimal getInventoryValue() {
         if (averageCost == null) return BigDecimal.ZERO;
         return averageCost.multiply(BigDecimal.valueOf(quantity));
@@ -40,6 +42,12 @@ public class InventoryRow {
 
     public int getProductId() { return productId; }
     public void setProductId(int v) { this.productId = v; }
+
+    public int getNewQuantity() { return newQuantity; }
+    public void setNewQuantity(int v) { this.newQuantity = v; }
+
+    public int getUsedQuantity() { return usedQuantity; }
+    public void setUsedQuantity(int v) { this.usedQuantity = v; }
 
     public int getQuantity() { return quantity; }
     public void setQuantity(int v) { this.quantity = v; }

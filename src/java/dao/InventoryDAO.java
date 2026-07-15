@@ -24,6 +24,7 @@ public class InventoryDAO {
 
     private static final String BASE_SELECT =
         "SELECT i.warehouse_id, i.product_id, i.quantity, i.quarantine_quantity, "
+        + "       COALESCE(iv.in_stock_new_qty, 0) AS new_quantity, COALESCE(iv.in_stock_used_qty, 0) AS used_quantity, "
         + "       p.product_name, p.sku, p.unit, p.min_stock, p.average_cost, "
         + "       c.category_name, b.brand_name, w.warehouse_name, "
         + "       (SELECT COUNT(*) FROM Product_Items pi WHERE pi.product_id = i.product_id AND pi.warehouse_id = i.warehouse_id AND pi.status = 'IN_TRANSIT') AS in_transit_qty, "
@@ -32,12 +33,15 @@ public class InventoryDAO {
         + "JOIN Products p   ON p.id = i.product_id "
         + "JOIN Warehouses w ON w.id = i.warehouse_id "
         + "LEFT JOIN Categories c ON c.id = p.category_id "
-        + "LEFT JOIN Brands b     ON b.id = p.brand_id ";
+        + "LEFT JOIN Brands b     ON b.id = p.brand_id "
+        + "LEFT JOIN Inventory_Available iv ON iv.warehouse_id = i.warehouse_id AND iv.product_id = i.product_id ";
 
     private InventoryRow mapRow(ResultSet rs) throws Exception {
         InventoryRow r = new InventoryRow();
         r.setWarehouseId(rs.getInt("warehouse_id"));
         r.setProductId(rs.getInt("product_id"));
+        r.setNewQuantity(rs.getInt("new_quantity"));
+        r.setUsedQuantity(rs.getInt("used_quantity"));
         r.setQuantity(rs.getInt("quantity"));
         r.setQuarantineQuantity(rs.getInt("quarantine_quantity"));
         r.setInTransitQuantity(rs.getInt("in_transit_qty"));
@@ -106,18 +110,21 @@ public class InventoryDAO {
      */
     public InventoryKpi getKpi(Integer warehouseId) {
         InventoryKpi k = new InventoryKpi();
-        String filter = warehouseId != null ? " WHERE warehouse_id = ?" : "";
+        String filter = warehouseId != null ? " WHERE ia.warehouse_id = ?" : "";
 
         String sql =
             "SELECT "
-          + " COUNT(DISTINCT product_id)              AS total_skus, "
-          + " COUNT(DISTINCT CASE WHEN quantity > 0 THEN product_id END) AS skus_in_stock, "
+          + " COUNT(DISTINCT ia.product_id) AS total_skus, "
+          + " COUNT(DISTINCT CASE WHEN ia.physical_total_qty > 0 THEN ia.product_id END) AS skus_in_stock, "
           + " (SELECT COUNT(DISTINCT i2.product_id) FROM Inventories i2"
           +   " JOIN Products p2 ON p2.id = i2.product_id"
           +   " WHERE i2.quantity < p2.min_stock" + (warehouseId != null ? " AND i2.warehouse_id = ?" : "") + ") AS low_stock_skus, "
-          + " SUM(quarantine_quantity)                AS total_quarantine, "
-          + " SUM(quantity * (SELECT average_cost FROM Products WHERE id = product_id)) AS total_value "
-          + "FROM Inventories " + filter;
+          + " COALESCE(SUM(ia.in_stock_new_qty), 0) AS total_new, "
+          + " COALESCE(SUM(ia.in_stock_used_qty), 0) AS total_used, "
+          + " COALESCE(SUM(ia.quarantine_qty), 0) AS total_quarantine, "
+          + " COALESCE(SUM(ia.physical_total_qty), 0) AS total_on_hand, "
+          + " COALESCE(SUM(ia.in_stock_qty * (SELECT average_cost FROM Products WHERE id = ia.product_id)), 0) AS total_value "
+          + "FROM Inventory_Available ia" + filter;
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             if (warehouseId != null) {
@@ -126,16 +133,18 @@ public class InventoryDAO {
             }
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    k.totalSkus      = rs.getInt("total_skus");
-                    k.skusInStock    = rs.getInt("skus_in_stock");
-                    k.lowStockSkus   = rs.getInt("low_stock_skus");
+                    k.totalSkus = rs.getInt("total_skus");
+                    k.skusInStock = rs.getInt("skus_in_stock");
+                    k.lowStockSkus = rs.getInt("low_stock_skus");
+                    k.totalNew = rs.getInt("total_new");
+                    k.totalUsed = rs.getInt("total_used");
                     k.totalQuarantine = rs.getInt("total_quarantine");
-                    k.totalValue     = rs.getBigDecimal("total_value");
+                    k.totalOnHand = rs.getInt("total_on_hand");
+                    k.totalValue = rs.getBigDecimal("total_value");
                 }
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // Đếm LOST từ Product_Items
         String sqlLost = "SELECT COUNT(*) FROM Product_Items WHERE status = 'LOST'"
                        + (warehouseId != null ? " AND warehouse_id = ?" : "");
         try (Connection conn = DBUtils.getConnection();
@@ -148,21 +157,29 @@ public class InventoryDAO {
 
         return k;
     }
-
     /**
-     * Lấy danh sách serial của 1 SKU trong 1 kho — group theo status.
+     * Lấy danh sách serial của 1 SKU trong 1 kho, lọc theo status — group theo status.
+     * Dùng chung cho cả "còn trong kho" (IN_STOCK/QUARANTINE) và "đã xuất/đã mất"
+     * (EXPORTED/IN_TRANSIT/LOST) — xem InventoryService.
      */
-    public List<ProductItem> getSerialsByWarehouseProduct(int warehouseId, int productId) {
+    public List<ProductItem> getSerialsByWarehouseProduct(int warehouseId, int productId, List<String> statuses) {
         List<ProductItem> list = new ArrayList<>();
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < statuses.size(); i++) {
+            if (i > 0) placeholders.append(",");
+            placeholders.append("?");
+        }
         String sql = "SELECT i.*, p.product_name, p.sku, p.unit "
                    + "FROM Product_Items i "
                    + "JOIN Products p ON p.id = i.product_id "
-                   + "WHERE i.warehouse_id = ? AND i.product_id = ? "
+                   + "WHERE i.warehouse_id = ? AND i.product_id = ? AND i.status IN (" + placeholders + ") "
                    + "ORDER BY i.status, i.item_condition, i.serial_number";
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, warehouseId);
-            ps.setInt(2, productId);
+            int idx = 1;
+            ps.setInt(idx++, warehouseId);
+            ps.setInt(idx++, productId);
+            for (String status : statuses) ps.setString(idx++, status);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     ProductItem it = new ProductItem();
@@ -188,9 +205,12 @@ public class InventoryDAO {
      */
     public List<LedgerEntry> getRecentLedger(int warehouseId, int productId, int limit) {
         List<LedgerEntry> list = new ArrayList<>();
-        String sql = "SELECT l.*, u.full_name AS created_by_name "
+        String sql = "SELECT l.*, u.full_name AS created_by_name, "
+                   + "t.ticket_code, t.type AS ticket_type, st.stocktake_code "
                    + "FROM Product_Ledger l "
                    + "LEFT JOIN Users u ON u.id = l.created_by "
+                   + "LEFT JOIN Tickets t ON t.id = l.reference_id AND l.transaction_type <> 'STOCKTAKE' "
+                   + "LEFT JOIN Stocktakes st ON st.id = l.reference_id AND l.transaction_type = 'STOCKTAKE' "
                    + "WHERE l.warehouse_id = ? AND l.product_id = ? "
                    + "ORDER BY l.id DESC LIMIT ?";
         try (Connection conn = DBUtils.getConnection();
@@ -207,6 +227,9 @@ public class InventoryDAO {
                     e.balanceQuantity = rs.getInt("balance_quantity");
                     e.createdAt = rs.getTimestamp("created_at");
                     e.createdByName = rs.getString("created_by_name");
+                    e.ticketCode = rs.getString("ticket_code");
+                    e.ticketType = rs.getString("ticket_type");
+                    e.stocktakeCode = rs.getString("stocktake_code");
                     list.add(e);
                 }
             }
@@ -221,7 +244,10 @@ public class InventoryDAO {
         public int totalSkus;
         public int skusInStock;
         public int lowStockSkus;
+        public int totalNew;
+        public int totalUsed;
         public int totalQuarantine;
+        public int totalOnHand;
         public int totalLost;
         public BigDecimal totalValue;
     }
@@ -233,5 +259,8 @@ public class InventoryDAO {
         public int balanceQuantity;
         public java.sql.Timestamp createdAt;
         public String createdByName;
+        public String ticketCode;
+        public String ticketType;
+        public String stocktakeCode;
     }
 }

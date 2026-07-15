@@ -18,7 +18,7 @@
     boolean canEdit = loggedInUser.hasPermission("PRODUCT_EDIT");
     boolean canToggle = loggedInUser.hasPermission("PRODUCT_TOGGLE");
 
-    // Retrieve active filter values
+
     String searchVal = request.getParameter("search");
     String catVal = request.getParameter("categoryId");
     String brandVal = request.getParameter("brandId");
@@ -30,14 +30,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Danh mục sản phẩm - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
     <style>
         .low-stock-row {
@@ -71,7 +71,7 @@
                     </div>
                 </div>
 
-                <!-- Searching & Filtering Panel -->
+                
                 <div class="card mb-3">
                     <div class="card-body py-3">
                     <form action="product" method="GET" class="row g-2">
@@ -144,7 +144,7 @@
                     </div>
                 </div>
 
-                <!-- Product List Card -->
+                
                 <div class="card mb-4">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <span class="fw-bold text-slate-800"><i class="bi bi-box-seam-fill me-2 text-primary"></i>Danh sách sản phẩm</span>
@@ -236,7 +236,7 @@
                             <span class="text-muted small">dòng</span>
                         </div>
                         <div id="paginationContainer" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
-                            <!-- Dynamically populated entries info & pagination list -->
+                            
                         </div>
                     </div>
                 </div>
@@ -245,13 +245,13 @@
         </div>
     </div>
 
-    <!-- Bootstrap Bundle JS -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             initPagination("productTable", "paginationContainer", "entriesPerPage");
             
-            // Initialize Bootstrap Tooltips
+
             const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
             const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
         });
@@ -264,7 +264,7 @@
             
             const rows = Array.from(tbody.querySelectorAll("tr"));
             if (rows.length === 1 && rows[0].querySelector("td[colspan]")) {
-                return; // No pagination for empty data
+                return;
             }
             
             const container = document.getElementById(containerId);

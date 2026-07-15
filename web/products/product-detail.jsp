@@ -3,6 +3,13 @@
 <%@page import="java.util.List" %>
 <%@page import="model.User" %>
 <%@page contentType="text/html" pageEncoding="UTF-8" %>
+<%!
+    private String h(Object value) {
+        if (value == null) return "";
+        return value.toString().replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
+    }
+%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
     if (loggedInUser == null || !loggedInUser.hasPermission("PRODUCT_VIEW")) {
@@ -24,17 +31,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Thông tin sản phẩm: <%= product.getProductName() %> - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
         rel="stylesheet">
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 
@@ -70,7 +77,7 @@
                     </div>
                 </div>
 
-                <!-- Metrics Grid: chỉ các thuộc tính của sản phẩm, số liệu tồn kho xem tại trang Tồn kho -->
+                
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <div class="card h-100"><div class="card-body p-3 stat-tile">
@@ -94,7 +101,7 @@
                 </div>
 
                         <div class="row g-4">
-                            <!-- General details card -->
+                            
                             <div class="col-md-6">
                                 <div class="card h-100">
                                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -142,7 +149,7 @@
                                 </div>
                             </div>
 
-                            <!-- Specs sheet -->
+                            
                             <div class="col-md-6">
                                 <div class="card h-100">
                                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -177,7 +184,7 @@
                             </div>
                         </div>
 
-                        <!-- In-Stock Serial Numbers & Barcodes Section -->
+                        
                         <div class="card mt-4 mb-4">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                                 <span class="fw-bold text-slate-800">
@@ -201,7 +208,8 @@
                                             <thead class="table-light sticky-top">
                                                 <tr>
                                                     <th style="width: 5%;">#</th>
-                                                    <th style="<%= loggedInUser.getWarehouseId() == null ? "width: 25%;" : "width: 35%;" %>">Mã Serial</th>
+                                                    <th>Mã WMS</th>
+                                                    <th>Serial nhà sản xuất</th>
                                                     <th style="<%= loggedInUser.getWarehouseId() == null ? "width: 30%;" : "width: 45%;" %>">Nhãn Barcode</th>
                                                     <% if (loggedInUser.getWarehouseId() == null) { %>
                                                     <th style="width: 20%;">Kho</th>
@@ -219,6 +227,7 @@
                                                         <td>
                                                             <code class="fw-bold fs-6 text-dark"><%= item.getSerialNumber() %></code>
                                                         </td>
+                                                        <td><span class="font-monospace"><%= item.getManufacturerSerial() == null ? "—" : h(item.getManufacturerSerial()) %></span></td>
                                                         <td>
                                                             <svg class="barcode-svg" data-value="<%= item.getSerialNumber() %>" style="max-height: 60px; max-width: 100%;"></svg>
                                                         </td>
@@ -239,7 +248,7 @@
                             </div>
                         </div>
 
-                        <!-- Hidden Printable Area for Barcodes -->
+                        
                         <% if (inStockSerials != null && !inStockSerials.isEmpty()) { %>
                         <div class="d-none">
                             <div id="printable-barcodes-section">
@@ -247,7 +256,11 @@
                                     <% for (ProductItem item : inStockSerials) { %>
                                     <div style="border: 1px solid #ccc; border-radius: 4px; padding: 15px; margin: 10px; background-color: #fff; text-align: center; width: 280px; page-break-inside: avoid; box-sizing: border-box;">
                                         <div style="font-weight: bold; color: #333; margin-bottom: 5px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= item.getProductName() %>"><%= item.getProductName() %></div>
+                                        <div style="font-size: 9px; color: #666;">Mã WMS</div>
                                         <svg class="printable-barcode-svg" data-value="<%= item.getSerialNumber() %>" style="max-width: 100%; height: auto;"></svg>
+                                        <% if (item.getManufacturerSerial() != null) { %>
+                                        <div style="font-size: 9px; color: #666; margin-top: 3px;">Serial hãng: <%= h(item.getManufacturerSerial()) %></div>
+                                        <% } %>
                                     </div>
                                     <% } %>
                                 </div>
@@ -259,14 +272,14 @@
         </div>
     </div>
 
-    <!-- Bootstrap Bundle JS -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- JsBarcode & Print Logic -->
+    
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Render standard display barcodes
+
             document.querySelectorAll(".barcode-svg").forEach(function(el) {
                 const val = el.getAttribute("data-value");
                 JsBarcode(el, val, {
@@ -278,7 +291,7 @@
                 });
             });
             
-            // Render printable barcodes
+
             document.querySelectorAll(".printable-barcode-svg").forEach(function(el) {
                 const val = el.getAttribute("data-value");
                 JsBarcode(el, val, {
@@ -297,13 +310,13 @@
             const printContent = printSection.innerHTML;
             const originalContent = document.body.innerHTML;
             
-            // Replace body with print-only content
+
             document.body.innerHTML = '<div>' + printContent + '</div>';
             window.print();
             
-            // Restore original page content
+
             document.body.innerHTML = originalContent;
-            window.location.reload(); // reload to restore scripts/events
+            window.location.reload();
         }
     </script>
 </body>

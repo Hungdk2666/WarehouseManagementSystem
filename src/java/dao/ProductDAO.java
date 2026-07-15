@@ -24,12 +24,16 @@ public class ProductDAO {
             query = "SELECT p.*, c.category_name, b.brand_name, "
                   + "COALESCE(iv.in_stock_qty, 0)   AS quantity, "
                   + "(COALESCE(iv.in_stock_qty, 0) + COALESCE(iv.quarantine_qty, 0)) AS physical_qty, "
+                  + "COALESCE(iv.in_stock_new_qty, 0) AS new_qty, "
+                  + "COALESCE(iv.in_stock_used_qty, 0) AS used_qty, "
                   + "COALESCE(iv.available_qty, 0)  AS available_qty, "
                   + "COALESCE(iv.available_new_qty, 0)  AS available_new_qty, "
                   + "COALESCE(iv.available_used_qty, 0)  AS available_used_qty, "
+                  + "COALESCE(iv.available_damaged_qty, 0) AS available_damaged_qty, "
                   + "COALESCE(iv.reserved_qty, 0)   AS reserved_qty, "
                   + "COALESCE(iv.reserved_new_qty, 0)   AS reserved_new_qty, "
                   + "COALESCE(iv.reserved_used_qty, 0)   AS reserved_used_qty, "
+                  + "COALESCE(iv.reserved_damaged_qty, 0) AS reserved_damaged_qty, "
                   + "COALESCE(iv.quarantine_qty, 0) AS damaged_qty "
                   + "FROM Products p "
                   + "LEFT JOIN Categories c ON p.category_id = c.id "
@@ -39,12 +43,16 @@ public class ProductDAO {
             query = "SELECT p.*, c.category_name, b.brand_name, "
                   + "COALESCE((SELECT SUM(in_stock_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS quantity, "
                   + "COALESCE((SELECT SUM(in_stock_qty + quarantine_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS physical_qty, "
+                  + "COALESCE((SELECT SUM(in_stock_new_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS new_qty, "
+                  + "COALESCE((SELECT SUM(in_stock_used_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS used_qty, "
                   + "COALESCE((SELECT SUM(available_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_qty, "
                   + "COALESCE((SELECT SUM(available_new_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_new_qty, "
                   + "COALESCE((SELECT SUM(available_used_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_used_qty, "
+                  + "COALESCE((SELECT SUM(available_damaged_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_damaged_qty, "
                   + "COALESCE((SELECT SUM(reserved_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_qty, "
                   + "COALESCE((SELECT SUM(reserved_new_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_new_qty, "
                   + "COALESCE((SELECT SUM(reserved_used_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_used_qty, "
+                  + "COALESCE((SELECT SUM(reserved_damaged_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_damaged_qty, "
                   + "COALESCE((SELECT SUM(quarantine_qty)FROM Inventory_Available WHERE product_id = p.id), 0) AS damaged_qty "
                   + "FROM Products p "
                   + "LEFT JOIN Categories c ON p.category_id = c.id "
@@ -77,12 +85,16 @@ public class ProductDAO {
             query.append("SELECT p.*, c.category_name, b.brand_name, ")
                  .append("COALESCE(iv.in_stock_qty, 0)   AS quantity, ")
                  .append("(COALESCE(iv.in_stock_qty, 0) + COALESCE(iv.quarantine_qty, 0)) AS physical_qty, ")
+                 .append("COALESCE(iv.in_stock_new_qty, 0) AS new_qty, ")
+                 .append("COALESCE(iv.in_stock_used_qty, 0) AS used_qty, ")
                  .append("COALESCE(iv.available_qty, 0)  AS available_qty, ")
                  .append("COALESCE(iv.available_new_qty, 0)  AS available_new_qty, ")
                  .append("COALESCE(iv.available_used_qty, 0)  AS available_used_qty, ")
+                 .append("COALESCE(iv.available_damaged_qty, 0) AS available_damaged_qty, ")
                  .append("COALESCE(iv.reserved_qty, 0)   AS reserved_qty, ")
                  .append("COALESCE(iv.reserved_new_qty, 0)   AS reserved_new_qty, ")
                  .append("COALESCE(iv.reserved_used_qty, 0)   AS reserved_used_qty, ")
+                 .append("COALESCE(iv.reserved_damaged_qty, 0) AS reserved_damaged_qty, ")
                  .append("COALESCE(iv.quarantine_qty, 0) AS damaged_qty ")
                  .append("FROM Products p ")
                  .append("LEFT JOIN Categories c ON p.category_id = c.id ")
@@ -93,12 +105,16 @@ public class ProductDAO {
             query.append("SELECT p.*, c.category_name, b.brand_name, ")
                  .append("COALESCE((SELECT SUM(in_stock_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS quantity, ")
                  .append("COALESCE((SELECT SUM(in_stock_qty + quarantine_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS physical_qty, ")
+                 .append("COALESCE((SELECT SUM(in_stock_new_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS new_qty, ")
+                 .append("COALESCE((SELECT SUM(in_stock_used_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS used_qty, ")
                  .append("COALESCE((SELECT SUM(available_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_qty, ")
                  .append("COALESCE((SELECT SUM(available_new_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_new_qty, ")
                  .append("COALESCE((SELECT SUM(available_used_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_used_qty, ")
+                 .append("COALESCE((SELECT SUM(available_damaged_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_damaged_qty, ")
                  .append("COALESCE((SELECT SUM(reserved_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_qty, ")
                  .append("COALESCE((SELECT SUM(reserved_new_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_new_qty, ")
                  .append("COALESCE((SELECT SUM(reserved_used_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_used_qty, ")
+                 .append("COALESCE((SELECT SUM(reserved_damaged_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_damaged_qty, ")
                  .append("COALESCE((SELECT SUM(quarantine_qty)FROM Inventory_Available WHERE product_id = p.id), 0) AS damaged_qty ")
                  .append("FROM Products p ")
                  .append("LEFT JOIN Categories c ON p.category_id = c.id ")
@@ -163,12 +179,16 @@ public class ProductDAO {
             query = "SELECT p.*, c.category_name, b.brand_name, "
                   + "COALESCE(iv.in_stock_qty, 0)   AS quantity, "
                   + "(COALESCE(iv.in_stock_qty, 0) + COALESCE(iv.quarantine_qty, 0)) AS physical_qty, "
+                  + "COALESCE(iv.in_stock_new_qty, 0) AS new_qty, "
+                  + "COALESCE(iv.in_stock_used_qty, 0) AS used_qty, "
                   + "COALESCE(iv.available_qty, 0)  AS available_qty, "
                   + "COALESCE(iv.available_new_qty, 0)  AS available_new_qty, "
                   + "COALESCE(iv.available_used_qty, 0)  AS available_used_qty, "
+                  + "COALESCE(iv.available_damaged_qty, 0) AS available_damaged_qty, "
                   + "COALESCE(iv.reserved_qty, 0)   AS reserved_qty, "
                   + "COALESCE(iv.reserved_new_qty, 0)   AS reserved_new_qty, "
                   + "COALESCE(iv.reserved_used_qty, 0)   AS reserved_used_qty, "
+                  + "COALESCE(iv.reserved_damaged_qty, 0) AS reserved_damaged_qty, "
                   + "COALESCE(iv.quarantine_qty, 0) AS damaged_qty "
                   + "FROM Products p "
                   + "LEFT JOIN Categories c ON p.category_id = c.id "
@@ -180,12 +200,16 @@ public class ProductDAO {
             query = "SELECT p.*, c.category_name, b.brand_name, "
                   + "COALESCE((SELECT SUM(in_stock_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS quantity, "
                   + "COALESCE((SELECT SUM(in_stock_qty + quarantine_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS physical_qty, "
+                  + "COALESCE((SELECT SUM(in_stock_new_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS new_qty, "
+                  + "COALESCE((SELECT SUM(in_stock_used_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS used_qty, "
                   + "COALESCE((SELECT SUM(available_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_qty, "
                   + "COALESCE((SELECT SUM(available_new_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_new_qty, "
                   + "COALESCE((SELECT SUM(available_used_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_used_qty, "
+                  + "COALESCE((SELECT SUM(available_damaged_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS available_damaged_qty, "
                   + "COALESCE((SELECT SUM(reserved_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_qty, "
                   + "COALESCE((SELECT SUM(reserved_new_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_new_qty, "
                   + "COALESCE((SELECT SUM(reserved_used_qty)  FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_used_qty, "
+                  + "COALESCE((SELECT SUM(reserved_damaged_qty) FROM Inventory_Available WHERE product_id = p.id), 0) AS reserved_damaged_qty, "
                   + "COALESCE((SELECT SUM(quarantine_qty)FROM Inventory_Available WHERE product_id = p.id), 0) AS damaged_qty "
                   + "FROM Products p "
                   + "LEFT JOIN Categories c ON p.category_id = c.id "
@@ -477,12 +501,16 @@ public class ProductDAO {
         p.setQuantity(rs.getInt("quantity"));
         try {
             p.setPhysicalQty(rs.getInt("physical_qty"));
+            p.setNewQty(rs.getInt("new_qty"));
+            p.setUsedQty(rs.getInt("used_qty"));
             p.setAvailableQty(rs.getInt("available_qty"));
             p.setAvailableNewQty(rs.getInt("available_new_qty"));
             p.setAvailableUsedQty(rs.getInt("available_used_qty"));
+            p.setAvailableDamagedQty(rs.getInt("available_damaged_qty"));
             p.setReservedQty(rs.getInt("reserved_qty"));
             p.setReservedNewQty(rs.getInt("reserved_new_qty"));
             p.setReservedUsedQty(rs.getInt("reserved_used_qty"));
+            p.setReservedDamagedQty(rs.getInt("reserved_damaged_qty"));
             p.setDamagedQty(rs.getInt("damaged_qty"));
         } catch (Exception e) {
             // Ignore if columns not in projection
