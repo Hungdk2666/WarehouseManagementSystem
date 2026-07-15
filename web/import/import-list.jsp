@@ -19,14 +19,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Phiếu nhập kho - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -51,7 +51,7 @@
                     </div>
                 </div>
 
-                <!-- Filters -->
+                
                 <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
@@ -120,7 +120,7 @@
                                         <th>Nhà cung cấp</th>
                                         <th>Kho nhập</th>
                                         <th>Trạng thái</th>
-                                        <th>Thủ kho (Nhân viên)</th>
+                                        <th>Thủ kho</th>
                                         <th>Ngày tạo</th>
                                         <th>Xác nhận bởi</th>
                                         <th>Thời gian xác nhận</th>
@@ -206,7 +206,7 @@
             initPaginationAndFilter("grnTable", "paginationContainer", "entriesPerPage", "importSearch", "startDateFilter", "endDateFilter", "statusFilter", "warehouseFilter", "keeperFilter");
         });
 
-        // Col indices: 0=code, 1=PO, 2=supplier, 3=warehouse, 4=status, 5=keeper, 6=createdAt, 7=confirmedBy, 8=confirmedAt, 9=actions
+
         function initPaginationAndFilter(tableId, containerId, selectId, searchInputId, startDateFilterId, endDateFilterId, statusFilterId, warehouseFilterId, keeperFilterId) {
             const table = document.getElementById(tableId);
             if (!table) return;
@@ -237,7 +237,7 @@
             const keeperFilter = document.getElementById(keeperFilterId);
             if (!container || !select) return;
 
-            // Multi-select trạng thái
+
             function getSelectedStatuses() {
                 return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(cb => cb.value);
             }
@@ -260,7 +260,7 @@
             let pageSize = parseInt(select.value) || 10;
             let filteredRows = allRows;
 
-            // Populate warehouse dropdown
+
             if (warehouseFilter) {
                 const warehouses = new Set();
                 allRows.forEach(row => {
@@ -274,7 +274,7 @@
                 });
             }
 
-            // Dynamically populate Keeper datalist
+
             if (keeperFilter) {
                 const keepers = new Set();
                 allRows.forEach(row => {
@@ -332,7 +332,7 @@
                     return matchesSearch && matchesDate && matchesStatus && matchesWarehouse && matchesKeeper;
                 });
                 
-                // Hide all rows first
+
                 allRows.forEach(row => row.style.display = "none");
                 
                 const totalRows = filteredRows.length;
@@ -343,7 +343,7 @@
                 const start = (currentPage - 1) * pageSize;
                 const end = Math.min(start + pageSize, totalRows);
                 
-                // Show only the current page rows of the filtered set
+
                 for (let i = start; i < end; i++) {
                     filteredRows[i].style.display = "";
                 }
@@ -362,14 +362,14 @@
                 infoSpan.className = "text-muted small";
                 const startIdx = (currentPage - 1) * pageSize + 1;
                 const endIdx = Math.min(currentPage * pageSize, totalRows);
-                infoSpan.textContent = "Hiển thị " + startIdx + " đến " + endIdx + " trong số " + totalRows + " bản ghi (lọc từ tổng số " + allRows.length + " bản ghi)";
+                infoSpan.textContent = "Hiển thị " + startIdx + " đến " + endIdx + " trong số " + totalRows + " bản ghi · Tổng " + allRows.length + " bản ghi";
                 container.appendChild(infoSpan);
                 
                 const nav = document.createElement("nav");
                 const ul = document.createElement("ul");
                 ul.className = "pagination pagination-sm m-0 border-0";
                 
-                // Prev
+
                 const prevLi = document.createElement("li");
                 prevLi.className = "page-item " + (currentPage === 1 ? "disabled" : "");
                 const prevA = document.createElement("a");
@@ -386,7 +386,7 @@
                 prevLi.appendChild(prevA);
                 ul.appendChild(prevLi);
                 
-                // Pages
+
                 for (let i = 1; i <= totalPages; i++) {
                     const li = document.createElement("li");
                     li.className = "page-item " + (currentPage === i ? "active" : "");
@@ -403,7 +403,7 @@
                     ul.appendChild(li);
                 }
                 
-                // Next
+
                 const nextLi = document.createElement("li");
                 nextLi.className = "page-item " + (currentPage === totalPages ? "disabled" : "");
                 const nextA = document.createElement("a");

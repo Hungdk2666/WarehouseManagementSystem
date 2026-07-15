@@ -5,6 +5,13 @@
 <%@page import="java.util.List"%>
 <%@page import="java.util.Map"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%!
+    private String h(Object value) {
+        if (value == null) return "";
+        return value.toString().replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
+    }
+%>
 <%
     User loggedInUser = (User) session.getAttribute("user");
     if (loggedInUser == null || !loggedInUser.hasPermission("TICKET_VIEW_IN")) {
@@ -24,14 +31,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Chi tiết Phiếu nhập kho - #<%= ticket.getTicketCode() %></title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-grid-20260714">
 </head>
 <body>
@@ -78,7 +85,7 @@
                             </div>
                             
                             <div class="detail-item">
-                                <label class="text-muted small d-block">Người tạo (Thủ kho)</label>
+                                <label class="text-muted small d-block">Người tạo</label>
                                 <span class="text-slate-700"><%= ticket.getKeeperFullName() %></span>
                             </div>
                             <div class="detail-item">
@@ -139,7 +146,7 @@
                                             String condChipCls = "chip-success";
                                             String displayCond = "MỚI";
                                             if ("DAMAGED".equals(cond)) { condChipCls = "chip-danger"; displayCond = "LỖI"; }
-                                            else if ("USED".equals(cond)) { condChipCls = "chip-warning"; displayCond = "ĐÃ DÙNG"; }
+                                            else if ("USED".equals(cond)) { condChipCls = "chip-warning"; displayCond = "HÀNG CŨ"; }
                                         %>
                                         <span class="status-chip <%= condChipCls %>"><%= displayCond %></span>
                                     </td>
@@ -177,9 +184,10 @@
                             <div class="col-md-4 col-sm-6 text-center barcode-card-item mb-2">
                                 <div class="border rounded p-3 bg-light">
                                     <div class="fw-semibold text-slate-800 small text-truncate mb-1" title="<%= item.getProductName() %>"><%= item.getProductName() %></div>
+                                    <div class="text-muted" style="font-size: 10px;">Mã WMS</div>
                                     <svg class="barcode-svg" data-value="<%= item.getSerialNumber() %>"></svg>
                                     <% if (item.getManufacturerSerial() != null) { %>
-                                    <div class="text-muted small mt-1" style="font-size: 10px;">NSX: <span class="font-monospace"><%= item.getManufacturerSerial() %></span></div>
+                                    <div class="text-muted small mt-1" style="font-size: 10px;">Serial hãng: <span class="font-monospace"><%= h(item.getManufacturerSerial()) %></span></div>
                                     <% } %>
                                 </div>
                             </div>
@@ -188,16 +196,17 @@
                     </div>
                 </div>
                 
-                <!-- Hidden Printable Area -->
+                
                 <div class="d-none">
                     <div id="printable-barcodes-section">
                         <div style="display: flex; flex-wrap: wrap; justify-content: space-around; padding: 20px; font-family: 'Inter', sans-serif;">
                             <% for (ProductItem item : importedSerials) { %>
                             <div style="border: 1px solid #ccc; border-radius: 4px; padding: 15px; margin: 10px; background-color: #fff; text-align: center; width: 280px; page-break-inside: avoid; box-sizing: border-box;">
                                 <div style="font-weight: bold; color: #333; margin-bottom: 5px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= item.getProductName() %>"><%= item.getProductName() %></div>
+                                <div style="font-size: 9px; color: #666;">Mã WMS</div>
                                 <svg class="printable-barcode-svg" data-value="<%= item.getSerialNumber() %>" style="max-width: 100%; height: auto;"></svg>
                                 <% if (item.getManufacturerSerial() != null) { %>
-                                <div style="font-size: 9px; color: #666; margin-top: 3px;">NSX: <%= item.getManufacturerSerial() %></div>
+                                <div style="font-size: 9px; color: #666; margin-top: 3px;">Serial hãng: <%= h(item.getManufacturerSerial()) %></div>
                                 <% } %>
                             </div>
                             <% } %>
@@ -208,7 +217,7 @@
                 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
                 <script>
                     document.addEventListener("DOMContentLoaded", function() {
-                        // Render standard display barcodes
+
                         document.querySelectorAll(".barcode-svg").forEach(function(el) {
                             const val = el.getAttribute("data-value");
                             JsBarcode(el, val, {
@@ -220,7 +229,7 @@
                             });
                         });
                         
-                        // Render printable barcodes
+
                         document.querySelectorAll(".printable-barcode-svg").forEach(function(el) {
                             const val = el.getAttribute("data-value");
                             JsBarcode(el, val, {
@@ -237,13 +246,13 @@
                         const printContent = document.getElementById("printable-barcodes-section").innerHTML;
                         const originalContent = document.body.innerHTML;
                         
-                        // Replace body with print-only content
+
                         document.body.innerHTML = '<div>' + printContent + '</div>';
                         window.print();
                         
-                        // Restore original page content
+
                         document.body.innerHTML = originalContent;
-                        window.location.reload(); // reload to restore scripts/events
+                        window.location.reload();
                     }
                 </script>
                 <% } %>

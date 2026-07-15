@@ -7,8 +7,12 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import model.Request;
 import model.Ticket;
 import model.TicketDetail;
@@ -28,6 +32,11 @@ public class TicketDAO {
     private final AuditLogDAO auditLogDAO = new AuditLogDAO();
     private final RequestDAO requestDAO = new RequestDAO();
     private final ProductItemDAO productItemDAO = new ProductItemDAO();
+    private String lastErrorCode;
+
+    public String getLastErrorCode() {
+        return lastErrorCode;
+    }
 
     private static final String BASE_SELECT = "SELECT t.*, "
             + "r.request_code, r.reason AS req_reason, r.requested_condition, r.partner_type, r.partner_id, r.staff_id AS req_staff_id, "
@@ -204,7 +213,7 @@ public class TicketDAO {
      * Trả về false nếu có gì sai (caller sẽ rollback).
      */
     private boolean doConfirm(int ticketId, int confirmedBy, List<String> serials,
-            java.util.Map<String, java.util.List<String>> manufacturerSerialsBySku, Connection conn) throws Exception {
+            Map<Integer, List<String>> manufacturerSerialsByProductId, Connection conn) throws Exception {
         // Lock ticket
         Ticket ticket = lockTicketForUpdate(ticketId, conn);
         if (ticket == null || !Ticket.STATUS_DRAFT.equals(ticket.getStatus())) {
@@ -243,7 +252,7 @@ public class TicketDAO {
         List<TicketDetail> details = getDetailsByTicketId(ticketId, conn);
 
         return ticket.isIn()
-                ? processConfirmIn(ticket, req, details, confirmedBy, serials, manufacturerSerialsBySku, conn)
+                ? processConfirmIn(ticket, req, details, confirmedBy, serials, manufacturerSerialsByProductId, conn)
                 : processConfirmOut(ticket, req, details, confirmedBy, serials, conn);
     }
 
@@ -253,7 +262,8 @@ public class TicketDAO {
      * hệ thống không ghi gì vào sổ. Trả về mã lỗi cụ thể qua ConfirmResult.
      */
     public boolean addAndConfirm(Ticket ticket, List<TicketDetail> details, List<String> serials,
-            int confirmedBy, java.util.Map<String, java.util.List<String>> manufacturerSerialsBySku) {
+            int confirmedBy, Map<Integer, List<String>> manufacturerSerialsByProductId) {
+        lastErrorCode = null;
         try (Connection conn = DBUtils.getConnection()) {
             conn.setAutoCommit(false);
             try {
@@ -317,13 +327,19 @@ public class TicketDAO {
                 }
 
                 // 3) Xác nhận ngay trong cùng transaction
-                boolean ok = doConfirm(newId, confirmedBy, serials, manufacturerSerialsBySku, conn);
+                boolean ok = doConfirm(newId, confirmedBy, serials, manufacturerSerialsByProductId, conn);
                 if (!ok) { conn.rollback(); return false; }
 
                 conn.commit();
                 return true;
             } catch (Exception ex) {
                 conn.rollback();
+                String message = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase(Locale.ROOT);
+                if ("23000".equals(ex instanceof java.sql.SQLException
+                        ? ((java.sql.SQLException) ex).getSQLState() : null)
+                        && message.contains("manufacturer")) {
+                    lastErrorCode = "DuplicateManufacturerSerial";
+                }
                 ex.printStackTrace();
                 return false;
             } finally {
@@ -338,12 +354,85 @@ public class TicketDAO {
     // ============================================================
     // IN confirm — sinh serial, cộng tồn, update avg cost
     // ============================================================
+    /**
+     * Purchase receipts must provide exactly one manufacturer serial for each
+     * physical item. A serial may be reused by another product, but never by a
+     * second item of the same product.
+     */
+    private boolean validateManufacturerSerials(List<TicketDetail> details,
+            Map<Integer, List<String>> serialsByProductId, Connection conn) throws Exception {
+        if (serialsByProductId == null) {
+            lastErrorCode = "MissingManufacturerSerial";
+            return false;
+        }
+
+        Set<Integer> expectedProductIds = new HashSet<>();
+        for (TicketDetail detail : details) expectedProductIds.add(detail.getProductId());
+        for (Integer suppliedProductId : serialsByProductId.keySet()) {
+            if (!expectedProductIds.contains(suppliedProductId)) {
+                lastErrorCode = "InvalidManufacturerSerial";
+                return false;
+            }
+        }
+
+        String existsSql = "SELECT 1 FROM Product_Items "
+                + "WHERE product_id = ? AND manufacturer_serial = ? LIMIT 1";
+        try (PreparedStatement exists = conn.prepareStatement(existsSql)) {
+            for (TicketDetail detail : details) {
+                List<String> values = serialsByProductId.get(detail.getProductId());
+                if (values == null || values.size() != detail.getQuantity()) {
+                    lastErrorCode = "ManufacturerSerialCountMismatch";
+                    return false;
+                }
+
+                Set<String> seenForProduct = new HashSet<>();
+                for (int i = 0; i < values.size(); i++) {
+                    String value = values.get(i) == null ? "" : values.get(i).trim();
+                    if (!isValidManufacturerSerial(value)) {
+                        lastErrorCode = "InvalidManufacturerSerial";
+                        return false;
+                    }
+                    String comparisonKey = value.toLowerCase(Locale.ROOT);
+                    if (!seenForProduct.add(comparisonKey)) {
+                        lastErrorCode = "DuplicateManufacturerSerial";
+                        return false;
+                    }
+                    values.set(i, value);
+
+                    exists.setInt(1, detail.getProductId());
+                    exists.setString(2, value);
+                    try (ResultSet rs = exists.executeQuery()) {
+                        if (rs.next()) {
+                            lastErrorCode = "DuplicateManufacturerSerial";
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean isValidManufacturerSerial(String serial) {
+        if (serial == null || serial.isEmpty() || serial.length() > 100) return false;
+        for (int i = 0; i < serial.length(); i++) {
+            if (Character.isISOControl(serial.charAt(i))) return false;
+        }
+        return true;
+    }
+
     private boolean processConfirmIn(Ticket ticket, Request req, List<TicketDetail> details,
             int confirmedBy, List<String> serials,
-            java.util.Map<String, java.util.List<String>> manufacturerSerialsBySku, Connection conn) throws Exception {
+            Map<Integer, List<String>> manufacturerSerialsByProductId, Connection conn) throws Exception {
 
         boolean isReturn = Request.REASON_RETURN.equals(req.getReason());
         boolean isTransfer = Request.REASON_TRANSFER.equals(req.getReason());
+        boolean isTransferReturn = isTransfer && isTransferReturnRequest(req, conn);
+
+        if (!isReturn && !isTransfer
+                && !validateManufacturerSerials(details, manufacturerSerialsByProductId, conn)) {
+            return false;
+        }
 
         for (TicketDetail d : details) {
             int productId = d.getProductId();
@@ -351,6 +440,8 @@ public class TicketDAO {
             double recPrice = d.getUnitCost() != null ? d.getUnitCost().doubleValue() : 0.0;
             String condition = req.getRequestedCondition() != null ? req.getRequestedCondition() : "NEW";
             boolean isDamaged = "DAMAGED".equals(condition);
+            int receivedAtDestination = 0;
+            int quarantinedAtDestination = 0;
 
             // Lock current inventory
             int currentQty = 0;
@@ -410,38 +501,95 @@ public class TicketDAO {
                 }
             }
 
-            // Ledger
-            String ledgerType = isReturn ? "RETURN" : (isTransfer ? "TRANSFER_IN" : "IMPORT");
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO Product_Ledger (product_id, transaction_type, reference_id, change_quantity, balance_quantity, created_by, warehouse_id) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?)")) {
-                ps.setInt(1, productId);
-                ps.setString(2, ledgerType);
-                ps.setInt(3, ticket.getId());
-                ps.setInt(4, recQty);
-                ps.setInt(5, newTotalPhysicalQty);
-                ps.setInt(6, confirmedBy);
-                ps.setInt(7, ticket.getWarehouseId());
-                ps.executeUpdate();
-            }
 
             if (isTransfer && req.getRefTicketId() != null) {
-                // IN-TRANSFER: lấy đúng `recQty` Product_Items đang IN_TRANSIT từ OUT đối ứng
-                // (nếu user chỉ nhận một phần, không flip tất cả)
+                // IN-TRANSFER thông thường tự lấy theo số lượng. Riêng nhập trả
+                // bắt buộc scan đúng serial đang trên đường của phiếu xuất gốc.
                 Integer outTicketId = req.getRefTicketId();
                 List<Integer> itemIds = new ArrayList<>();
-                try (PreparedStatement ps = conn.prepareStatement(
-                        "SELECT pi.id FROM Product_Items pi "
-                                + "JOIN Product_Item_Movements m ON m.product_item_id = pi.id "
-                                + "WHERE m.ticket_id = ? AND m.action = 'TRANSFER_OUT' "
-                                + "  AND pi.product_id = ? AND pi.status = 'IN_TRANSIT' "
-                                + "ORDER BY pi.id LIMIT ? FOR UPDATE")) {
-                    ps.setInt(1, outTicketId);
-                    ps.setInt(2, productId);
-                    ps.setInt(3, recQty);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        while (rs.next())
-                            itemIds.add(rs.getInt(1));
+                Map<Integer, String> returnItemStatuses = new java.util.HashMap<>();
+                if (isTransferReturn) {
+                    if (serials == null || serials.isEmpty()) {
+                        lastErrorCode = "MissingTransferReturnSerial";
+                        return false;
+                    }
+                    Set<String> expected = splitExpectedSerials(req.getExpectedSerials());
+                    List<String> scannedForProduct = new ArrayList<>();
+                    for (String serial : serials) {
+                        if (!expected.contains(serial)) continue;
+                        try (PreparedStatement ps = conn.prepareStatement(
+                                "SELECT pi.id, pi.status FROM Product_Items pi "
+                                        + "JOIN Product_Item_Movements m ON m.product_item_id=pi.id "
+                                        + "WHERE pi.serial_number=? AND pi.product_id=? "
+                                        + "AND (pi.status='IN_TRANSIT' OR (pi.warehouse_id=? AND pi.status IN ('IN_STOCK','QUARANTINE'))) "
+                                        + "AND m.ticket_id=? AND m.action='TRANSFER_OUT' FOR UPDATE")) {
+                            ps.setString(1, serial);
+                            ps.setInt(2, productId);
+                            ps.setInt(3, req.getPartnerId());
+                            ps.setInt(4, outTicketId);
+                            try (ResultSet rs = ps.executeQuery()) {
+                                if (rs.next()) {
+                                    int itemId = rs.getInt("id");
+                                    itemIds.add(itemId);
+                                    returnItemStatuses.put(itemId, rs.getString("status"));
+                                    scannedForProduct.add(serial);
+                                }
+                            }
+                        }
+                    }
+                    if (new LinkedHashSet<>(serials).size() != serials.size()
+                            || itemIds.size() != recQty) {
+                        lastErrorCode = "InvalidTransferReturnSerial";
+                        return false;
+                    }
+                    serials.removeAll(scannedForProduct);
+                    for (String oldStatus : returnItemStatuses.values()) {
+                        if ("IN_STOCK".equals(oldStatus)) receivedAtDestination++;
+                        else if ("QUARANTINE".equals(oldStatus)) quarantinedAtDestination++;
+                    }
+
+                    // Nếu kho đích đã xác nhận một phần trước khi hủy, giảm
+                    // đúng phần tồn đó ngay khi kho nguồn xác nhận nhận trả.
+                    if (receivedAtDestination > 0 || quarantinedAtDestination > 0) {
+                        int destinationQty = 0, destinationQuarantine = 0;
+                        try (PreparedStatement ps = conn.prepareStatement(
+                                "SELECT quantity, quarantine_quantity FROM Inventories WHERE warehouse_id=? AND product_id=? FOR UPDATE")) {
+                            ps.setInt(1, req.getPartnerId());
+                            ps.setInt(2, productId);
+                            try (ResultSet rs = ps.executeQuery()) {
+                                if (rs.next()) {
+                                    destinationQty = rs.getInt("quantity");
+                                    destinationQuarantine = rs.getInt("quarantine_quantity");
+                                }
+                            }
+                        }
+                        if (destinationQty < receivedAtDestination || destinationQuarantine < quarantinedAtDestination) {
+                            lastErrorCode = "InvalidTransferReturnSerial";
+                            return false;
+                        }
+                        try (PreparedStatement ps = conn.prepareStatement(
+                                "UPDATE Inventories SET quantity=quantity-?, quarantine_quantity=quarantine_quantity-? "
+                                        + "WHERE warehouse_id=? AND product_id=?")) {
+                            ps.setInt(1, receivedAtDestination);
+                            ps.setInt(2, quarantinedAtDestination);
+                            ps.setInt(3, req.getPartnerId());
+                            ps.setInt(4, productId);
+                            ps.executeUpdate();
+                        }
+                    }
+                } else {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "SELECT pi.id FROM Product_Items pi "
+                                    + "JOIN Product_Item_Movements m ON m.product_item_id = pi.id "
+                                    + "WHERE m.ticket_id = ? AND m.action = 'TRANSFER_OUT' "
+                                    + "  AND pi.product_id = ? AND pi.status = 'IN_TRANSIT' "
+                                    + "ORDER BY pi.id LIMIT ? FOR UPDATE")) {
+                        ps.setInt(1, outTicketId);
+                        ps.setInt(2, productId);
+                        ps.setInt(3, recQty);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            while (rs.next()) itemIds.add(rs.getInt(1));
+                        }
                     }
                 }
                 if (itemIds.size() < recQty) {
@@ -460,18 +608,19 @@ public class TicketDAO {
                         ps.executeUpdate();
                     }
                 }
-                // Sinh TRANSFER_IN movement cho đúng các item này
+                // Nhập trả dùng action RETURN_IN để phân biệt rõ với kho đích nhận hàng.
                 String insMov = "INSERT INTO Product_Item_Movements "
                         + "(product_item_id, ticket_id, action, from_warehouse_id, to_warehouse_id, condition_at_time, created_by) "
-                        + "VALUES (?, ?, 'TRANSFER_IN', ?, ?, ?, ?)";
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement ps = conn.prepareStatement(insMov)) {
                     for (int itemId : itemIds) {
                         ps.setInt(1, itemId);
                         ps.setInt(2, ticket.getId());
-                        ps.setInt(3, req.getPartnerId()); // kho nguồn
-                        ps.setInt(4, ticket.getWarehouseId()); // kho đích
-                        ps.setString(5, condition);
-                        ps.setInt(6, confirmedBy);
+                        ps.setString(3, isTransferReturn ? "RETURN_IN" : "TRANSFER_IN");
+                        ps.setInt(4, req.getPartnerId());
+                        ps.setInt(5, ticket.getWarehouseId());
+                        ps.setString(6, condition);
+                        ps.setInt(7, confirmedBy);
                         ps.executeUpdate();
                     }
                 }
@@ -487,13 +636,24 @@ public class TicketDAO {
                     }
                 }
 
+                // Thắt chặt: khi đơn trả hàng có tham chiếu phiếu xuất gốc (ref_ticket_id),
+                // serial phải đúng là món đã được XUẤT bởi chính phiếu đó (có movement EXPORT_OUT),
+                // không chỉ "đang ở trạng thái EXPORTED" chung chung.
+                Integer refTicketId = req.getRefTicketId();
                 List<String> productSerials = new ArrayList<>();
                 for (String s : serials) {
                     if (!expectedSerialsList.contains(s)) continue;
-                    try (PreparedStatement ps = conn.prepareStatement(
-                            "SELECT COUNT(*) FROM Product_Items WHERE serial_number = ? AND product_id = ? AND status = 'EXPORTED'")) {
+                    String checkSql = (refTicketId != null)
+                        ? "SELECT COUNT(*) FROM Product_Items pi "
+                          + "JOIN Product_Item_Movements m ON m.product_item_id = pi.id "
+                          + "WHERE pi.serial_number = ? AND pi.product_id = ? AND pi.status = 'EXPORTED' "
+                          + "  AND m.ticket_id = ? AND m.action = 'EXPORT_OUT'"
+                        : "SELECT COUNT(*) FROM Product_Items pi "
+                          + "WHERE pi.serial_number = ? AND pi.product_id = ? AND pi.status = 'EXPORTED'";
+                    try (PreparedStatement ps = conn.prepareStatement(checkSql)) {
                         ps.setString(1, s);
                         ps.setInt(2, productId);
+                        if (refTicketId != null) ps.setInt(3, refTicketId);
                         try (ResultSet rs = ps.executeQuery()) {
                             if (rs.next() && rs.getInt(1) > 0)
                                 productSerials.add(s);
@@ -537,8 +697,7 @@ public class TicketDAO {
             } else {
                 // PURCHASE: sinh serial mới + gắn serial NSX nếu có
                 String skuKey = d.getSku() != null ? d.getSku() : ("P" + productId);
-                java.util.List<String> mfrSerials = (manufacturerSerialsBySku != null)
-                        ? manufacturerSerialsBySku.get(skuKey) : null;
+                List<String> mfrSerials = manufacturerSerialsByProductId.get(productId);
                 List<String> newSerials = productItemDAO.addProductItemsAndReturnSerials(
                         productId, ticket.getId(), recQty, skuKey,
                         ticket.getWarehouseId(), condition, mfrSerials, conn);
@@ -556,6 +715,53 @@ public class TicketDAO {
                         ps.setInt(5, confirmedBy);
                         ps.executeUpdate();
                     }
+                }
+            }
+
+            int[] balances = getConditionBalances(productId, ticket.getWarehouseId(), conn);
+            String ledgerType = isReturn ? "RETURN"
+                    : (isTransferReturn ? "TRANSFER_RETURN" : (isTransfer ? "TRANSFER_IN" : "IMPORT"));
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO Product_Ledger (product_id, transaction_type, reference_id, change_quantity, balance_quantity, "
+                            + "change_new_quantity, change_used_quantity, change_damaged_quantity, "
+                            + "balance_new_quantity, balance_used_quantity, balance_damaged_quantity, created_by, warehouse_id) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                ps.setInt(1, productId);
+                ps.setString(2, ledgerType);
+                ps.setInt(3, ticket.getId());
+                ps.setInt(4, recQty);
+                ps.setInt(5, balances[0] + balances[1] + balances[2]);
+                ps.setInt(6, "NEW".equals(condition) ? recQty : 0);
+                ps.setInt(7, "USED".equals(condition) ? recQty : 0);
+                ps.setInt(8, "DAMAGED".equals(condition) ? recQty : 0);
+                ps.setInt(9, balances[0]);
+                ps.setInt(10, balances[1]);
+                ps.setInt(11, balances[2]);
+                ps.setInt(12, confirmedBy);
+                ps.setInt(13, ticket.getWarehouseId());
+                ps.executeUpdate();
+            }
+            if (isTransferReturn && (receivedAtDestination > 0 || quarantinedAtDestination > 0)) {
+                int[] destinationBalances = getConditionBalances(productId, req.getPartnerId(), conn);
+                int delta = -(receivedAtDestination + quarantinedAtDestination);
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO Product_Ledger (product_id, transaction_type, reference_id, change_quantity, balance_quantity, "
+                                + "change_new_quantity, change_used_quantity, change_damaged_quantity, "
+                                + "balance_new_quantity, balance_used_quantity, balance_damaged_quantity, created_by, warehouse_id) "
+                                + "VALUES (?, 'TRANSFER_RETURN_OUT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                    ps.setInt(1, productId);
+                    ps.setInt(2, ticket.getId());
+                    ps.setInt(3, delta);
+                    ps.setInt(4, destinationBalances[0] + destinationBalances[1] + destinationBalances[2]);
+                    ps.setInt(5, "NEW".equals(condition) ? -receivedAtDestination : 0);
+                    ps.setInt(6, "USED".equals(condition) ? -receivedAtDestination : 0);
+                    ps.setInt(7, -quarantinedAtDestination);
+                    ps.setInt(8, destinationBalances[0]);
+                    ps.setInt(9, destinationBalances[1]);
+                    ps.setInt(10, destinationBalances[2]);
+                    ps.setInt(11, confirmedBy);
+                    ps.setInt(12, req.getPartnerId());
+                    ps.executeUpdate();
                 }
             }
         }
@@ -584,14 +790,27 @@ public class TicketDAO {
             }
             if (stillInTransit == 0) {
                 try (PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE Tickets SET status = 'COMPLETED' WHERE id = ? AND status = 'IN_TRANSIT'")) {
-                    ps.setInt(1, req.getRefTicketId());
+                        "UPDATE Tickets SET status = 'COMPLETED', return_status = CASE WHEN ? THEN 'FULL' ELSE return_status END "
+                                + "WHERE id = ? AND status = 'IN_TRANSIT'")) {
+                    ps.setBoolean(1, isTransferReturn);
+                    ps.setInt(2, req.getRefTicketId());
                     ps.executeUpdate();
                 }
-                // Đánh dấu Request OUT gốc → COMPLETED
+                refreshTransferOutRequestStatus(req.getRefTicketId(), conn);
+                if (isTransferReturn) {
+                    // Yêu cầu nhận ở kho đích đã kết thúc hoàn trả. Không đụng
+                    // yêu cầu nhập trả nguồn (nó đã được roll-up thành COMPLETED).
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "UPDATE Requests SET status='RETURNED' "
+                                    + "WHERE type='IN' AND reason='TRANSFER' AND ref_ticket_id=? "
+                                    + "AND status='RETURNING'")) {
+                        ps.setInt(1, req.getRefTicketId());
+                        ps.executeUpdate();
+                    }
+                }
+            } else if (isTransferReturn) {
                 try (PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE Requests r JOIN Tickets t ON t.request_id = r.id "
-                                + "SET r.status = 'COMPLETED' WHERE t.id = ?")) {
+                        "UPDATE Tickets SET return_status='PARTIAL' WHERE id=? AND status='IN_TRANSIT'")) {
                     ps.setInt(1, req.getRefTicketId());
                     ps.executeUpdate();
                 }
@@ -599,7 +818,7 @@ public class TicketDAO {
         }
 
         // Audit + notification
-        auditLogDAO.log(confirmedBy, "CONFIRM_TICKET_IN",
+        auditLogDAO.log(conn, confirmedBy, "CONFIRM_TICKET_IN",
                 "Phiếu " + ticket.getTicketCode() + " (Yêu cầu " + req.getRequestCode() + ")");
         if (req.getStaffId() != confirmedBy) {
             notificationDAO.createNotification(req.getStaffId(),
@@ -949,6 +1168,121 @@ public class TicketDAO {
         try (PreparedStatement ps = conn.prepareStatement("UPDATE Requests SET status = ? WHERE id = ?")) {
             ps.setString(1, newStatus);
             ps.setInt(2, req.getId());
+            ps.executeUpdate();
+        }
+    }
+
+    /** Một IN-TRANSFER là nhập trả khi kho nhận của nó chính là kho nguồn của phiếu OUT tham chiếu. */
+    private boolean isTransferReturnRequest(Request req, Connection conn) throws Exception {
+        if (!req.isIn() || !Request.REASON_TRANSFER.equals(req.getReason()) || req.getRefTicketId() == null) {
+            return false;
+        }
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT warehouse_id FROM Tickets WHERE id=? AND type='OUT'")) {
+            ps.setInt(1, req.getRefTicketId());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) == req.getWarehouseId();
+            }
+        }
+    }
+
+    private Set<String> splitExpectedSerials(String value) {
+        Set<String> result = new LinkedHashSet<>();
+        if (value == null || value.trim().isEmpty()) return result;
+        for (String serial : value.split(",")) {
+            if (serial != null && !serial.trim().isEmpty()) result.add(serial.trim());
+        }
+        return result;
+    }
+
+    /**
+     * Trạng thái gọn cho request OUT-TRANSFER: xuất thiếu = PARTIALLY_COMPLETED;
+     * xuất đủ nhưng còn phiếu đi đường = IN_TRANSIT; chỉ COMPLETED khi mọi phiếu
+     * đã được kho đích nhận hoặc kho nguồn nhận trả.
+     */
+    private void refreshTransferOutRequestStatus(int outTicketId, Connection conn) throws Exception {
+        int requestId;
+        String currentStatus;
+        boolean cancellationApproved;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT r.id AS request_id, r.status, r.cancelled_at FROM Tickets t "
+                        + "JOIN Requests r ON r.id=t.request_id "
+                        + "WHERE t.id=? AND t.type='OUT' FOR UPDATE")) {
+            ps.setInt(1, outTicketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return;
+                requestId = rs.getInt("request_id");
+                currentStatus = rs.getString("status");
+                cancellationApproved = rs.getTimestamp("cancelled_at") != null;
+            }
+        }
+
+        boolean allIssued = true;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT product_id, quantity FROM Request_Details WHERE request_id=?")) {
+            ps.setInt(1, requestId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int issued = 0;
+                    try (PreparedStatement sum = conn.prepareStatement(
+                            "SELECT COALESCE(SUM(td.quantity),0) FROM Ticket_Details td "
+                                    + "JOIN Tickets t ON t.id=td.ticket_id "
+                                    + "WHERE t.request_id=? AND td.product_id=? "
+                                    + "AND t.status IN ('IN_TRANSIT','COMPLETED')")) {
+                        sum.setInt(1, requestId);
+                        sum.setInt(2, rs.getInt("product_id"));
+                        try (ResultSet sumRs = sum.executeQuery()) {
+                            if (sumRs.next()) issued = sumRs.getInt(1);
+                        }
+                    }
+                    if (issued < rs.getInt("quantity")) { allIssued = false; break; }
+                }
+            }
+        }
+
+        boolean hasInTransit;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT 1 FROM Tickets WHERE request_id=? AND type='OUT' AND status='IN_TRANSIT' LIMIT 1")) {
+            ps.setInt(1, requestId);
+            try (ResultSet rs = ps.executeQuery()) { hasInTransit = rs.next(); }
+        }
+
+        int transferTicketCount = 0;
+        int fullyReturnedTicketCount = 0;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT COUNT(*) AS total, COALESCE(SUM(return_status='FULL'),0) AS returned "
+                        + "FROM Tickets WHERE request_id=? AND type='OUT' "
+                        + "AND status IN ('IN_TRANSIT','COMPLETED')")) {
+            ps.setInt(1, requestId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    transferTicketCount = rs.getInt("total");
+                    fullyReturnedTicketCount = rs.getInt("returned");
+                }
+            }
+        }
+        boolean anyActuallyShippedTicketReturned = fullyReturnedTicketCount > 0;
+        boolean allActuallyShippedTicketsReturned = transferTicketCount > 0
+                && transferTicketCount == fullyReturnedTicketCount;
+
+        String status;
+        if (hasInTransit) {
+            if (Request.STATUS_RETURNING.equals(currentStatus)) status = Request.STATUS_RETURNING;
+            else if (cancellationApproved && !allIssued) status = Request.STATUS_PARTIALLY_IN_TRANSIT;
+            else status = allIssued ? Request.STATUS_IN_TRANSIT : Request.STATUS_PARTIALLY_COMPLETED;
+        } else if (allActuallyShippedTicketsReturned) {
+            status = Request.STATUS_RETURNED;
+        } else if (anyActuallyShippedTicketReturned) {
+            // Một phần lô đã nhận ở đích, phần khác đã quay về nguồn.
+            status = Request.STATUS_PARTIALLY_CLOSED;
+        } else if (cancellationApproved && !allIssued) {
+            status = Request.STATUS_PARTIALLY_CLOSED;
+        } else {
+            status = allIssued ? Request.STATUS_COMPLETED : Request.STATUS_PARTIALLY_COMPLETED;
+        }
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE Requests SET status=? WHERE id=?")) {
+            ps.setString(1, status);
+            ps.setInt(2, requestId);
             ps.executeUpdate();
         }
     }

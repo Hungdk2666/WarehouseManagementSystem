@@ -43,8 +43,12 @@ public class TicketService {
 
     /** Gộp 1 màn hình: tạo phiếu + xác nhận trong 1 giao dịch (không để lại phiếu nháp). */
     public boolean addAndConfirm(Ticket ticket, List<TicketDetail> details, List<String> serials,
-            int confirmedBy, Map<String, List<String>> manufacturerSerialsBySku) {
-        return dao.addAndConfirm(ticket, details, serials, confirmedBy, manufacturerSerialsBySku);
+            int confirmedBy, Map<Integer, List<String>> manufacturerSerialsByProductId) {
+        return dao.addAndConfirm(ticket, details, serials, confirmedBy, manufacturerSerialsByProductId);
+    }
+
+    public String getLastErrorCode() {
+        return dao.getLastErrorCode();
     }
 
     public List<Ticket> getAll(String arg0) {

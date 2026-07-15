@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import model.ProductItem;
 import utils.DBUtils;
 
@@ -54,29 +55,45 @@ public class ProductItemDAO {
 
         List<String> serials = new ArrayList<>();
         String insertSql = "INSERT INTO Product_Items (product_id, serial_number, manufacturer_serial, status, item_condition, warehouse_id) VALUES (?, ?, ?, ?, ?, ?)";
+        // nextIndex luôn tăng dần. Nếu số serial vừa bị phiếu khác (nhập đồng thời) tạo trùng
+        // → dính UNIQUE serial_number → bắt lỗi và thử số kế tiếp, không để giao dịch fail oan.
+        int nextIndex = currentMaxIndex;
         try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
             for (int i = 0; i < quantity; i++) {
-                int nextIndex = currentMaxIndex + i + 1;
-                String serial = String.format("%s-%03d", skuClean, nextIndex);
                 String mfrSerial = (manufacturerSerials != null && i < manufacturerSerials.size()) ? manufacturerSerials.get(i) : null;
-                ps.setInt(1, productId);
-                ps.setString(2, serial);
-                if (mfrSerial != null) {
-                    ps.setString(3, mfrSerial);
-                } else {
-                    ps.setNull(3, java.sql.Types.VARCHAR);
+                while (true) {
+                    nextIndex++;
+                    String serial = String.format("%s-%03d", skuClean, nextIndex);
+                    ps.setInt(1, productId);
+                    ps.setString(2, serial);
+                    if (mfrSerial != null) {
+                        ps.setString(3, mfrSerial);
+                    } else {
+                        ps.setNull(3, java.sql.Types.VARCHAR);
+                    }
+                    ps.setString(4, status);
+                    ps.setString(5, condition);
+                    ps.setInt(6, warehouseId);
+                    try {
+                        ps.executeUpdate();
+                        serials.add(serial);
+                        break;
+                    } catch (java.sql.SQLIntegrityConstraintViolationException dup) {
+                        if (!isInternalSerialCollision(dup)) throw dup;
+                        // serial đã tồn tại → thử số kế tiếp (nextIndex đã tăng ở đầu vòng)
+                    }
                 }
-                ps.setString(4, status);
-                ps.setString(5, condition);
-                ps.setInt(6, warehouseId);
-                ps.executeUpdate();
-                serials.add(serial);
             }
         }
         return serials;
     }
 
     /** Legacy wrapper — delegates to addProductItemsAndReturnSerials via a fresh connection. */
+    private boolean isInternalSerialCollision(java.sql.SQLIntegrityConstraintViolationException error) {
+        String message = error.getMessage() == null ? "" : error.getMessage().toLowerCase(Locale.ROOT);
+        return message.contains("serial_number") && !message.contains("manufacturer");
+    }
+
     public boolean addProductItems(int productId, int importTicketId, int quantity, String sku, int warehouseId, Connection conn) throws Exception {
         addProductItemsAndReturnSerials(productId, importTicketId, quantity, sku, warehouseId, conn);
         return true;
@@ -96,8 +113,8 @@ public class ProductItemDAO {
 
     public List<ProductItem> getInStockItemsByProductId(int productId, Integer warehouseId, String itemCondition) {
         List<ProductItem> list = new ArrayList<>();
-        String itemStatus = "DAMAGED".equals(itemCondition) ? "QUARANTINE" : "IN_STOCK";
         String query;
+        String dispatchableStatus = "DAMAGED".equals(itemCondition) ? "QUARANTINE" : "IN_STOCK";
         if (warehouseId != null) {
             query = "SELECT i.*, p.product_name, p.sku, p.unit, w.warehouse_name "
                   + "FROM Product_Items i "
@@ -118,8 +135,8 @@ public class ProductItemDAO {
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setInt(1, productId);
-            ps.setString(2, itemStatus);
-            int paramIndex = 3;
+            int paramIndex = 2;
+            ps.setString(paramIndex++, dispatchableStatus);
             if (warehouseId != null) {
                 ps.setInt(paramIndex++, warehouseId);
             }
