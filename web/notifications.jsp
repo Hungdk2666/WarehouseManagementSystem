@@ -21,14 +21,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Thông báo - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
     <style>
         .notification-row {
@@ -72,10 +72,10 @@
                     </div>
                 </div>
 
-                <!-- Notifications Card -->
+                
                 <div class="card bg-white">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
-                        <span class="fw-bold text-slate-800"><i class="bi bi-bell-fill me-2 text-primary"></i>Danh sách thông báo (tổng số <%= totalCount %>)</span>
+                        <span class="fw-bold text-slate-800"><i class="bi bi-bell-fill me-2 text-primary"></i>Danh sách thông báo · <%= totalCount %></span>
                     </div>
                     <div class="card-body p-0">
                         <% if (notifications != null && !notifications.isEmpty()) { %>
@@ -127,7 +127,7 @@
                     </div>
                 </div>
 
-                <!-- Pagination -->
+                
                 <% if (totalPages > 1) { %>
                 <nav aria-label="Page navigation" class="mt-4">
                     <ul class="pagination justify-content-center">
@@ -155,7 +155,7 @@
         </div>
     </div>
 
-    <!-- Bootstrap Bundle JS -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const ctxPath = '<%= request.getContextPath() %>';
@@ -184,7 +184,7 @@
                     if (dot) dot.remove();
                     if (btnElement) btnElement.remove();
                     
-                    // Trigger global header unread badge update if function exists
+
                     if (typeof updateHeaderBadge === 'function') {
                         updateHeaderBadge();
                     }

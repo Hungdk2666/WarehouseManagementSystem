@@ -56,6 +56,34 @@ public class NotificationDAO {
         }
     }
 
+    /**
+     * Thông báo cho user vừa THUỘC kho vừa CÓ vai trò chỉ định (đang hoạt động).
+     * Dùng cho nghiệp vụ nhắm đúng người của đúng kho (vd: thủ kho/quản lý của kho đang kiểm kê),
+     * tránh gửi lan sang nhân viên kho khác.
+     */
+    public void createNotificationForWarehouseRole(int warehouseId, int roleId, String title, String message, String link, Connection conn) throws Exception {
+        List<Integer> userIds = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT id FROM Users WHERE warehouse_id = ? AND role_id = ? AND status = TRUE")) {
+            ps.setInt(1, warehouseId);
+            ps.setInt(2, roleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) userIds.add(rs.getInt("id"));
+            }
+        }
+        if (!userIds.isEmpty()) {
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO Notifications (user_id, title, message, link) VALUES (?, ?, ?, ?)")) {
+                for (int uid : userIds) {
+                    ps.setInt(1, uid); ps.setString(2, title);
+                    ps.setString(3, message); ps.setString(4, link);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+            }
+        }
+    }
+
     public void createNotificationForRole(int roleId, String title, String message, String link, Connection conn) throws Exception {
         String queryUsers = "SELECT id FROM Users WHERE role_id = ? AND status = TRUE";
         List<Integer> userIds = new ArrayList<>();

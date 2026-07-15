@@ -90,7 +90,10 @@ public class NotificationServlet extends HttpServlet {
         if (totalPages == 0) {
             totalPages = 1;
         }
-        
+        // Kẹp page trong [1, totalPages] để tránh OFFSET âm (page<=0) hoặc truy vấn rỗng (page quá lớn).
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+
         List<Notification> list = dao.getNotifications(loggedInUser.getId(), pageSize, (page - 1) * pageSize);
         
         request.setAttribute("notifications", list);
