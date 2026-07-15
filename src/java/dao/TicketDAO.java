@@ -617,9 +617,9 @@ public class TicketDAO {
             int confirmedBy, List<String> serials, Connection conn) throws Exception {
 
         boolean isTransfer = Request.REASON_TRANSFER.equals(req.getReason());
-        String requestedCondition = req.getRequestedCondition() == null ? "NEW" : req.getRequestedCondition();
-        boolean isDamaged = "DAMAGED".equals(requestedCondition);
-        String sourceItemStatus = isDamaged ? "QUARANTINE" : "IN_STOCK";
+        String condition = req.getRequestedCondition() == null ? "NEW" : req.getRequestedCondition();
+        boolean isDamaged = "DAMAGED".equals(condition);
+        String dispatchableStatus = isDamaged ? "QUARANTINE" : "IN_STOCK";
 
         // Auto-pick serials nếu caller không cung cấp (test compat)
         if (serials == null) {
@@ -632,8 +632,8 @@ public class TicketDAO {
                                 + "ORDER BY id LIMIT ?")) {
                     ps.setInt(1, d.getProductId());
                     ps.setInt(2, ticket.getWarehouseId());
-                    ps.setString(3, sourceItemStatus);
-                    ps.setString(4, requestedCondition);
+                    ps.setString(3, dispatchableStatus);
+                    ps.setString(4, condition);
                     ps.setInt(5, d.getQuantity());
                     try (ResultSet rs = ps.executeQuery()) {
                         while (rs.next())
@@ -657,16 +657,18 @@ public class TicketDAO {
 
             List<String> productSerials = new ArrayList<>();
             for (String s : deduped) {
+                // FOR UPDATE: khóa đúng dòng serial này để phiếu khác không xuất trùng cùng lúc.
+                // Nếu serial vừa bị phiếu khác xuất (status đổi) thì WHERE không khớp → không lấy.
                 try (PreparedStatement ps = conn.prepareStatement(
-                        "SELECT COUNT(*) FROM Product_Items WHERE serial_number = ? AND product_id = ? "
-                                + "AND status = ? AND warehouse_id = ? AND item_condition = ?")) {
+                        "SELECT id FROM Product_Items WHERE serial_number = ? AND product_id = ? "
+                                + "AND status = ? AND warehouse_id = ? AND item_condition = ? FOR UPDATE")) {
                     ps.setString(1, s);
                     ps.setInt(2, productId);
-                    ps.setString(3, sourceItemStatus);
+                    ps.setString(3, dispatchableStatus);
                     ps.setInt(4, ticket.getWarehouseId());
-                    ps.setString(5, requestedCondition);
+                    ps.setString(5, condition);
                     try (ResultSet rs = ps.executeQuery()) {
-                        if (rs.next() && rs.getInt(1) > 0)
+                        if (rs.next())
                             productSerials.add(s);
                     }
                 }
@@ -688,7 +690,7 @@ public class TicketDAO {
                     }
                 }
             }
-            if (isDamaged ? currentQuarantineQty < issueQty : currentQty < issueQty)
+            if ((isDamaged ? currentQuarantineQty : currentQty) < issueQty)
                 return false;
 
             // Snapshot avg cost
@@ -721,14 +723,15 @@ public class TicketDAO {
                 ps.executeUpdate();
             }
 
-            // Update Product_Items
+            // Update Product_Items — thêm guard trạng thái + kiểm số dòng để tránh xuất trùng.
             String newItemStatus = isTransfer ? "IN_TRANSIT" : "EXPORTED";
             try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE Product_Items SET status = ? WHERE serial_number = ?")) {
+                    "UPDATE Product_Items SET status = ? WHERE serial_number = ? AND status = ?")) {
                 for (String s : productSerials) {
                     ps.setString(1, newItemStatus);
                     ps.setString(2, s);
-                    ps.executeUpdate();
+                    ps.setString(3, dispatchableStatus);
+                    if (ps.executeUpdate() != 1) return false; // serial đã bị xuất bởi phiếu khác → rollback
                 }
             }
 
@@ -752,18 +755,26 @@ public class TicketDAO {
                 }
             }
 
-            // Ledger
-            int newTotalPhysicalQty = newQty + newQuarantineQty;
+            // Ledger snapshot after serial statuses have changed.
+            int[] balances = getConditionBalances(productId, ticket.getWarehouseId(), conn);
             try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO Product_Ledger (product_id, transaction_type, reference_id, change_quantity, balance_quantity, created_by, warehouse_id) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?)")) {
+                    "INSERT INTO Product_Ledger (product_id, transaction_type, reference_id, change_quantity, balance_quantity, "
+                            + "change_new_quantity, change_used_quantity, change_damaged_quantity, "
+                            + "balance_new_quantity, balance_used_quantity, balance_damaged_quantity, created_by, warehouse_id) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
                 ps.setInt(1, productId);
                 ps.setString(2, isTransfer ? "TRANSFER_OUT" : "EXPORT");
                 ps.setInt(3, ticket.getId());
                 ps.setInt(4, -issueQty);
-                ps.setInt(5, newTotalPhysicalQty);
-                ps.setInt(6, confirmedBy);
-                ps.setInt(7, ticket.getWarehouseId());
+                ps.setInt(5, balances[0] + balances[1] + balances[2]);
+                ps.setInt(6, "NEW".equals(condition) ? -issueQty : 0);
+                ps.setInt(7, "USED".equals(condition) ? -issueQty : 0);
+                ps.setInt(8, "DAMAGED".equals(condition) ? -issueQty : 0);
+                ps.setInt(9, balances[0]);
+                ps.setInt(10, balances[1]);
+                ps.setInt(11, balances[2]);
+                ps.setInt(12, confirmedBy);
+                ps.setInt(13, ticket.getWarehouseId());
                 ps.executeUpdate();
             }
         }
@@ -798,11 +809,12 @@ public class TicketDAO {
         String finalStatus = isTransfer ? Ticket.STATUS_IN_TRANSIT : Ticket.STATUS_CONFIRMED;
         updateTicketStatus(ticket.getId(), finalStatus, confirmedBy, conn);
 
-        // Roll-up parent request
-        rollupRequestStatus(req, conn);
+        // Với xuất chuyển kho, "đã xuất đủ" là ĐANG CHUYỂN, không phải hoàn thành.
+        if (isTransfer) refreshTransferOutRequestStatus(ticket.getId(), conn);
+        else rollupRequestStatus(req, conn);
 
         // Audit + notify
-        auditLogDAO.log(confirmedBy, "CONFIRM_TICKET_OUT",
+        auditLogDAO.log(conn, confirmedBy, "CONFIRM_TICKET_OUT",
                 "Phiếu " + ticket.getTicketCode() + " (Yêu cầu " + req.getRequestCode() + ")");
         if (req.getStaffId() != confirmedBy) {
             notificationDAO.createNotification(req.getStaffId(),
@@ -878,6 +890,21 @@ public class TicketDAO {
         }
     }
 
+    private int[] getConditionBalances(int productId, int warehouseId, Connection conn) throws Exception {
+        String sql = "SELECT "
+                + "COALESCE(SUM(CASE WHEN status = 'IN_STOCK' AND item_condition = 'NEW' THEN 1 ELSE 0 END), 0) AS new_qty, "
+                + "COALESCE(SUM(CASE WHEN status = 'IN_STOCK' AND item_condition = 'USED' THEN 1 ELSE 0 END), 0) AS used_qty, "
+                + "COALESCE(SUM(CASE WHEN status = 'QUARANTINE' AND item_condition = 'DAMAGED' THEN 1 ELSE 0 END), 0) AS damaged_qty "
+                + "FROM Product_Items WHERE product_id = ? AND warehouse_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            ps.setInt(2, warehouseId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return new int[] { rs.getInt("new_qty"), rs.getInt("used_qty"), rs.getInt("damaged_qty") };
+            }
+        }
+        return new int[] { 0, 0, 0 };
+    }
     private void updateTicketStatus(int ticketId, String status, int confirmedBy, Connection conn) throws Exception {
         try (PreparedStatement ps = conn.prepareStatement(
                 "UPDATE Tickets SET status = ?, confirmed_by = ?, confirmed_at = NOW() WHERE id = ?")) {

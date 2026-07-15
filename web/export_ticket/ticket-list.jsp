@@ -19,24 +19,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Phiếu xuất kho - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
     <div class="container-fluid mt-4 px-4 animated-fade-in">
         <div class="row">
-            <!-- Left Sidebar -->
+            
             <jsp:include page="/includes/sidebar.jsp" />
 
-            <!-- Main Content -->
+            
             <div class="col-md-9 col-lg-10">
                 <jsp:include page="/includes/frozen-banner.jsp" />
                 <div class="page-header">
@@ -53,7 +53,7 @@
                     </div>
                 </div>
 
-                <%-- Phase 4: Incoming Transfers section — only for destination warehouse staff --%>
+                
                 <% if (incomingTransfers != null && !incomingTransfers.isEmpty()) { %>
                 <div class="card mb-4" style="border-left: 4px solid #f59e0b !important;">
                     <div class="card-header bg-warning bg-opacity-10 py-3 d-flex align-items-center gap-2">
@@ -69,7 +69,7 @@
                                     <tr>
                                         <th>Mã phiếu</th>
                                         <th>Mã yêu cầu</th>
-                                        <th>Kho xuất (nguồn)</th>
+                                        <th>Kho nguồn</th>
                                         <th>Thủ kho</th>
                                         <th>Ngày xuất</th>
                                         <% if (canConfirm) { %><th>Thao tác</th><% } %>
@@ -101,7 +101,7 @@
                 </div>
                 <% } %>
 
-                <!-- Filters -->
+                
                 <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
@@ -156,7 +156,7 @@
                     </div>
                 </div>
 
-                <!-- Tickets Directory Table -->
+                
                 <div class="card mb-4">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <span class="fw-bold text-slate-800"><i class="bi bi-box-arrow-up-right me-2 text-primary"></i>Danh sách phiếu xuất kho</span>
@@ -253,7 +253,7 @@
                             </table>
                         </div>
                     </div>
-                    <!-- Pagination Container -->
+                    
                     <div class="card-footer bg-transparent py-3 border-0" id="paginationContainer"></div>
                 </div>
 
@@ -261,10 +261,10 @@
         </div>
     </div>
 
-    <!-- Client-Side Pagination & Filter Script -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Col indices: 0=code, 1=reqCode, 2=destination, 3=reason, 4=warehouse, 5=keeper, 6=status, 7=createdAt, 8=actions
+
         const exportUserWarehouse = '<%= loggedInUser.getWarehouseName() != null ? loggedInUser.getWarehouseName().replace("'", "\\'") : "" %>';
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -293,7 +293,7 @@
             const keeperFilter = document.getElementById("keeperFilter");
             const select = document.getElementById("entriesPerPage");
 
-            // Multi-select trạng thái
+
             function getSelectedStatuses() {
                 return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(cb => cb.value);
             }
@@ -312,7 +312,7 @@
             });
             new bootstrap.Dropdown(document.getElementById('statusDropdownBtn'), { popperConfig: { strategy: 'fixed' } });
 
-            // Populate warehouse dropdown
+
             if (warehouseFilter) {
                 const warehouses = new Set();
                 allRows.forEach(row => {
@@ -403,7 +403,7 @@
                 const ul = document.createElement("ul");
                 ul.className = "pagination pagination-sm m-0";
 
-                // Prev
+
                 const prevLi = document.createElement("li");
                 prevLi.className = "page-item " + (currentPage === 1 ? "disabled" : "");
                 const prevA = document.createElement("a");
@@ -420,7 +420,7 @@
                 prevLi.appendChild(prevA);
                 ul.appendChild(prevLi);
 
-                // Pages
+
                 for (let i = 1; i <= totalPages; i++) {
                     const li = document.createElement("li");
                     li.className = "page-item " + (i === currentPage ? "active" : "");
@@ -437,7 +437,7 @@
                     ul.appendChild(li);
                 }
 
-                // Next
+
                 const nextLi = document.createElement("li");
                 nextLi.className = "page-item " + (currentPage === totalPages ? "disabled" : "");
                 const nextA = document.createElement("a");

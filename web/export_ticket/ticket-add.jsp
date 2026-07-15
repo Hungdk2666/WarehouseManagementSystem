@@ -1,7 +1,7 @@
-﻿<%@page import="model.Request"%>
+<%@page import="model.Request"%>
 <%@page import="model.RequestDetail"%>
-<%@page import="java.util.Map"%>
 <%@page import="java.util.List"%>
+<%@page import="java.util.Map"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
@@ -20,16 +20,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Tạo Phiếu xuất kho - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Tom Select CSS -->
+    
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -49,7 +49,7 @@
                     </a>
                 </div>
 
-                <%-- Banner kho đang làm việc --%>
+                
                 <div class="d-flex align-items-center gap-3 py-2 px-3 mb-4 rounded-3 bg-warning bg-opacity-10">
                     <i class="bi bi-building-fill fs-5 text-warning"></i>
                     <div class="small">
@@ -57,14 +57,14 @@
                         <strong class="ms-1 text-warning">
                             <%= loggedInUser.getWarehouseName() != null ? loggedInUser.getWarehouseName() : "Kho #" + loggedInUser.getWarehouseId() %>
                         </strong>
-                        <span class="text-muted ms-2">— Tồn kho và serial số hiển thị bên dưới thuộc kho này</span>
+                        <span class="text-muted ms-2">— Serial quét được kiểm tra trong kho này</span>
                     </div>
                 </div>
 
                 <% if (error != null) { %>
                 <div class="alert alert-danger rounded-3 mb-4">
                     <% if ("NoItemsDispatched".equals(error)) { %>
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Bạn phải chọn xuất ít nhất 1 sản phẩm (số lượng > 0) để lưu Phiếu xuất kho.
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Bạn phải chọn ít nhất một sản phẩm và nhập số lượng xuất lớn hơn 0.
                     <% } else if ("ExceededRemainingQuantity".equals(error)) { %>
                         <i class="bi bi-exclamation-triangle-fill me-2"></i> Số lượng thực xuất vượt quá số lượng yêu cầu còn lại.
                     <% } else if ("InsufficientStock".equals(error)) { %>
@@ -99,16 +99,17 @@
                                                 boolean isSel = selectedReq != null && selectedReq.getId() == r.getId();
                                     %>
                                     <option value="<%= r.getId() %>" <%= isSel ? "selected" : "" %>>
-                                        #<%= r.getRequestCode() %> - Điểm nhận: <%= r.getPartnerName() %> (Trạng thái: 
+                                        #<%= r.getRequestCode() %> — <%= r.getPartnerName() %> · 
                                         <%
                                             if ("PENDING".equals(r.getStatus())) out.print("Chờ duyệt");
                                             else if ("APPROVED".equals(r.getStatus())) out.print("Đã duyệt");
                                             else if ("PARTIALLY_COMPLETED".equals(r.getStatus())) out.print("Đang xuất dở");
+                                            else if ("IN_TRANSIT".equals(r.getStatus())) out.print("Đang chuyển");
                                             else if ("REJECTED".equals(r.getStatus())) out.print("Từ chối");
                                             else if ("COMPLETED".equals(r.getStatus())) out.print("Hoàn thành");
                                             else if ("CANCELLED".equals(r.getStatus())) out.print("Đã hủy");
                                             else out.print(r.getStatus());
-                                        %>)
+                                        %>
                                     </option>
                                     <%
                                             }
@@ -135,7 +136,17 @@
                             <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-seam me-2 text-primary"></i>Chi tiết phiếu xuất kho</h5>
                         </div>
                         <div class="card-body p-0">
-                            <table class="table align-middle text-center mb-0">
+                            <div class="table-responsive">
+                            <table class="table align-middle text-center mb-0 editable-table" style="min-width: 940px;">
+                                <colgroup>
+                                    <col style="width:28%">
+                                    <col style="width:14%">
+                                    <col style="width:8%">
+                                    <col style="width:14%">
+                                    <col style="width:10%">
+                                    <col style="width:10%">
+                                    <col style="width:16%">
+                                </colgroup>
                                 <thead class="table-light">
                                     <tr>
                                         <th class="text-start ps-4">Tên sản phẩm</th>
@@ -144,42 +155,16 @@
                                         <th>Số lượng yêu cầu</th>
                                         <th>Đã xuất</th>
                                         <th>Còn lại</th>
-                                        <th>
-                                            Tồn NEW
-                                            <i class="bi bi-info-circle text-muted" title="Số lượng khả dụng hàng MỚI" data-bs-toggle="tooltip"></i>
-                                        </th>
-                                        <th>
-                                            Tồn USED
-                                            <i class="bi bi-info-circle text-muted" title="Số lượng khả dụng hàng CŨ" data-bs-toggle="tooltip"></i>
-                                        </th>
-                                        <th>
-                                            Tồn hỏng
-                                            <i class="bi bi-info-circle text-muted" title="Số lượng hàng hỏng đang cách ly" data-bs-toggle="tooltip"></i>
-                                        </th>
-                                        <th>
-                                            Tổng khả dụng
-                                            <i class="bi bi-info-circle text-muted" title="Tổng số lượng khả dụng tại kho của bạn" data-bs-toggle="tooltip"></i>
-                                        </th>
                                         <th style="width: 15%;">Số lượng xuất thực tế</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <%
-                                        java.util.Map<Integer, Integer> stockMap = (java.util.Map<Integer, Integer>) request.getAttribute("stockMap");
-                                        java.util.Map<Integer, Integer> newStockMap = (java.util.Map<Integer, Integer>) request.getAttribute("newStockMap");
-                                        java.util.Map<Integer, Integer> usedStockMap = (java.util.Map<Integer, Integer>) request.getAttribute("usedStockMap");
-                                        java.util.Map<Integer, Integer> damagedStockMap = (java.util.Map<Integer, Integer>) request.getAttribute("damagedStockMap");
-                                        java.util.Map<Integer, Integer> totalStockMap = (java.util.Map<Integer, Integer>) request.getAttribute("totalStockMap");
-                                        String reqCond = selectedReq.getRequestedCondition() != null ? selectedReq.getRequestedCondition() : "NEW";
-                                        
                                         if (selectedReq.getDetails() != null) {
                                             for (RequestDetail d : selectedReq.getDetails()) {
                                                 int remaining = d.getQuantity() - d.getProcessedQuantity();
                                                 if (remaining < 0) remaining = 0;
-                                                
-                                                int stock = (stockMap != null && stockMap.containsKey(d.getProductId())) ? stockMap.get(d.getProductId()) : 0;
-                                                int defaultIssue = Math.min(remaining, stock);
-                                                if (defaultIssue < 0) defaultIssue = 0;
+                                                int defaultIssue = remaining;
                                     %>
                                     <tr>
                                         <td class="text-start ps-4 fw-semibold">
@@ -191,36 +176,6 @@
                                         <td class="text-muted"><%= d.getQuantity() %></td>
                                         <td class="text-muted text-success fw-semibold"><%= d.getProcessedQuantity() %></td>
                                         <td class="fw-semibold text-primary"><%= remaining %></td>
-                                        <% 
-                                            int newStock = (newStockMap != null && newStockMap.containsKey(d.getProductId())) ? newStockMap.get(d.getProductId()) : 0;
-                                            int usedStock = (usedStockMap != null && usedStockMap.containsKey(d.getProductId())) ? usedStockMap.get(d.getProductId()) : 0;
-                                            int damagedStock = (damagedStockMap != null && damagedStockMap.containsKey(d.getProductId())) ? damagedStockMap.get(d.getProductId()) : 0;
-                                            int totalStock = (totalStockMap != null && totalStockMap.containsKey(d.getProductId())) ? totalStockMap.get(d.getProductId()) : 0;
-                                            boolean isNewRequested = "NEW".equals(reqCond);
-                                            boolean isUsedRequested = "USED".equals(reqCond);
-                                            boolean isDamagedRequested = "DAMAGED".equals(reqCond);
-                                        %>
-                                        <td class="fw-semibold <%= isNewRequested ? (stock < remaining ? "text-danger bg-light" : "text-primary bg-light") : "text-muted" %>">
-                                            <%= newStock %>
-                                            <% if (isNewRequested && stock < remaining) { %>
-                                            <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="Không đủ hàng NEW tại kho này" data-bs-toggle="tooltip"></i>
-                                            <% } %>
-                                        </td>
-                                        <td class="fw-semibold <%= isUsedRequested ? (stock < remaining ? "text-danger bg-light" : "text-primary bg-light") : "text-muted" %>">
-                                            <%= usedStock %>
-                                            <% if (isUsedRequested && stock < remaining) { %>
-                                            <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="Không đủ hàng USED tại kho này" data-bs-toggle="tooltip"></i>
-                                            <% } %>
-                                        </td>
-                                        <td class="fw-semibold <%= isDamagedRequested ? (stock < remaining ? "text-danger bg-light" : "text-primary bg-light") : "text-muted" %>">
-                                            <%= damagedStock %>
-                                            <% if (isDamagedRequested && stock < remaining) { %>
-                                            <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="Không đủ hàng hỏng tại kho này" data-bs-toggle="tooltip"></i>
-                                            <% } %>
-                                        </td>
-                                        <td class="fw-bold text-dark">
-                                            <%= totalStock %>
-                                        </td>
                                         <td>
                                             <input type="number"
                                                    class="form-control form-control-sm text-center qty-input" 
@@ -229,7 +184,6 @@
                                                    min="0" 
                                                    max="<%= remaining %>" 
                                                    data-remaining="<%= remaining %>"
-                                                   data-stock="<%= stock %>"
                                                    data-pname="<%= d.getProductName() %>"
                                                    data-pid="<%= d.getProductId() %>"
                                                    data-sku="<%= d.getSku() %>"
@@ -244,6 +198,7 @@
                                     %>
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                         <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0" id="step1Footer">
                             <a href="export-ticket?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-x-circle me-1"></i> Hủy</a>
@@ -253,7 +208,7 @@
                         </div>
                     </div>
 
-                    <!-- BƯỚC 2: Quét serial rồi xuất kho (hiện sau khi bấm "Tiếp tục") -->
+                    
                     <div class="card bg-white mb-4 d-none" id="scanCard">
                         <div class="card-header bg-warning bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
                             <h5 class="mb-0 fw-bold text-warning"><i class="bi bi-barcode me-2"></i>Quét mã serial hàng xuất</h5>
@@ -263,7 +218,7 @@
                         </div>
                         <div class="card-body p-4">
                             <div class="mb-3">
-                                <label for="barcode-scanner-input" class="form-label fw-semibold text-slate-700">Quét mã serial (máy quét hoặc nhập tay rồi Enter):</label>
+                                <label for="barcode-scanner-input" class="form-label fw-semibold text-slate-700">Quét hoặc nhập mã serial</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light text-muted"><i class="bi bi-upc-scan"></i></span>
                                     <input type="text" id="barcode-scanner-input" class="form-control form-control-lg border-warning" placeholder="Đặt con trỏ tại đây và quét mã..." autocomplete="off">
@@ -289,11 +244,11 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Tom Select JS -->
+    
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Init tooltips
+
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
             new TomSelect("#reqSelect", {
@@ -316,7 +271,7 @@
         }
 
         <% if (selectedReq != null) { %>
-        // Danh sách serial khả dụng theo từng sản phẩm (nạp từ server)
+
         const availableSerials = {
             <%
             Map<Integer, List<String>> avMap = (Map<Integer, List<String>>) request.getAttribute("availableSerials");
@@ -332,12 +287,27 @@
             %>
         };
 
-        const scannedSerials = {};              // { productId: [serial,...] }
+        const serialConditions = {
+            <%
+            Map<String, String> serialConditionMap = (Map<String, String>) request.getAttribute("serialConditions");
+            if (serialConditionMap != null) {
+                for (Map.Entry<String, String> entry : serialConditionMap.entrySet()) {
+            %>
+            "<%= entry.getKey() %>": "<%= entry.getValue() %>",
+            <%
+                }
+            }
+            %>
+        };
+        const requestedCondition = "<%= selectedReq.getRequestedCondition() == null ? "NEW" : selectedReq.getRequestedCondition() %>";
+        const conditionLabels = { NEW: "Hàng mới", USED: "Hàng cũ", DAMAGED: "Hàng hỏng" };
+
+        const scannedSerials = {};
         const allScannedSerialsGlobal = new Set();
-        let requiredByProduct = {};             // { productId: soLuongCanQuet } — chốt ở bước 1
+        let requiredByProduct = {};
 
         document.addEventListener("DOMContentLoaded", function() {
-            // Kẹp số lượng nhập trong khoảng cho phép
+
             document.querySelectorAll(".qty-input").forEach(input => input.addEventListener("input", function() {
                 if (this.value !== "") {
                     let val = parseInt(this.value);
@@ -347,22 +317,20 @@
             }));
         });
 
-        // BƯỚC 1 -> 2: kiểm tra số lượng, dựng panel quét theo số lượng vừa nhập
+
         function lockAndBuildScan() {
             const qtyInputs = document.querySelectorAll(".qty-input");
             let totalQty = 0;
             for (const input of qtyInputs) {
                 const qty = parseInt(input.value) || 0;
                 const remaining = parseInt(input.getAttribute("data-remaining")) || 0;
-                const stock = parseInt(input.getAttribute("data-stock")) || 0;
                 const pname = input.getAttribute("data-pname") || "Sản phẩm";
-                if (qty > remaining) { alert("Sản phẩm '" + pname + "': số lượng xuất (" + qty + ") vượt quá số còn lại của yêu cầu (" + remaining + ")."); return; }
-                if (qty > stock) { alert("Sản phẩm '" + pname + "': số lượng xuất (" + qty + ") vượt quá tồn kho khả dụng (" + stock + ")."); return; }
+                if (qty > remaining) { alert("Sản phẩm '" + pname + "': số lượng xuất " + qty + " vượt quá số lượng còn lại " + remaining + "."); return; }
                 totalQty += qty;
             }
-            if (totalQty <= 0) { alert("Bạn phải chọn xuất ít nhất 1 sản phẩm (số lượng > 0)."); return; }
+            if (totalQty <= 0) { alert("Bạn phải chọn ít nhất một sản phẩm và nhập số lượng xuất lớn hơn 0."); return; }
 
-            // Dựng panel quét cho các sản phẩm có số lượng > 0
+
             requiredByProduct = {};
             for (const k in scannedSerials) delete scannedSerials[k];
             allScannedSerialsGlobal.clear();
@@ -401,7 +369,7 @@
 
             document.getElementById("step1Footer").classList.add("d-none");
             document.getElementById("scanCard").classList.remove("d-none");
-            // Khóa ô số lượng (readonly vẫn gửi lên server, khác disabled)
+
             qtyInputs.forEach(input => input.setAttribute("readonly", "readonly"));
             checkOverallCompletion();
             const si = document.getElementById("barcode-scanner-input");
@@ -439,7 +407,17 @@
             for (const pid in requiredByProduct) {
                 if (availableSerials[pid] && availableSerials[pid].includes(serial)) { foundPid = pid; break; }
             }
-            if (!foundPid) { playBeep(false); showScanAlert("Mã <strong>" + serial + "</strong> không thuộc sản phẩm nào đang xuất (hoặc không có trong kho).", "danger"); return; }
+            if (!foundPid) {
+                const actualCondition = serialConditions[serial];
+                if (actualCondition && actualCondition !== requestedCondition) {
+                    playBeep(false);
+                    showScanAlert("Mã <strong>" + serial + "</strong> thuộc tình trạng <strong>" + conditionLabels[actualCondition] + "</strong>, không thuộc tình trạng <strong>" + conditionLabels[requestedCondition] + "</strong> của yêu cầu.", "danger");
+                } else {
+                    playBeep(false);
+                    showScanAlert("Mã <strong>" + serial + "</strong> không thuộc sản phẩm đang xuất hoặc không tồn tại trong kho.", "danger");
+                }
+                return;
+            }
             const required = requiredByProduct[foundPid];
             if (scannedSerials[foundPid].length >= required) { playBeep(false); showScanAlert("Sản phẩm này đã quét đủ số lượng!", "danger"); return; }
 
@@ -518,7 +496,7 @@
             const form = document.getElementById("ginForm");
             if (form) {
                 form.addEventListener("submit", function(e) {
-                    // Chỉ cho submit khi đã quét đủ (nút đã bật). Hỏi xác nhận lần cuối.
+
                     if (!confirm("Xác nhận XUẤT KHO các sản phẩm vừa quét? Hàng sẽ bị trừ khỏi tồn kho ngay.")) {
                         e.preventDefault();
                     }

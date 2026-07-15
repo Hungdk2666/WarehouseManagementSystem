@@ -1,4 +1,4 @@
-﻿<%@page import="model.Ticket"%>
+<%@page import="model.Ticket"%>
 <%@page import="model.TicketDetail"%>
 <%@page import="model.User"%>
 <%@page import="model.ProductItem"%>
@@ -24,14 +24,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Chi tiết phiếu xuất kho - #<%= ticket.getTicketCode() %></title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-grid-20260714">
 </head>
 <body>
@@ -108,15 +108,11 @@
                             <div class="detail-item">
                                 <label class="text-muted small d-block">Tình trạng xuất</label>
                                 <span class="badge bg-light text-dark border">
-                                    <%
-                                        if ("DAMAGED".equals(ticket.getRequestedCondition())) out.print("Hàng hỏng (DAMAGED)");
-                                        else if ("USED".equals(ticket.getRequestedCondition())) out.print("Hàng Cũ (USED)");
-                                        else out.print("Hàng Mới (NEW)");
-                                    %>
+                                    <%= "DAMAGED".equals(ticket.getRequestedCondition()) ? "Hàng hỏng" : ("USED".equals(ticket.getRequestedCondition()) ? "Hàng cũ" : "Hàng mới") %>
                                 </span>
                             </div>
                             <div class="detail-item">
-                                <label class="text-muted small d-block">Người tạo (Thủ kho)</label>
+                                <label class="text-muted small d-block">Người tạo</label>
                                 <span class="text-slate-700"><%= ticket.getKeeperFullName() %></span>
                             </div>
                             
@@ -152,7 +148,7 @@
                                     <th>SKU</th>
                                     <th>Đơn vị</th>
                                     <th>Số lượng xuất thực tế</th>
-                                    <th>Đơn giá (Tạm tính)</th>
+                                    <th>Đơn giá tạm tính</th>
                                     <th>Thành tiền</th>
                                 </tr>
                             </thead>
@@ -201,12 +197,12 @@
                     </div>
                     
                     
-                    <%-- IN_TRANSIT TRANSFER ticket — luồng v3: kho đích sẽ thấy Request IN-TRANSFER auto-sinh ở module Import Request --%>
+                    
                     <% if ("IN_TRANSIT".equals(ticket.getStatus())) { %>
                     <div class="card-footer bg-info bg-opacity-10 p-3 small text-info border-top-0">
                         <i class="bi bi-info-circle me-1"></i>
-                        Phiếu đang vận chuyển. Kho đích cần vào <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list">Yêu cầu nhập kho</a>
-                        để xử lý phiếu nhập tương ứng (hệ thống đã tự tạo khi xác nhận xuất kho).
+                        Phiếu đang vận chuyển. Hệ thống đã tạo yêu cầu nhập liên kết khi xác nhận xuất kho.
+                        Kho đích cần vào <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list">Yêu cầu nhập kho</a> để tiếp tục xử lý.
                     </div>
                     <% } %>
                 </div>
@@ -217,7 +213,7 @@
                 %>
                 <div class="card bg-white mb-4">
                     <div class="card-header bg-light py-3 border-0">
-                        <h5 class="mb-0 fw-bold text-success"><i class="bi bi-check2-all me-2"></i>Danh sách mã Serial xuất kho (Truy xuất nguồn gốc)</h5>
+                        <h5 class="mb-0 fw-bold text-success"><i class="bi bi-check2-all me-2"></i>Danh sách serial xuất kho</h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-3">
