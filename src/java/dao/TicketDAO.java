@@ -40,6 +40,8 @@ public class TicketDAO {
 
     private static final String BASE_SELECT = "SELECT t.*, "
             + "r.request_code, r.reason AS req_reason, r.requested_condition, r.partner_type, r.partner_id, r.staff_id AS req_staff_id, "
+            + "in_req.id AS linked_in_request_id, in_req.request_code AS linked_in_request_code, "
+            + "in_req.status AS linked_in_request_status, "
             + "w.warehouse_name, "
             + "k.full_name AS keeper_name, "
             + "c.full_name AS confirmed_by_name, "
@@ -51,6 +53,8 @@ public class TicketDAO {
             + "  ELSE NULL END AS partner_name "
             + "FROM Tickets t "
             + "JOIN Requests r ON r.id = t.request_id "
+            + "LEFT JOIN Requests in_req ON in_req.ref_ticket_id = t.id "
+            + "  AND in_req.type = 'IN' AND in_req.reason = 'TRANSFER' AND in_req.warehouse_id = r.partner_id "
             + "JOIN Warehouses w ON w.id = t.warehouse_id "
             + "JOIN Users k ON k.id = t.keeper_id "
             + "LEFT JOIN Users c ON c.id = t.confirmed_by ";
@@ -75,6 +79,9 @@ public class TicketDAO {
         t.setRequestReason(rs.getString("req_reason"));
         t.setRequestedCondition(rs.getString("requested_condition"));
         t.setPartnerName(rs.getString("partner_name"));
+        t.setLinkedInRequestId((Integer) rs.getObject("linked_in_request_id"));
+        t.setLinkedInRequestCode(rs.getString("linked_in_request_code"));
+        t.setLinkedInRequestStatus(rs.getString("linked_in_request_status"));
         return t;
     }
 
@@ -94,11 +101,22 @@ public class TicketDAO {
     // READ
     // ============================================================
     public List<Ticket> getAll(String type) {
+        return getAll(type, null);
+    }
+
+    /**
+     * @param warehouseId nếu khác null → chỉ lấy phiếu thuộc kho này.
+     *                    User không được gán kho truyền null để xem toàn hệ thống.
+     */
+    public List<Ticket> getAll(String type, Integer warehouseId) {
         List<Ticket> list = new ArrayList<>();
+        String sql = BASE_SELECT + "WHERE t.type = ? ";
+        if (warehouseId != null) sql += "AND t.warehouse_id = ? ";
+        sql += "ORDER BY t.created_at DESC";
         try (Connection conn = DBUtils.getConnection();
-                PreparedStatement ps = conn
-                        .prepareStatement(BASE_SELECT + "WHERE t.type = ? ORDER BY t.created_at DESC")) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, type);
+            if (warehouseId != null) ps.setInt(2, warehouseId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next())
                     list.add(mapRow(rs));
@@ -178,6 +196,8 @@ public class TicketDAO {
         String sql = BASE_SELECT
                 + "WHERE t.type = 'OUT' AND t.status = 'IN_TRANSIT' "
                 + "  AND r.reason = 'TRANSFER' AND r.partner_id = ? "
+                + "  AND in_req.status IN ('APPROVED', 'PARTIALLY_COMPLETED') "
+                + "  AND in_req.cancel_requested_at IS NULL "
                 + "ORDER BY t.confirmed_at DESC";
         try (Connection conn = DBUtils.getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -617,7 +637,11 @@ public class TicketDAO {
                         ps.setInt(1, itemId);
                         ps.setInt(2, ticket.getId());
                         ps.setString(3, isTransferReturn ? "RETURN_IN" : "TRANSFER_IN");
-                        ps.setInt(4, req.getPartnerId());
+                        if (isTransferReturn && "IN_TRANSIT".equals(returnItemStatuses.get(itemId))) {
+                            ps.setNull(4, Types.INTEGER);
+                        } else {
+                            ps.setInt(4, req.getPartnerId());
+                        }
                         ps.setInt(5, ticket.getWarehouseId());
                         ps.setString(6, condition);
                         ps.setInt(7, confirmedBy);
@@ -1202,7 +1226,6 @@ public class TicketDAO {
      */
     private void refreshTransferOutRequestStatus(int outTicketId, Connection conn) throws Exception {
         int requestId;
-        String currentStatus;
         boolean cancellationApproved;
         try (PreparedStatement ps = conn.prepareStatement(
                 "SELECT r.id AS request_id, r.status, r.cancelled_at FROM Tickets t "
@@ -1212,7 +1235,6 @@ public class TicketDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return;
                 requestId = rs.getInt("request_id");
-                currentStatus = rs.getString("status");
                 cancellationApproved = rs.getTimestamp("cancelled_at") != null;
             }
         }
@@ -1240,12 +1262,29 @@ public class TicketDAO {
             }
         }
 
-        boolean hasInTransit;
+        boolean hasDeliveringInTransit = false;
+        boolean hasReturningInTransit = false;
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT 1 FROM Tickets WHERE request_id=? AND type='OUT' AND status='IN_TRANSIT' LIMIT 1")) {
+                "SELECT in_req.status AS in_status, in_req.cancelled_at "
+                        + "FROM Tickets ot JOIN Requests out_req ON out_req.id=ot.request_id "
+                        + "LEFT JOIN Requests in_req ON in_req.ref_ticket_id=ot.id "
+                        + " AND in_req.type='IN' AND in_req.reason='TRANSFER' "
+                        + " AND in_req.warehouse_id=out_req.partner_id "
+                        + "WHERE ot.request_id=? AND ot.type='OUT' AND ot.status='IN_TRANSIT'")) {
             ps.setInt(1, requestId);
-            try (ResultSet rs = ps.executeQuery()) { hasInTransit = rs.next(); }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String inStatus = rs.getString("in_status");
+                    boolean returning = rs.getTimestamp("cancelled_at") != null
+                            || Request.STATUS_RETURNING.equals(inStatus)
+                            || Request.STATUS_RETURNED.equals(inStatus)
+                            || Request.STATUS_CANCELLED.equals(inStatus);
+                    if (returning) hasReturningInTransit = true;
+                    else hasDeliveringInTransit = true;
+                }
+            }
         }
+        boolean hasInTransit = hasDeliveringInTransit || hasReturningInTransit;
 
         int transferTicketCount = 0;
         int fullyReturnedTicketCount = 0;
@@ -1267,9 +1306,12 @@ public class TicketDAO {
 
         String status;
         if (hasInTransit) {
-            if (Request.STATUS_RETURNING.equals(currentStatus)) status = Request.STATUS_RETURNING;
-            else if (cancellationApproved && !allIssued) status = Request.STATUS_PARTIALLY_IN_TRANSIT;
-            else status = allIssued ? Request.STATUS_IN_TRANSIT : Request.STATUS_PARTIALLY_COMPLETED;
+            if (hasDeliveringInTransit) {
+                if (cancellationApproved && !allIssued) status = Request.STATUS_PARTIALLY_CLOSED_IN_TRANSIT;
+                else status = allIssued ? Request.STATUS_IN_TRANSIT : Request.STATUS_PARTIALLY_COMPLETED;
+            } else {
+                status = Request.STATUS_RETURNING;
+            }
         } else if (allActuallyShippedTicketsReturned) {
             status = Request.STATUS_RETURNED;
         } else if (anyActuallyShippedTicketReturned) {

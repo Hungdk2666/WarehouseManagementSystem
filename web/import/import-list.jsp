@@ -10,6 +10,7 @@
         return;
     }
     List<Ticket> ticketList = (List<Ticket>) request.getAttribute("ticketList");
+    List<Ticket> incomingTransfers = (List<Ticket>) request.getAttribute("incomingTransfers");
     boolean canAdd = loggedInUser.hasPermission("TICKET_ADD_IN");
     boolean canConfirm = loggedInUser.hasPermission("TICKET_CONFIRM_IN");
     boolean canCancel = loggedInUser.hasPermission("TICKET_CANCEL_IN");
@@ -51,7 +52,58 @@
                     </div>
                 </div>
 
-                
+                <% if (incomingTransfers != null && !incomingTransfers.isEmpty()) { %>
+                <div class="card mb-4" style="border-left: 4px solid #f59e0b !important;">
+                    <div class="card-header bg-warning bg-opacity-10 py-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-truck fs-5 text-warning"></i>
+                        <span class="fw-bold text-warning">Hàng chuyển kho chờ nhận</span>
+                        <span class="badge bg-warning text-dark ms-2"><%= incomingTransfers.size() %> phiếu</span>
+                        <span class="ms-auto text-muted small">Các lô hàng đang trên đường đến kho của bạn — tạo phiếu nhập khi đã nhận thực tế.</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.88rem;">
+                                <thead class="table-light text-uppercase text-muted" style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em;">
+                                    <tr>
+                                        <th>Mã phiếu xuất</th>
+                                        <th>Yêu cầu nhập liên kết</th>
+                                        <th>Kho nguồn</th>
+                                        <th>Thủ kho xuất</th>
+                                        <th>Ngày xuất</th>
+                                        <% if (canAdd && canConfirm) { %><th>Thao tác</th><% } %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% for (Ticket transfer : incomingTransfers) { %>
+                                    <tr>
+                                        <td class="fw-bold text-slate-800">#<%= transfer.getTicketCode() %></td>
+                                        <td class="fw-semibold text-primary">
+                                            <% if (transfer.getLinkedInRequestId() != null) { %>
+                                            <a href="<%= request.getContextPath() %>/warehouse/import-request?action=detail&id=<%= transfer.getLinkedInRequestId() %>" class="text-decoration-none">
+                                                #<%= transfer.getLinkedInRequestCode() %>
+                                            </a>
+                                            <% } else { %>-<% } %>
+                                        </td>
+                                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-building me-1"></i><%= transfer.getWarehouseName() != null ? transfer.getWarehouseName() : "-" %></span></td>
+                                        <td><%= transfer.getKeeperFullName() %></td>
+                                        <td class="text-muted small text-nowrap"><%= transfer.getConfirmedAt() != null ? transfer.getConfirmedAt().toString().substring(0, 16) : "-" %></td>
+                                        <% if (canAdd && canConfirm) { %>
+                                        <td>
+                                            <a href="<%= request.getContextPath() %>/warehouse/import-ticket?action=add&request_id=<%= transfer.getLinkedInRequestId() %>" class="btn btn-sm btn-warning py-1 px-2">
+                                                <i class="bi bi-box-arrow-in-down"></i> Tạo Phiếu nhập
+                                            </a>
+                                        </td>
+                                        <% } %>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+
+
                 <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">

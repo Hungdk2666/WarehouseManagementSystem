@@ -55,4 +55,8 @@ public class TicketService {
         return dao.getAll(arg0);
     }
 
+    public List<Ticket> getAll(String arg0, Integer arg1) {
+        return dao.getAll(arg0, arg1);
+    }
+
 }

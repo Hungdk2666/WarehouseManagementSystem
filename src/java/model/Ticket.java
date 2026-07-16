@@ -43,12 +43,30 @@ public class Ticket {
     private String requestedCondition;        // từ JOIN Requests
     private String partnerName;               // từ JOIN partner (SUPPLIER/CUSTOMER/...)
     private Request request;                  // request gốc nếu cần
+    private Integer linkedInRequestId;
+    private String linkedInRequestCode;
+    private String linkedInRequestStatus;
     private List<TicketDetail> details;
 
     public Ticket() {}
 
     public boolean isIn()  { return TYPE_IN.equals(type); }
     public boolean isOut() { return TYPE_OUT.equals(type); }
+
+    public boolean isTransferReturning() {
+        return Request.STATUS_RETURNING.equals(linkedInRequestStatus)
+                || Request.STATUS_RETURNED.equals(linkedInRequestStatus)
+                || Request.STATUS_CANCELLED.equals(linkedInRequestStatus);
+    }
+
+
+    public boolean isPartiallyReturned() {
+        return RETURN_PARTIAL.equals(returnStatus);
+    }
+
+    public boolean isFullyReturned() {
+        return RETURN_FULL.equals(returnStatus);
+    }
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -103,6 +121,16 @@ public class Ticket {
 
     public String getPartnerName() { return partnerName; }
     public void setPartnerName(String v) { this.partnerName = v; }
+
+    public Integer getLinkedInRequestId() { return linkedInRequestId; }
+    public void setLinkedInRequestId(Integer v) { this.linkedInRequestId = v; }
+
+    public String getLinkedInRequestCode() { return linkedInRequestCode; }
+    public void setLinkedInRequestCode(String v) { this.linkedInRequestCode = v; }
+
+    public String getLinkedInRequestStatus() { return linkedInRequestStatus; }
+    public void setLinkedInRequestStatus(String v) { this.linkedInRequestStatus = v; }
+
 
     public Request getRequest() { return request; }
     public void setRequest(Request request) { this.request = request; }

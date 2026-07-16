@@ -131,7 +131,7 @@
                                             for (Request r : poList) {
                                                 boolean isSel = selectedRequest != null && selectedRequest.getId() == r.getId();
                                                 String displayStatus = r.getStatus();
-                                                if ("APPROVED".equals(r.getStatus())) displayStatus = "Đã duyệt";
+                                                if ("APPROVED".equals(r.getStatus())) displayStatus = "Đã xác nhận";
                                                 else if ("PENDING".equals(r.getStatus())) displayStatus = "Chờ duyệt";
                                     %>
                                     <option value="<%= r.getId() %>" <%= isSel ? "selected" : "" %>>
