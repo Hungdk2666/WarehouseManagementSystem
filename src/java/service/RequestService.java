@@ -72,4 +72,12 @@ public class RequestService {
         return dao.getAll(arg0);
     }
 
+    public List<Request> getAll(String arg0, Integer arg1) {
+        return dao.getAll(arg0, arg1);
+    }
+
+    public List<Request> getForList(String type, Integer warehouseId, Integer ownStaffId) {
+        return dao.getForList(type, warehouseId, ownStaffId);
+    }
+
 }

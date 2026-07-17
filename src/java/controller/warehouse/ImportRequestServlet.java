@@ -31,6 +31,22 @@ public class ImportRequestServlet extends HttpServlet {
 
     private static final String TYPE = Request.TYPE_IN;
 
+    private boolean canAccessWarehouse(User user, int warehouseId) {
+        return isSalesUser(user) || user.getWarehouseId() == null || user.getWarehouseId() == warehouseId;
+    }
+
+    private List<Warehouse> getAccessibleWarehouses(User user) {
+        List<Warehouse> warehouses = new ArrayList<>(new WarehouseService().getAllActiveWarehouses());
+        if (user.getWarehouseId() != null) {
+            warehouses.removeIf(warehouse -> warehouse.getId() != user.getWarehouseId());
+        }
+        return warehouses;
+    }
+
+    private boolean isSalesUser(User user) {
+        return user.getRoleId() == 5 || "Sales Staff".equalsIgnoreCase(user.getRoleName());
+    }
+
     @Override
     protected void doGet(HttpServletRequest httpReq, HttpServletResponse response)
             throws ServletException, IOException {
@@ -59,7 +75,9 @@ public class ImportRequestServlet extends HttpServlet {
 
         switch (action) {
             case "list":
-                httpReq.setAttribute("requestList", dao.getAll(TYPE));
+                Integer importOwnerId = isSalesUser(loggedInUser) ? loggedInUser.getId() : null;
+                Integer importWarehouseId = isSalesUser(loggedInUser) ? null : loggedInUser.getWarehouseId();
+                httpReq.setAttribute("requestList", dao.getForList(TYPE, importWarehouseId, importOwnerId));
                 httpReq.getRequestDispatcher("/import_request/request-list.jsp").forward(httpReq, response);
                 break;
             case "detail": {
@@ -67,6 +85,10 @@ public class ImportRequestServlet extends HttpServlet {
                 Request req = dao.getById(id);
                 if (req == null) {
                     response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list");
+                    return;
+                }
+                if (!canAccessWarehouse(loggedInUser, req.getWarehouseId())) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Request belongs to another warehouse.");
                     return;
                 }
                 List<Ticket> tickets = ticketService.getByRequestId(id);
@@ -78,12 +100,12 @@ public class ImportRequestServlet extends HttpServlet {
             case "add": {
                 httpReq.setAttribute("supplierList", new SupplierService().getActiveSuppliers());
                 httpReq.setAttribute("productList", new ProductService().getAllProducts());
-                httpReq.setAttribute("warehouseList", new WarehouseService().getAllActiveWarehouses());
+                httpReq.setAttribute("warehouseList", getAccessibleWarehouses(loggedInUser));
                 httpReq.getRequestDispatcher("/import_request/request-add.jsp").forward(httpReq, response);
                 break;
             }
             case "addReturn": {
-                httpReq.setAttribute("warehouseList", new WarehouseService().getAllActiveWarehouses());
+                httpReq.setAttribute("warehouseList", getAccessibleWarehouses(loggedInUser));
                 httpReq.getRequestDispatcher("/import_request/return-add.jsp").forward(httpReq, response);
                 break;
             }
@@ -189,6 +211,22 @@ public class ImportRequestServlet extends HttpServlet {
                 && !loggedInUser.hasPermission("REQUEST_APPROVE_CANCEL_IN")) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt hủy.");
             return;
+        }
+
+        // Chống thao tác nhầm loại: mọi hành động trên 1 yêu cầu cụ thể phải đúng loại NHẬP (IN).
+        if ("approve".equals(action) || "reject".equals(action) || "cancel".equals(action)
+                || "approveCancel".equals(action) || "rejectCancel".equals(action)) {
+            String idStr = httpReq.getParameter("id");
+            if (idStr != null && !idStr.isEmpty()) {
+                try {
+                    Request guardReq = new RequestService().getById(Integer.parseInt(idStr));
+                    if (guardReq == null || !TYPE.equals(guardReq.getType())
+                            || !canAccessWarehouse(loggedInUser, guardReq.getWarehouseId())) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Yêu cầu không hợp lệ cho luồng nhập kho.");
+                        return;
+                    }
+                } catch (NumberFormatException ignore) {}
+            }
         }
 
         RequestService dao = new RequestService();
@@ -363,9 +401,10 @@ public class ImportRequestServlet extends HttpServlet {
                         dao.cancelRequest(cancelId, loggedInUser.getId());
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=list");
                         return;
-                    } else if (Request.STATUS_APPROVED.equals(req.getStatus())) {
+                    } else if (Request.STATUS_APPROVED.equals(req.getStatus())
+                            || Request.STATUS_PARTIALLY_COMPLETED.equals(req.getStatus())) {
                         if (!loggedInUser.hasPermission("REQUEST_REQUEST_CANCEL_IN")) {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "KhĂ´ng cĂ³ quyá»n Ä‘á» xuáº¥t há»§y.");
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền đề xuất hủy.");
                             return;
                         }
                         dao.requestCancel(cancelId, loggedInUser.getId(), httpReq.getParameter("reason"));
@@ -377,9 +416,10 @@ public class ImportRequestServlet extends HttpServlet {
                 }
                 case "approveCancel": {
                     int id = Integer.parseInt(httpReq.getParameter("id"));
-                    dao.approveCancel(id, loggedInUser.getId());
+                    boolean approved = dao.approveCancel(id, loggedInUser.getId());
                     response.sendRedirect(
-                            httpReq.getContextPath() + "/warehouse/import-request?action=detail&id=" + id);
+                            httpReq.getContextPath() + "/warehouse/import-request?action=detail&id=" + id
+                                    + (approved ? "&success=CancelApproved" : "&error=CancelApprovalFailed"));
                     return;
                 }
                 case "rejectCancel": {
@@ -402,6 +442,7 @@ public class ImportRequestServlet extends HttpServlet {
      * 1.
      */
     private int parseWarehouseId(HttpServletRequest httpReq, User user) {
+        if (user.getWarehouseId() != null) return user.getWarehouseId();
         String p = httpReq.getParameter("warehouse_id");
         if (p != null && !p.trim().isEmpty()) {
             try {

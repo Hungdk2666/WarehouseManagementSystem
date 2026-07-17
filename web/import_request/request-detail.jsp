@@ -74,6 +74,17 @@
                     </div>
                 </div>
 
+                <% if ("CancelApprovalFailed".equals(request.getParameter("error"))) { %>
+                <div class="alert alert-danger border-0 shadow-sm mb-4">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                    Không thể duyệt hủy vì trạng thái vật lý của một hoặc nhiều serial không còn phù hợp để hoàn trả. Không có thay đổi nào được ghi nhận; hãy kiểm tra các lô và thử lại.
+                </div>
+                <% } else if ("CancelApproved".equals(request.getParameter("success"))) { %>
+                <div class="alert alert-success border-0 shadow-sm mb-4">
+                    <i class="bi bi-check-circle-fill me-2"></i>Đã duyệt yêu cầu hủy và cập nhật luồng xử lý liên quan.
+                </div>
+                <% } %>
+
                 <% if (req.getCancelRequestedAt() != null && ("APPROVED".equals(req.getStatus()) || "PARTIALLY_COMPLETED".equals(req.getStatus()))) { %>
                 <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 p-3 mb-4">
                     <i class="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
@@ -81,6 +92,11 @@
                         <h6 class="alert-heading fw-bold mb-1">Đang chờ duyệt yêu cầu hủy</h6>
                         <p class="mb-0 small"><strong>Lý do:</strong> <%= req.getCancelReason() %><br>
                         <strong>Đề xuất bởi:</strong> <%= req.getCancelRequestedByFullName() %> lúc <%= req.getCancelRequestedAt() %></p>
+                        <% if (isTransfer) { %>
+                        <p class="mb-0 mt-2 small fw-semibold text-danger">
+                            Nếu được duyệt, toàn bộ lô của phiếu xuất liên kết sẽ chuyển sang quy trình hoàn trả, bao gồm cả hàng đã nhập một phần tại kho đích.
+                        </p>
+                        <% } %>
                     </div>
                 </div>
                 <% } %>
@@ -93,9 +109,9 @@
                     <div>
                         <h6 class="alert-heading fw-bold mb-1"><%=
                             "REVOKED".equals(req.getStatus()) ? "Yêu cầu nhập kho đã được thu hồi" :
-                            "PARTIALLY_CLOSED".equals(req.getStatus()) ? "Yêu cầu nhập kho đã đóng phần còn lại" :
-                            "RETURNING".equals(req.getStatus()) ? "Hàng đang được trả về kho nguồn" :
-                            "RETURNED".equals(req.getStatus()) ? "Hàng đã được trả về kho nguồn" :
+                            "PARTIALLY_CLOSED".equals(req.getStatus()) ? "Yêu cầu nhập kho đã hoàn tất một phần" :
+                            "RETURNING".equals(req.getStatus()) ? "Lô hàng đang hoàn trả" :
+                            "RETURNED".equals(req.getStatus()) ? "Hàng đã hoàn trả" :
                             "Yêu cầu nhập kho đã bị hủy"
                         %></h6>
                         <p class="mb-0 small">
@@ -194,20 +210,20 @@
                                             displayStatus = "Chờ hủy";
                                         } else {
                                             statusBadge = "chip-success";
-                                            displayStatus = "Đã duyệt";
+                                            displayStatus = "Đã xác nhận";
                                         }
                                     } else if ("PARTIALLY_COMPLETED".equals(req.getStatus())) {
                                         statusBadge = "chip-info";
                                         displayStatus = req.getCancelRequestedAt() != null ? "Chờ đóng phần còn lại" : "Đang nhập dở";
                                     } else if ("PARTIALLY_CLOSED".equals(req.getStatus())) {
                                         statusBadge = "chip-muted";
-                                        displayStatus = "Đã đóng một phần";
+                                        displayStatus = "Hoàn tất 1 phần";
                                     } else if ("RETURNING".equals(req.getStatus())) {
                                         statusBadge = "chip-warning";
-                                        displayStatus = "Đang trả về nguồn";
+                                        displayStatus = "Đang hoàn trả";
                                     } else if ("RETURNED".equals(req.getStatus())) {
                                         statusBadge = "chip-primary";
-                                        displayStatus = "Đã trả về nguồn";
+                                        displayStatus = "Đã hoàn trả";
                                     } else if ("REVOKED".equals(req.getStatus())) {
                                         statusBadge = "chip-muted";
                                         displayStatus = "Đã thu hồi";
@@ -216,7 +232,7 @@
                                         displayStatus = "Từ chối";
                                     } else if ("COMPLETED".equals(req.getStatus())) {
                                         statusBadge = "chip-primary";
-                                        displayStatus = "Hoàn thành";
+                                        displayStatus = "Hoàn tất";
                                     } else if ("CANCELLED".equals(req.getStatus())) {
                                         statusBadge = "chip-muted";
                                         displayStatus = "Đã hủy";
@@ -403,7 +419,7 @@
                                 <input type="hidden" name="id" value="<%= req.getId() %>">
                                 <button type="submit" class="btn btn-outline-success px-4"><i class="bi bi-x-circle me-1"></i> Từ chối yêu cầu hủy</button>
                             </form>
-                            <form action="<%= request.getContextPath() %>/warehouse/import-request?action=approveCancel" method="POST" class="d-inline">
+                            <form action="<%= request.getContextPath() %>/warehouse/import-request?action=approveCancel" method="POST" class="d-inline" onsubmit="return confirm('Duyệt hủy sẽ đưa toàn bộ lô liên kết vào quy trình hoàn trả, kể cả phần đã nhận. Tiếp tục?');">
                                 <input type="hidden" name="id" value="<%= req.getId() %>">
                                 <button type="submit" class="btn btn-danger px-4"><i class="bi bi-check-circle-fill me-1"></i> <%= isTransfer ? "Duyệt hủy & tạo nhập trả" : ("PARTIALLY_COMPLETED".equals(req.getStatus()) ? "Duyệt đóng phần còn lại" : "Duyệt & Đóng") %></button>
                             </form>
@@ -428,6 +444,11 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
+                        <% if (isTransfer) { %>
+                        <div class="alert alert-warning small">
+                            Hủy yêu cầu chuyển kho sẽ hoàn trả toàn bộ lô liên kết. Nếu kho đã nhận một phần, phần đó cũng sẽ được đưa vào yêu cầu nhập trả về kho nguồn.
+                        </div>
+                        <% } %>
                         <label for="cancelReason" class="form-label small fw-semibold text-muted">Lý do hủy</label>
                         <textarea class="form-control" id="cancelReason" name="reason" rows="4" required placeholder="Nhập lý do chi tiết..."></textarea>
                     </div>

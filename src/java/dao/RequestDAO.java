@@ -92,10 +92,49 @@ public class RequestDAO {
     // READ
     // ============================================================
     public List<Request> getAll(String type) {
+        return getAll(type, null);
+    }
+
+    /**
+     * @param warehouseId nếu khác null → chỉ lấy yêu cầu của kho này.
+     *                    User không được gán kho truyền null để xem toàn hệ thống.
+     */
+    public List<Request> getAll(String type, Integer warehouseId) {
         List<Request> list = new ArrayList<>();
+        String sql = BASE_SELECT + "WHERE r.type = ? ";
+        if (warehouseId != null) sql += "AND r.warehouse_id = ? ";
+        sql += "ORDER BY r.created_at DESC";
         try (Connection conn = DBUtils.getConnection();
-             PreparedStatement ps = conn.prepareStatement(BASE_SELECT + "WHERE r.type = ? ORDER BY r.created_at DESC")) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, type);
+            if (warehouseId != null) ps.setInt(2, warehouseId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapRow(rs));
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return list;
+    }
+
+    /**
+     * Danh sách vận hành: ẩn yêu cầu đã kết thúc khỏi kho/admin.
+     * Sales vẫn nhìn thấy các yêu cầu terminal do chính mình tạo để biết kết quả.
+     */
+    public List<Request> getForList(String type, Integer warehouseId, Integer ownStaffId) {
+        List<Request> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(BASE_SELECT)
+                .append("WHERE r.type = ? AND (r.status NOT IN ('REJECTED','REVOKED','CANCELLED') ");
+        if (ownStaffId != null) {
+            sql.append("OR r.staff_id = ? ");
+        }
+        sql.append(") ");
+        if (warehouseId != null) sql.append("AND r.warehouse_id = ? ");
+        sql.append("ORDER BY r.created_at DESC");
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int index = 1;
+            ps.setString(index++, type);
+            if (ownStaffId != null) ps.setInt(index++, ownStaffId);
+            if (warehouseId != null) ps.setInt(index, warehouseId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) list.add(mapRow(rs));
             }
@@ -271,7 +310,7 @@ public class RequestDAO {
                     if (ps.executeUpdate() == 0) { conn.rollback(); return false; }
                 }
 
-                String statusVi = "APPROVED".equals(status) ? "Đã duyệt"
+                String statusVi = "APPROVED".equals(status) ? "Đã xác nhận"
                         : "REJECTED".equals(status) ? "Từ chối" : status;
                 auditLogDAO.log(approvedBy, "APPROVE_REQUEST_" + req.getType(),
                         "Yêu cầu " + req.getRequestCode() + " → " + statusVi);
@@ -280,11 +319,11 @@ public class RequestDAO {
                                          : "/warehouse/export-request?action=detail&id=" + id;
                 if (Request.STATUS_APPROVED.equals(status)) {
                     notificationDAO.createNotification(req.getStaffId(),
-                            "Yêu cầu " + req.getRequestCode() + " đã được duyệt",
+                            "Yêu cầu " + req.getRequestCode() + " đã được xác nhận",
                             "Tiến hành tạo phiếu " + (req.isIn() ? "nhập" : "xuất") + " kho", link, conn);
                     // Notify warehouse staff to create ticket
                     notificationDAO.createNotificationForWarehouse(req.getWarehouseId(),
-                            "Có yêu cầu " + (req.isIn() ? "nhập" : "xuất") + " đã duyệt",
+                            "Có yêu cầu " + (req.isIn() ? "nhập" : "xuất") + " đã xác nhận",
                             "Hãy tạo phiếu cho " + req.getRequestCode(), link, conn);
                 } else if (Request.STATUS_REJECTED.equals(status)) {
                     notificationDAO.createNotification(req.getStaffId(),
@@ -389,7 +428,7 @@ public class RequestDAO {
                 if (inboundTransfer) {
                     newStatus = Request.STATUS_RETURNING;
                 } else if (wasPartial && req.isOut() && Request.REASON_TRANSFER.equals(req.getReason())) {
-                    newStatus = Request.STATUS_PARTIALLY_IN_TRANSIT;
+                    newStatus = Request.STATUS_PARTIALLY_CLOSED_IN_TRANSIT;
                 } else if (wasPartial) {
                     newStatus = Request.STATUS_PARTIALLY_CLOSED;
                 } else {
@@ -409,14 +448,7 @@ public class RequestDAO {
                 // Đánh dấu yêu cầu xuất nguồn đang trên đường trả. Chứng từ xuất
                 // chỉ thành RETURNED sau khi kho nguồn quét nhận đủ serial.
                 if (inboundTransfer) {
-                    try (PreparedStatement ps = conn.prepareStatement(
-                            "UPDATE Requests r JOIN Tickets t ON t.request_id=r.id "
-                                    + "SET r.status='RETURNING' WHERE t.id=? "
-                                    + "AND r.type='OUT' AND r.reason='TRANSFER' "
-                                    + "AND r.status IN ('IN_TRANSIT','PARTIALLY_IN_TRANSIT','PARTIALLY_COMPLETED')")) {
-                        ps.setInt(1, req.getRefTicketId());
-                        ps.executeUpdate();
-                    }
+                    refreshTransferOutStatusAfterInboundCancel(req.getRefTicketId(), conn);
                 }
 
                 // Hủy luôn mọi phiếu còn ở trạng thái nháp của đơn này để trả lại số hàng
@@ -469,6 +501,63 @@ public class RequestDAO {
             } catch (Exception ex) { conn.rollback(); ex.printStackTrace(); return false; }
             finally { conn.setAutoCommit(true); }
         } catch (Exception e) { e.printStackTrace(); return false; }
+    }
+
+    /**
+     * Há»§y má»™t lĂ´ nháº­p khĂ´ng Ä‘Æ°á»£c Ä‘Ă¡nh dáº¥u toĂ n bá»™ yĂªu cáº§u xuáº¥t lĂ 
+     * RETURNING náº¿u váº«n cĂ²n lĂ´ khĂ¡c Ä‘ang giao bĂ¬nh thÆ°á»ng.
+     */
+    private void refreshTransferOutStatusAfterInboundCancel(int outTicketId, Connection conn) throws Exception {
+        int outRequestId;
+        String currentStatus;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT r.id, r.status FROM Tickets t JOIN Requests r ON r.id=t.request_id "
+                        + "WHERE t.id=? AND t.type='OUT' AND r.type='OUT' AND r.reason='TRANSFER' FOR UPDATE")) {
+            ps.setInt(1, outTicketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return;
+                outRequestId = rs.getInt("id");
+                currentStatus = rs.getString("status");
+            }
+        }
+
+        boolean hasDeliveringTicket = false;
+        boolean hasReturningTicket = false;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT ot.id, in_req.status AS in_status, in_req.cancelled_at "
+                        + "FROM Tickets ot JOIN Requests out_req ON out_req.id=ot.request_id "
+                        + "LEFT JOIN Requests in_req ON in_req.ref_ticket_id=ot.id "
+                        + " AND in_req.type='IN' AND in_req.reason='TRANSFER' "
+                        + " AND in_req.warehouse_id=out_req.partner_id "
+                        + "WHERE ot.request_id=? AND ot.type='OUT' AND ot.status='IN_TRANSIT'")) {
+            ps.setInt(1, outRequestId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String inStatus = rs.getString("in_status");
+                    boolean returning = rs.getTimestamp("cancelled_at") != null
+                            || Request.STATUS_RETURNING.equals(inStatus)
+                            || Request.STATUS_RETURNED.equals(inStatus)
+                            || Request.STATUS_CANCELLED.equals(inStatus);
+                    if (returning) hasReturningTicket = true;
+                    else hasDeliveringTicket = true;
+                }
+            }
+        }
+
+        String status = currentStatus;
+        if (hasDeliveringTicket) {
+            if (!Request.STATUS_PARTIALLY_COMPLETED.equals(currentStatus)
+                    && !Request.STATUS_PARTIALLY_CLOSED_IN_TRANSIT.equals(currentStatus)) {
+                status = Request.STATUS_IN_TRANSIT;
+            }
+        } else if (hasReturningTicket) {
+            status = Request.STATUS_RETURNING;
+        }
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE Requests SET status=? WHERE id=?")) {
+            ps.setString(1, status);
+            ps.setInt(2, outRequestId);
+            ps.executeUpdate();
+        }
     }
 
     // ============================================================

@@ -64,16 +64,16 @@
                                     </button>
                                     <ul class="dropdown-menu p-2 shadow-sm" id="statusDropdownMenu" style="min-width:170px;">
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ duyệt"> Chờ duyệt</label></li>
-                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã duyệt"> Đã duyệt</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã xác nhận"> Đã xác nhận</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ hủy"> Chờ hủy</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang nhập dở"> Đang nhập dở</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ đóng phần còn lại"> Chờ đóng phần còn lại</label></li>
-                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã đóng một phần"> Đã đóng một phần</label></li>
-                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang trả về nguồn"> Đang trả về nguồn</label></li>
-                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã trả về nguồn"> Đã trả về nguồn</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Hoàn tất 1 phần"> Hoàn tất 1 phần</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang hoàn trả"> Đang hoàn trả</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã hoàn trả"> Đã hoàn trả</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã thu hồi"> Đã thu hồi</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Từ chối"> Từ chối</label></li>
-                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Hoàn thành"> Hoàn thành</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Hoàn tất"> Hoàn tất</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã hủy"> Đã hủy</label></li>
                                         <li><hr class="dropdown-divider my-1"></li>
                                         <li><button type="button" id="clearStatusBtn" class="btn btn-link btn-sm w-100 text-muted text-decoration-none py-1" style="font-size:0.8rem;"><i class="bi bi-x-circle me-1"></i>Xóa chọn</button></li>
@@ -141,20 +141,20 @@
                                                         displayStatus = "Chờ hủy";
                                                     } else {
                                                         statusBadge = "chip-success";
-                                                        displayStatus = "Đã duyệt";
+                                                        displayStatus = "Đã xác nhận";
                                                     }
                                                 } else if ("PARTIALLY_COMPLETED".equals(r.getStatus())) {
                                                     statusBadge = "chip-info";
                                                     displayStatus = r.getCancelRequestedAt() != null ? "Chờ đóng phần còn lại" : "Đang nhập dở";
                                                 } else if ("PARTIALLY_CLOSED".equals(r.getStatus())) {
                                                     statusBadge = "chip-muted";
-                                                    displayStatus = "Đã đóng một phần";
+                                                    displayStatus = "Hoàn tất 1 phần";
                                                 } else if ("RETURNING".equals(r.getStatus())) {
                                                     statusBadge = "chip-warning";
-                                                    displayStatus = "Đang trả về nguồn";
+                                                    displayStatus = "Đang hoàn trả";
                                                 } else if ("RETURNED".equals(r.getStatus())) {
                                                     statusBadge = "chip-primary";
-                                                    displayStatus = "Đã trả về nguồn";
+                                                    displayStatus = "Đã hoàn trả";
                                                 } else if ("REVOKED".equals(r.getStatus())) {
                                                     statusBadge = "chip-muted";
                                                     displayStatus = "Đã thu hồi";
@@ -163,7 +163,7 @@
                                                     displayStatus = "Từ chối";
                                                 } else if ("COMPLETED".equals(r.getStatus())) {
                                                     statusBadge = "chip-primary";
-                                                    displayStatus = "Hoàn thành";
+                                                    displayStatus = "Hoàn tất";
                                                 } else if ("CANCELLED".equals(r.getStatus())) {
                                                     statusBadge = "chip-muted";
                                                     displayStatus = "Đã hủy";

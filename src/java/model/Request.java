@@ -36,7 +36,7 @@ public class Request {
     public static final String STATUS_APPROVED             = "APPROVED";
     public static final String STATUS_PARTIALLY_COMPLETED  = "PARTIALLY_COMPLETED";
     /** Đã xuất một phần chuyển kho, đóng phần còn lại, hàng đã xuất vẫn đang đi. */
-    public static final String STATUS_PARTIALLY_IN_TRANSIT = "PARTIALLY_IN_TRANSIT";
+    public static final String STATUS_PARTIALLY_CLOSED_IN_TRANSIT = "PARTIALLY_CLOSED_IN_TRANSIT";
     /** Hàng chuyển kho đã xuất đủ ở kho nguồn, chờ kho đích nhận hoặc trả về. */
     public static final String STATUS_IN_TRANSIT           = "IN_TRANSIT";
     public static final String STATUS_COMPLETED            = "COMPLETED";
