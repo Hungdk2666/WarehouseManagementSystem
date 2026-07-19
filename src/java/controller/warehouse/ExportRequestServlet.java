@@ -26,11 +26,28 @@ import model.RequestDetail;
 import model.Ticket;
 import model.User;
 import model.Warehouse;
+import utils.ItemConditionUtils;
 
 @WebServlet(name = "ExportRequestServlet", urlPatterns = {"/warehouse/export-request"})
 public class ExportRequestServlet extends HttpServlet {
 
     private static final String TYPE = Request.TYPE_OUT;
+
+    private boolean canAccessWarehouse(User user, int warehouseId) {
+        return isSalesUser(user) || user.getWarehouseId() == null || user.getWarehouseId() == warehouseId;
+    }
+
+    private List<Warehouse> getAccessibleWarehouses(User user) {
+        List<Warehouse> warehouses = new ArrayList<>(new WarehouseService().getAllActiveWarehouses());
+        if (user.getWarehouseId() != null) {
+            warehouses.removeIf(warehouse -> warehouse.getId() != user.getWarehouseId());
+        }
+        return warehouses;
+    }
+
+    private boolean isSalesUser(User user) {
+        return user.getRoleId() == 5 || "Sales Staff".equalsIgnoreCase(user.getRoleName());
+    }
 
     @Override
     protected void doGet(HttpServletRequest httpReq, HttpServletResponse response)
@@ -54,13 +71,19 @@ public class ExportRequestServlet extends HttpServlet {
 
         switch (action) {
             case "list":
-                httpReq.setAttribute("requestList", dao.getAll(TYPE));
+                Integer exportOwnerId = isSalesUser(loggedInUser) ? loggedInUser.getId() : null;
+                Integer exportWarehouseId = isSalesUser(loggedInUser) ? null : loggedInUser.getWarehouseId();
+                httpReq.setAttribute("requestList", dao.getForList(TYPE, exportWarehouseId, exportOwnerId));
                 httpReq.getRequestDispatcher("/export_request/request-list.jsp").forward(httpReq, response);
                 break;
             case "detail": {
                 int id = Integer.parseInt(httpReq.getParameter("id"));
                 Request req = dao.getById(id);
                 if (req == null) { response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"); return; }
+                if (!canAccessWarehouse(loggedInUser, req.getWarehouseId())) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Request belongs to another warehouse.");
+                    return;
+                }
                 List<Ticket> tickets = ticketService.getByRequestId(id);
                 httpReq.setAttribute("req", req);
                 httpReq.setAttribute("ticketList", tickets);
@@ -69,12 +92,12 @@ public class ExportRequestServlet extends HttpServlet {
             }
             case "add": {
                 ProductService pService = new ProductService();
-                List<Warehouse> warehouses = new WarehouseService().getAllActiveWarehouses();
+                List<Warehouse> warehouses = getAccessibleWarehouses(loggedInUser);
                 httpReq.setAttribute("destinationList", new InternalDestinationService().getAllDestinations());
                 httpReq.setAttribute("productList",    pService.getAllProducts());
                 httpReq.setAttribute("warehouseList",  warehouses);
                 httpReq.setAttribute("customerList",   new CustomerService().getActiveCustomers());
-                // Map kho -> map product -> available qty (NEW/USED/DAMAGED)
+                // Map warehouse -> product -> available quantity by condition.
                 Map<Integer, Map<Integer, Integer>> stockMapNew = new HashMap<>();
                 Map<Integer, Map<Integer, Integer>> stockMapUsed = new HashMap<>();
                 Map<Integer, Map<Integer, Integer>> stockMapDamaged = new HashMap<>();
@@ -85,7 +108,7 @@ public class ExportRequestServlet extends HttpServlet {
                     for (Product p : pService.getAllProducts(w.getId())) {
                         wStockNew.put(p.getId(), p.getAvailableNewQty());
                         wStockUsed.put(p.getId(), p.getAvailableUsedQty());
-                        wStockDamaged.put(p.getId(), p.getDamagedQty());
+                        wStockDamaged.put(p.getId(), p.getAvailableDamagedQty());
                     }
                     stockMapNew.put(w.getId(), wStockNew);
                     stockMapUsed.put(w.getId(), wStockUsed);
@@ -123,6 +146,22 @@ public class ExportRequestServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền duyệt hủy."); return;
         }
 
+        // Chống thao tác nhầm loại: mọi hành động trên 1 yêu cầu cụ thể phải đúng loại XUẤT (OUT).
+        if ("approve".equals(action) || "reject".equals(action) || "cancel".equals(action)
+                || "approveCancel".equals(action) || "rejectCancel".equals(action)) {
+            String idStr = httpReq.getParameter("id");
+            if (idStr != null && !idStr.isEmpty()) {
+                try {
+                    Request guardReq = new RequestService().getById(Integer.parseInt(idStr));
+                    if (guardReq == null || !TYPE.equals(guardReq.getType())
+                            || !canAccessWarehouse(loggedInUser, guardReq.getWarehouseId())) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Yêu cầu không hợp lệ cho luồng xuất kho.");
+                        return;
+                    }
+                } catch (NumberFormatException ignore) {}
+            }
+        }
+
         RequestService dao = new RequestService();
 
         try {
@@ -134,16 +173,24 @@ public class ExportRequestServlet extends HttpServlet {
                     if (reasonStr == null || reasonStr.trim().isEmpty()) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoReason"); return;
                     }
-                    if (requestedCondition == null || requestedCondition.trim().isEmpty()) {
-                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoCondition"); return;
+                    if (!Request.REASON_TRANSFER.equals(reasonStr)
+                            && !Request.REASON_CUSTOMER_SALE.equals(reasonStr)
+                            && !Request.REASON_DISPLAY.equals(reasonStr)
+                            && !Request.REASON_WARRANTY.equals(reasonStr)) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=InvalidReason"); return;
                     }
-                    if (!"NEW".equals(requestedCondition) && !"USED".equals(requestedCondition) && !"DAMAGED".equals(requestedCondition)) {
+                    if (!ItemConditionUtils.isValid(requestedCondition)) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=InvalidCondition"); return;
+                    }
+                    if (!ItemConditionUtils.isAllowedForExportReason(reasonStr, requestedCondition)) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=ConditionNotAllowed"); return;
                     }
 
                     int sourceWh;
                     String sourceWhStr = httpReq.getParameter("source_warehouse_id");
-                    if (sourceWhStr != null && !sourceWhStr.trim().isEmpty()) {
+                    if (loggedInUser.getWarehouseId() != null) {
+                        sourceWh = loggedInUser.getWarehouseId();
+                    } else if (sourceWhStr != null && !sourceWhStr.trim().isEmpty()) {
                         sourceWh = Integer.parseInt(sourceWhStr);
                     } else {
                         if (loggedInUser.getWarehouseId() == null) {
@@ -189,15 +236,24 @@ public class ExportRequestServlet extends HttpServlet {
                             shippingAddress = httpReq.getParameter("shipping_address");
                             break;
                         }
-                        default: { // DISPLAY, WARRANTY, OTHER
+                        case "DISPLAY":
+                        case "WARRANTY": {
                             String destIdStr = httpReq.getParameter("destination_id");
                             if (destIdStr == null || destIdStr.trim().isEmpty()) {
                                 response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoDestination"); return;
                             }
+                            int destId = Integer.parseInt(destIdStr);
+                            InternalDestination dest = new InternalDestinationService().getDestinationById(destId);
+                            String requiredType = "WARRANTY".equals(reasonStr) ? "WARRANTY_CENTER" : "SHOWROOM";
+                            if (dest == null || !requiredType.equals(dest.getDestinationType())) {
+                                response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=DestinationPurposeMismatch"); return;
+                            }
                             partnerType = Request.PARTNER_INTERNAL_DEST;
-                            partnerId = Integer.parseInt(destIdStr);
+                            partnerId = destId;
                             break;
                         }
+                        default:
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=InvalidReason"); return;
                     }
 
                     String[] productIds = httpReq.getParameterValues("product_id");
@@ -217,6 +273,25 @@ public class ExportRequestServlet extends HttpServlet {
                     }
                     if (details.isEmpty()) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=NoValidDetails"); return;
+                    }
+
+                    ProductService productService = new ProductService();
+                    for (RequestDetail detail : details) {
+                        Product product = productService.getProductById(detail.getProductId(), sourceWh);
+                        if (product == null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=InvalidProduct"); return;
+                        }
+                        int available;
+                        if (ItemConditionUtils.DAMAGED.equals(requestedCondition)) {
+                            available = product.getAvailableDamagedQty();
+                        } else if (ItemConditionUtils.USED.equals(requestedCondition)) {
+                            available = product.getAvailableUsedQty();
+                        } else {
+                            available = product.getAvailableNewQty();
+                        }
+                        if (detail.getQuantity() > available) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=add&error=InsufficientStock&productId=" + detail.getProductId()); return;
+                        }
                     }
 
                     Request req = new Request();
@@ -250,7 +325,8 @@ public class ExportRequestServlet extends HttpServlet {
                         }
                         dao.cancelRequest(cancelId, loggedInUser.getId());
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=list"); return;
-                    } else if (Request.STATUS_APPROVED.equals(req.getStatus())) {
+                    } else if (Request.STATUS_APPROVED.equals(req.getStatus())
+                            || Request.STATUS_PARTIALLY_COMPLETED.equals(req.getStatus())) {
                         if (!loggedInUser.hasPermission("REQUEST_REQUEST_CANCEL_OUT")) {
                             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền đề xuất hủy."); return;
                         }
@@ -261,8 +337,9 @@ public class ExportRequestServlet extends HttpServlet {
                 }
                 case "approveCancel": {
                     int id = Integer.parseInt(httpReq.getParameter("id"));
-                    dao.approveCancel(id, loggedInUser.getId());
-                    response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=detail&id=" + id); return;
+                    boolean approved = dao.approveCancel(id, loggedInUser.getId());
+                    response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-request?action=detail&id=" + id
+                            + (approved ? "&success=CancelApproved" : "&error=CancelApprovalFailed")); return;
                 }
                 case "rejectCancel": {
                     int id = Integer.parseInt(httpReq.getParameter("id"));

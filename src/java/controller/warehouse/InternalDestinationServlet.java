@@ -28,7 +28,7 @@ public class InternalDestinationServlet extends HttpServlet {
 
         // RBAC check: Read actions require DESTINATION_VIEW
         if (!loggedInUser.hasPermission("DESTINATION_VIEW")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view internal destinations.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem điểm đến nội bộ.");
             return;
         }
 
@@ -47,14 +47,14 @@ public class InternalDestinationServlet extends HttpServlet {
                 break;
             case "add":
                 if (!loggedInUser.hasPermission("DESTINATION_ADD")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add destinations.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm điểm đến nội bộ.");
                     return;
                 }
                 request.getRequestDispatcher("/destinations/destination-add.jsp").forward(request, response);
                 break;
             case "update":
                 if (!loggedInUser.hasPermission("DESTINATION_EDIT")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify destinations.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa điểm đến nội bộ.");
                     return;
                 }
                 int updateId = Integer.parseInt(request.getParameter("id"));
@@ -92,17 +92,17 @@ public class InternalDestinationServlet extends HttpServlet {
         // RBAC check: Action-based permissions
         if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("DESTINATION_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add destinations.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm điểm đến nội bộ.");
                 return;
             }
         } else if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("DESTINATION_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify destinations.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa điểm đến nội bộ.");
                 return;
             }
         } else if ("toggle".equals(action)) {
             if (!loggedInUser.hasPermission("DESTINATION_TOGGLE")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to enable/disable destinations.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền bật/tắt điểm đến nội bộ.");
                 return;
             }
         }

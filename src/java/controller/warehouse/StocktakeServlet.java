@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import model.Product;
 import model.Stocktake;
 import model.StocktakeDetail;
@@ -98,6 +100,24 @@ public class StocktakeServlet extends HttpServlet {
                 req.getRequestDispatcher("/stocktake/config.jsp").forward(req, resp);
                 break;
             }
+            case "verify": {
+                if (!user.hasPermission("STOCKTAKE_COUNT")) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xác minh.");
+                    return;
+                }
+                int vid = Integer.parseInt(req.getParameter("id"));
+                Stocktake vs = service.getById(vid);
+                if (vs == null || !vs.isCounting() || !vs.isQuantityMode()) {
+                    resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?action=detail&id=" + vid);
+                    return;
+                }
+                req.setAttribute("stocktake", vs);
+                req.setAttribute("varianceProductIds", service.getVarianceProductIds(vid));
+                req.setAttribute("verificationProductIds", service.getVerificationProductIds(vid));
+                req.setAttribute("damagedOnlyProductIds", service.getDamagedOnlyProductIds(vid));
+                req.getRequestDispatcher("/stocktake/verify.jsp").forward(req, resp);
+                break;
+            }
             case "lookupSerial": {
                 handleLookupSerial(req, resp);
                 break;
@@ -123,6 +143,7 @@ public class StocktakeServlet extends HttpServlet {
         switch (action) {
             case "add":         handleCreate(req, resp, user); break;
             case "saveCount":   handleSaveCount(req, resp, user); break;
+            case "saveVerification": handleSaveVerification(req, resp, user); break;
             case "submit":      handleSubmit(req, resp, user); break;
             case "approveL1":   handleApproveL1(req, resp, user); break;
             case "approveL2":   handleApproveL2(req, resp, user); break;
@@ -208,6 +229,7 @@ public class StocktakeServlet extends HttpServlet {
                     }
                 }
                 service.saveQuantityCounts(id, details);
+                service.checkAndSetVerificationRequired(id);
             } else {
                 // SERIAL mode — payload: arrays serial_number[], product_id[], scanned_status[], etc.
                 List<StocktakeItem> items = new ArrayList<>();
@@ -238,6 +260,13 @@ public class StocktakeServlet extends HttpServlet {
 
             String submit = req.getParameter("submit_after_save");
             if ("1".equals(submit)) {
+                // Nếu QUANTITY mode và có chênh lệch chưa xác minh → chặn submit, redirect sang verify
+                Stocktake updated = service.getById(id);
+                if (updated.isQuantityMode() && updated.isVerificationRequired()) {
+                    resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?action=verify&id=" + id
+                            + "&msg=VerificationRequired");
+                    return;
+                }
                 service.submit(id);
                 resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?action=detail&id=" + id + "&msg=Submitted");
             } else {
@@ -249,12 +278,80 @@ public class StocktakeServlet extends HttpServlet {
         }
     }
 
+    // ===== SAVE VERIFICATION (quét serial xác minh) =====
+    private void handleSaveVerification(HttpServletRequest req, HttpServletResponse resp, User user)
+            throws IOException {
+        if (!user.hasPermission("STOCKTAKE_COUNT")) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền xác minh.");
+            return;
+        }
+        try {
+            int id = Integer.parseInt(req.getParameter("id"));
+            Stocktake s = service.getById(id);
+            if (s == null || !s.isCounting() || !s.isQuantityMode()) {
+                resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake");
+                return;
+            }
+
+            List<StocktakeItem> items = new ArrayList<>();
+            Set<Integer> damagedOnlyProductIds = new HashSet<>(service.getDamagedOnlyProductIds(id));
+            String[] serials = req.getParameterValues("serial_number");
+            String[] productIds = req.getParameterValues("item_product_id");
+            String[] statuses = req.getParameterValues("scanned_status");
+            String[] itemIds = req.getParameterValues("product_item_id");
+            String[] conditions = req.getParameterValues("new_condition");
+            String[] notes = req.getParameterValues("item_note");
+            if (serials != null) {
+                for (int i = 0; i < serials.length; i++) {
+                    if (serials[i] == null || serials[i].trim().isEmpty()) continue;
+                    StocktakeItem it = new StocktakeItem();
+                    it.setSerialNumber(serials[i].trim());
+                    it.setProductId(parseIntSafe(productIds != null && i < productIds.length ? productIds[i] : null, 0));
+                    it.setScannedStatus(statuses != null && i < statuses.length ? statuses[i] : "FOUND");
+                    String pidStr = itemIds != null && i < itemIds.length ? itemIds[i] : null;
+                    if (pidStr != null && !pidStr.isEmpty() && !"null".equals(pidStr)) {
+                        it.setProductItemId(Integer.parseInt(pidStr));
+                    }
+                    it.setNewCondition(conditions != null && i < conditions.length ? conditions[i] : null);
+                    it.setNote(notes != null && i < notes.length ? notes[i] : null);
+                    it.setPhase(StocktakeItem.PHASE_VERIFY);
+                    if (damagedOnlyProductIds.contains(it.getProductId())
+                            && !StocktakeItem.STATUS_DAMAGED.equals(it.getScannedStatus())) {
+                        resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?action=verify&id=" + id
+                                + "&error=DamagedOnlyRequiresDamagedSerials");
+                        return;
+                    }
+                    items.add(it);
+                }
+            }
+
+            service.saveVerificationCounts(id, items, user.getId());
+
+            String submit = req.getParameter("submit_after_save");
+            if ("1".equals(submit)) {
+                service.submit(id);
+                resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?action=detail&id=" + id + "&msg=Submitted");
+            } else {
+                resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?action=verify&id=" + id + "&msg=Saved");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?error=VerifySaveFailed");
+        }
+    }
+
     // ===== SUBMIT =====
     private void handleSubmit(HttpServletRequest req, HttpServletResponse resp, User user)
             throws IOException {
         int id = Integer.parseInt(req.getParameter("id"));
         if (!user.hasPermission("STOCKTAKE_SUBMIT")) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền gửi duyệt.");
+            return;
+        }
+        Stocktake check = service.getById(id);
+        if (check != null && check.isQuantityMode() && check.isVerificationRequired()) {
+            resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?action=verify&id=" + id
+                    + "&msg=VerificationRequired");
             return;
         }
         service.submit(id);

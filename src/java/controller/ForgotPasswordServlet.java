@@ -34,7 +34,7 @@ public class ForgotPasswordServlet extends HttpServlet {
             session.setAttribute("resetEmail", user.getEmail());
             response.sendRedirect("verify_code.jsp");
         } else {
-            request.setAttribute("error", "Email not found in our system!");
+            request.setAttribute("error", "Không tìm thấy email trong hệ thống!");
             request.getRequestDispatcher("forgot_password.jsp").forward(request, response);
         }
     }

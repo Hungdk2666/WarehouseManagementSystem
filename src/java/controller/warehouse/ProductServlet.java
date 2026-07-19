@@ -37,7 +37,7 @@ public class ProductServlet extends HttpServlet {
 
         // RBAC check: read actions require PRODUCT_VIEW
         if (!loggedInUser.hasPermission("PRODUCT_VIEW")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view products.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem sản phẩm.");
             return;
         }
 
@@ -111,7 +111,7 @@ public class ProductServlet extends HttpServlet {
             case "add":
                 // Write actions require PRODUCT_ADD
                 if (!loggedInUser.hasPermission("PRODUCT_ADD")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add products.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm sản phẩm.");
                     return;
                 }
                 List<Category> addCategories = catService.getAllCategories();
@@ -124,7 +124,7 @@ public class ProductServlet extends HttpServlet {
             case "update":
                 // Write actions require PRODUCT_EDIT
                 if (!loggedInUser.hasPermission("PRODUCT_EDIT")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to update products.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa sản phẩm.");
                     return;
                 }
                 int updateId = Integer.parseInt(request.getParameter("id"));
@@ -167,17 +167,17 @@ public class ProductServlet extends HttpServlet {
         // RBAC check: Action-based permissions
         if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("PRODUCT_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add products.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm sản phẩm.");
                 return;
             }
         } else if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("PRODUCT_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify products.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa sản phẩm.");
                 return;
             }
         } else if ("toggle".equals(action)) {
             if (!loggedInUser.hasPermission("PRODUCT_TOGGLE")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to enable/disable products.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền bật/tắt sản phẩm.");
                 return;
             }
         }
@@ -207,7 +207,7 @@ public class ProductServlet extends HttpServlet {
                         return;
                     }
                     if (dao.isSkuExists(sku, 0)) {
-                        request.setAttribute("error", "SKU unique constraint violated! Product SKU already exists.");
+                        request.setAttribute("error", "Mã SKU đã tồn tại! SKU sản phẩm phải là duy nhất.");
                         doGet(request, response);
                         return;
                     }
@@ -262,7 +262,7 @@ public class ProductServlet extends HttpServlet {
                         return;
                     }
                     if (dao.isSkuExists(updateSku, id)) {
-                        request.setAttribute("error", "SKU unique constraint violated! Product SKU already exists.");
+                        request.setAttribute("error", "Mã SKU đã tồn tại! SKU sản phẩm phải là duy nhất.");
                         doGet(request, response);
                         return;
                     }

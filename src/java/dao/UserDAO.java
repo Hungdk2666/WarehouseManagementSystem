@@ -11,23 +11,6 @@ import utils.DBUtils;
 
 public class UserDAO {
 
-    public User login(String username, String hashedPassword) {
-        String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE u.username = ? AND u.password = ? AND u.status = true";
-        try (Connection conn = DBUtils.getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setString(1, username);
-            ps.setString(2, hashedPassword);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSetToUser(rs, conn);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     public User getUserByUsername(String username) {
         String query = "SELECT u.*, r.role_name, w.warehouse_name FROM Users u LEFT JOIN Roles r ON u.role_id = r.id LEFT JOIN Warehouses w ON u.warehouse_id = w.id WHERE u.username = ?";
         try (Connection conn = DBUtils.getConnection();

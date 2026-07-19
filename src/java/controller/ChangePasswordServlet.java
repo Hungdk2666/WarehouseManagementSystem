@@ -45,13 +45,13 @@ public class ChangePasswordServlet extends HttpServlet {
         User verifyUser = userService.login(loggedInUser.getUsername(), oldPassword);
 
         if (verifyUser == null) {
-            request.setAttribute("error", "Incorrect old password!");
+            request.setAttribute("error", "Mật khẩu cũ không đúng!");
             request.getRequestDispatcher("change_password.jsp").forward(request, response);
             return;
         }
 
-        if (!newPassword.equals(confirmPassword)) {
-            request.setAttribute("error", "New passwords do not match!");
+        if (newPassword == null || confirmPassword == null || !newPassword.equals(confirmPassword)) {
+            request.setAttribute("error", "Mật khẩu mới không khớp!");
             request.getRequestDispatcher("change_password.jsp").forward(request, response);
             return;
         }
@@ -67,10 +67,10 @@ public class ChangePasswordServlet extends HttpServlet {
 
         if (success) {
             new AuditLogService().log(loggedInUser.getId(), "CHANGE_PASSWORD", "User changed their own password");
-            request.setAttribute("message", "Password changed successfully!");
+            request.setAttribute("message", "Đổi mật khẩu thành công!");
             request.getRequestDispatcher("change_password.jsp").forward(request, response);
         } else {
-            request.setAttribute("error", "Failed to change password. Try again.");
+            request.setAttribute("error", "Đổi mật khẩu thất bại. Vui lòng thử lại.");
             request.getRequestDispatcher("change_password.jsp").forward(request, response);
         }
     }

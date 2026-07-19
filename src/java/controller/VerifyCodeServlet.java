@@ -37,7 +37,7 @@ public class VerifyCodeServlet extends HttpServlet {
             session.setAttribute("resetUserId", user.getId());
             response.sendRedirect("reset_password.jsp");
         } else {
-            request.setAttribute("error", "Invalid or expired reset code. The code expires after 10 minutes and you have 5 attempts.");
+            request.setAttribute("error", "Mã đặt lại không đúng hoặc đã hết hạn. Mã hết hạn sau 10 phút và bạn có tối đa 5 lần thử.");
             request.getRequestDispatcher("verify_code.jsp").forward(request, response);
         }
     }

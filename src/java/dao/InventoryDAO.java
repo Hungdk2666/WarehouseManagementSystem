@@ -27,14 +27,18 @@ public class InventoryDAO {
         + "       COALESCE(iv.in_stock_new_qty, 0) AS new_quantity, COALESCE(iv.in_stock_used_qty, 0) AS used_quantity, "
         + "       p.product_name, p.sku, p.unit, p.min_stock, p.average_cost, "
         + "       c.category_name, b.brand_name, w.warehouse_name, "
-        + "       (SELECT COUNT(*) FROM Product_Items pi WHERE pi.product_id = i.product_id AND pi.warehouse_id = i.warehouse_id AND pi.status = 'IN_TRANSIT') AS in_transit_qty, "
-        + "       (SELECT COUNT(*) FROM Product_Items pi WHERE pi.product_id = i.product_id AND pi.warehouse_id = i.warehouse_id AND pi.status = 'LOST') AS lost_qty "
+        + "       COALESCE(pic.in_transit_qty, 0) AS in_transit_qty, COALESCE(pic.lost_qty, 0) AS lost_qty "
         + "FROM Inventories i "
         + "JOIN Products p   ON p.id = i.product_id "
         + "JOIN Warehouses w ON w.id = i.warehouse_id "
         + "LEFT JOIN Categories c ON c.id = p.category_id "
         + "LEFT JOIN Brands b     ON b.id = p.brand_id "
-        + "LEFT JOIN Inventory_Available iv ON iv.warehouse_id = i.warehouse_id AND iv.product_id = i.product_id ";
+        + "LEFT JOIN Inventory_Available iv ON iv.warehouse_id = i.warehouse_id AND iv.product_id = i.product_id "
+        + "LEFT JOIN ( "
+        + "    SELECT warehouse_id, product_id, "
+        + "           SUM(status = 'IN_TRANSIT') AS in_transit_qty, SUM(status = 'LOST') AS lost_qty "
+        + "    FROM Product_Items WHERE status IN ('IN_TRANSIT','LOST') GROUP BY warehouse_id, product_id "
+        + ") pic ON pic.warehouse_id = i.warehouse_id AND pic.product_id = i.product_id ";
 
     private InventoryRow mapRow(ResultSet rs) throws Exception {
         InventoryRow r = new InventoryRow();

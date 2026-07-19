@@ -54,7 +54,7 @@ public class InventoryHistoryServlet extends HttpServlet {
             List<HistoryEntry> allData = historyService.getHistoryForExport(
                     search, transactionType, warehouseId, startDate, endDate);
 
-            String fileName = "lich-su-xuat-nhap-kho";
+            String fileName = "lich-su-bien-dong-kho";
             if (startDate != null && !startDate.isEmpty()) fileName += "_" + startDate;
             if (endDate != null && !endDate.isEmpty()) fileName += "_" + endDate;
             fileName += ".xlsx";

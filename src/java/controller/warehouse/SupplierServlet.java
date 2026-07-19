@@ -28,7 +28,7 @@ public class SupplierServlet extends HttpServlet {
 
         // RBAC check: Read actions require SUPPLIER_VIEW
         if (!loggedInUser.hasPermission("SUPPLIER_VIEW")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view suppliers.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem nhà cung cấp.");
             return;
         }
 
@@ -47,14 +47,14 @@ public class SupplierServlet extends HttpServlet {
                 break;
             case "add":
                 if (!loggedInUser.hasPermission("SUPPLIER_ADD")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add suppliers.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm nhà cung cấp.");
                     return;
                 }
                 request.getRequestDispatcher("/suppliers/supplier-add.jsp").forward(request, response);
                 break;
             case "update":
                 if (!loggedInUser.hasPermission("SUPPLIER_EDIT")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify suppliers.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa nhà cung cấp.");
                     return;
                 }
                 int updateId = Integer.parseInt(request.getParameter("id"));
@@ -92,17 +92,17 @@ public class SupplierServlet extends HttpServlet {
         // RBAC check: Action-based permissions
         if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("SUPPLIER_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add suppliers.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm nhà cung cấp.");
                 return;
             }
         } else if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("SUPPLIER_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify suppliers.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa nhà cung cấp.");
                 return;
             }
         } else if ("toggle".equals(action)) {
             if (!loggedInUser.hasPermission("SUPPLIER_TOGGLE")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to enable/disable suppliers.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền bật/tắt nhà cung cấp.");
                 return;
             }
         }

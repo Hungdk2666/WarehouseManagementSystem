@@ -13,6 +13,7 @@ import model.Permission;
 import model.Role;
 import model.User;
 import service.AuditLogService;
+import service.UserService;
 
 @WebServlet(name = "AdminRoleServlet", urlPatterns = {"/admin/role"})
 public class RoleServlet extends HttpServlet {
@@ -35,12 +36,12 @@ public class RoleServlet extends HttpServlet {
 
         if ("list".equals(action) || "permissions".equals(action)) {
             if (!loggedInUser.hasPermission("ROLE_VIEW")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view roles.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem vai trò.");
                 return;
             }
         } else if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("ROLE_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit roles.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa vai trò.");
                 return;
             }
         }
@@ -96,22 +97,22 @@ public class RoleServlet extends HttpServlet {
 
         if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("ROLE_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit roles.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa vai trò.");
                 return;
             }
         } else if ("toggle".equals(action)) {
             if (!loggedInUser.hasPermission("ROLE_TOGGLE")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to disable/enable roles.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền bật/tắt vai trò.");
                 return;
             }
         } else if ("addRole".equals(action)) {
             if (!loggedInUser.hasPermission("ROLE_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add roles.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm vai trò.");
                 return;
             }
         } else if ("permissions".equals(action)) {
             if (!loggedInUser.hasPermission("ROLE_ASSIGN")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to assign permissions.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền phân quyền.");
                 return;
             }
         }
@@ -135,6 +136,16 @@ public class RoleServlet extends HttpServlet {
                 }
                 case "toggle": {
                     int toggleId = Integer.parseInt(request.getParameter("id"));
+                    // Chặn TẮT một vai trò khi vẫn còn người dùng đang hoạt động mang vai trò đó.
+                    Role toggleRole = dao.getRoleById(toggleId);
+                    if (toggleRole != null && toggleRole.isStatus()) {
+                        int activeCount = new UserService().countActiveUsersByRoleId(toggleId);
+                        if (activeCount > 0) {
+                            response.sendRedirect(request.getContextPath()
+                                    + "/admin/role?action=list&error=RoleInUse&count=" + activeCount);
+                            return;
+                        }
+                    }
                     dao.toggleRoleStatus(toggleId);
                     auditLog.log(loggedInUser.getId(), "ROLE_TOGGLE", "Toggled status of role ID " + toggleId);
                     break;
@@ -147,7 +158,7 @@ public class RoleServlet extends HttpServlet {
                         java.util.List<String> filtered = new java.util.ArrayList<>();
                         for (String pIdStr : selectedPerms) {
                             int pId = Integer.parseInt(pIdStr);
-                            if (pId >= 1 && pId <= 10) {
+                            if ((pId >= 1 && pId <= 10) || pId == 75) {
                                 filtered.add(pIdStr);
                             }
                         }

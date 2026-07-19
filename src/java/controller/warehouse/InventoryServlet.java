@@ -83,6 +83,7 @@ public class InventoryServlet extends HttpServlet {
 
             req.setAttribute("row", service.getByKey(warehouseId, productId));
             req.setAttribute("serials", service.getSerials(warehouseId, productId));
+            req.setAttribute("exportedOrLostSerials", service.getExportedOrLostSerials(warehouseId, productId));
             req.setAttribute("ledger", service.getRecentLedger(warehouseId, productId));
 
             req.getRequestDispatcher("/inventory/detail.jsp").forward(req, resp);

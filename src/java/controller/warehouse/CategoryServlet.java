@@ -28,7 +28,7 @@ public class CategoryServlet extends HttpServlet {
 
         // RBAC check: Read actions require CATEGORY_VIEW
         if (!loggedInUser.hasPermission("CATEGORY_VIEW")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view categories.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem ngành hàng.");
             return;
         }
 
@@ -47,14 +47,14 @@ public class CategoryServlet extends HttpServlet {
                 break;
             case "add":
                 if (!loggedInUser.hasPermission("CATEGORY_ADD")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add categories.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm ngành hàng.");
                     return;
                 }
                 request.getRequestDispatcher("/categories/category-add.jsp").forward(request, response);
                 break;
             case "update":
                 if (!loggedInUser.hasPermission("CATEGORY_EDIT")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify categories.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa ngành hàng.");
                     return;
                 }
                 int updateId = Integer.parseInt(request.getParameter("id"));
@@ -92,17 +92,17 @@ public class CategoryServlet extends HttpServlet {
         // RBAC check: Action-based permissions
         if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("CATEGORY_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add categories.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm ngành hàng.");
                 return;
             }
         } else if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("CATEGORY_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify categories.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa ngành hàng.");
                 return;
             }
         } else if ("toggle".equals(action)) {
             if (!loggedInUser.hasPermission("CATEGORY_TOGGLE")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to enable/disable categories.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền bật/tắt ngành hàng.");
                 return;
             }
         }

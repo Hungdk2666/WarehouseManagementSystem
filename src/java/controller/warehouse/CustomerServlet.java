@@ -109,7 +109,7 @@ public class CustomerServlet extends HttpServlet {
                 try {
                     String name = request.getParameter("customer_name");
                     if (name == null || name.trim().isEmpty()) {
-                        request.setAttribute("error", "TĂªn khĂ¡ch hĂ ng khĂ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+                        request.setAttribute("error", "Tên khách hàng không được để trống.");
                         request.getRequestDispatcher("/customer/customer-add.jsp").forward(request, response);
                         return;
                     }
@@ -136,7 +136,7 @@ public class CustomerServlet extends HttpServlet {
                     int id = Integer.parseInt(request.getParameter("id"));
                     String name = request.getParameter("customer_name");
                     if (name == null || name.trim().isEmpty()) {
-                        request.setAttribute("error", "TĂªn khĂ¡ch hĂ ng khĂ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+                        request.setAttribute("error", "Tên khách hàng không được để trống.");
                         Customer existing = dao.getCustomerById(id);
                         request.setAttribute("customer", existing);
                         request.getRequestDispatcher("/customer/customer-add.jsp").forward(request, response);

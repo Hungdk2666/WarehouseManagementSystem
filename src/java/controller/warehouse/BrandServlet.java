@@ -28,7 +28,7 @@ public class BrandServlet extends HttpServlet {
 
         // RBAC check: Read actions require BRAND_VIEW
         if (!loggedInUser.hasPermission("BRAND_VIEW")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view brands.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem thương hiệu.");
             return;
         }
 
@@ -47,14 +47,14 @@ public class BrandServlet extends HttpServlet {
                 break;
             case "add":
                 if (!loggedInUser.hasPermission("BRAND_ADD")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add brands.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm thương hiệu.");
                     return;
                 }
                 request.getRequestDispatcher("/brands/brand-add.jsp").forward(request, response);
                 break;
             case "update":
                 if (!loggedInUser.hasPermission("BRAND_EDIT")) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify brands.");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa thương hiệu.");
                     return;
                 }
                 int updateId = Integer.parseInt(request.getParameter("id"));
@@ -92,17 +92,17 @@ public class BrandServlet extends HttpServlet {
         // RBAC check: Action-based permissions
         if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("BRAND_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add brands.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm thương hiệu.");
                 return;
             }
         } else if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("BRAND_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to modify brands.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa thương hiệu.");
                 return;
             }
         } else if ("toggle".equals(action)) {
             if (!loggedInUser.hasPermission("BRAND_TOGGLE")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to enable/disable brands.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền bật/tắt thương hiệu.");
                 return;
             }
         }

@@ -28,6 +28,10 @@ public class ExportTicketServlet extends HttpServlet {
 
     private static final String TYPE = Ticket.TYPE_OUT;
 
+    private boolean canAccessWarehouse(User user, int warehouseId) {
+        return user.getWarehouseId() == null || user.getWarehouseId() == warehouseId;
+    }
+
     @Override
     protected void doGet(HttpServletRequest httpReq, HttpServletResponse response)
             throws ServletException, IOException {
@@ -51,12 +55,7 @@ public class ExportTicketServlet extends HttpServlet {
 
         switch (action) {
             case "list":
-                httpReq.setAttribute("ticketList", ticketService.getAll(TYPE));
-                // Phiếu OUT-TRANSFER đang đến kho hiện tại (FYI only — luồng mới: tạo Ticket IN)
-                if (loggedInUser.getWarehouseId() != null) {
-                    httpReq.setAttribute("incomingTransfers",
-                            ticketService.getIncomingTransfersForWarehouse(loggedInUser.getWarehouseId()));
-                }
+                httpReq.setAttribute("ticketList", ticketService.getAll(TYPE, loggedInUser.getWarehouseId()));
                 httpReq.getRequestDispatcher("/export_ticket/ticket-list.jsp").forward(httpReq, response);
                 break;
             case "detail": {
@@ -64,6 +63,10 @@ public class ExportTicketServlet extends HttpServlet {
                 Ticket ticket = ticketService.getById(id);
                 if (ticket == null) {
                     response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=list"); return;
+                }
+                if (!canAccessWarehouse(loggedInUser, ticket.getWarehouseId())) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Ticket belongs to another warehouse.");
+                    return;
                 }
                 String s = ticket.getStatus();
                 if (Ticket.STATUS_CONFIRMED.equals(s) || Ticket.STATUS_IN_TRANSIT.equals(s) || Ticket.STATUS_COMPLETED.equals(s)) {
@@ -90,54 +93,46 @@ public class ExportTicketServlet extends HttpServlet {
                 if (reqIdParam != null && !reqIdParam.trim().isEmpty()) {
                     int reqId = Integer.parseInt(reqIdParam);
                     Request selectedReq = requestService.getById(reqId);
+                    if (selectedReq == null || !canAccessWarehouse(loggedInUser, selectedReq.getWarehouseId())) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Request belongs to another warehouse.");
+                        return;
+                    }
                     ProductService pService = new ProductService();
-                    Map<Integer, Integer> stockMap = new HashMap<>();
-                    Map<Integer, Integer> newStockMap = new HashMap<>();
-                    Map<Integer, Integer> usedStockMap = new HashMap<>();
-                    Map<Integer, Integer> damagedStockMap = new HashMap<>();
-                    Map<Integer, Integer> totalStockMap = new HashMap<>();
-                    if (selectedReq != null && selectedReq.getDetails() != null) {
+                    if (selectedReq.getDetails() != null) {
                         for (RequestDetail d : selectedReq.getDetails()) {
                             Product p = pService.getProductById(d.getProductId(), selectedReq.getWarehouseId());
                             if (p != null) {
                                 d.setUnit(p.getUnit());
                                 d.setSku(p.getSku());
-                                boolean isUsed = "USED".equals(selectedReq.getRequestedCondition());
-                                boolean isDamaged = "DAMAGED".equals(selectedReq.getRequestedCondition());
-                                stockMap.put(d.getProductId(), isDamaged ? p.getDamagedQty() : (isUsed ? p.getAvailableUsedQty() : p.getAvailableNewQty()));
-                                newStockMap.put(d.getProductId(), p.getAvailableNewQty());
-                                usedStockMap.put(d.getProductId(), p.getAvailableUsedQty());
-                                damagedStockMap.put(d.getProductId(), p.getDamagedQty());
-                                totalStockMap.put(d.getProductId(), p.getAvailableQty() + p.getDamagedQty());
-                            } else {
-                                stockMap.put(d.getProductId(), 0);
-                                newStockMap.put(d.getProductId(), 0);
-                                usedStockMap.put(d.getProductId(), 0);
-                                damagedStockMap.put(d.getProductId(), 0);
-                                totalStockMap.put(d.getProductId(), 0);
                             }
                         }
                     }
-                    // Danh sách serial khả dụng cho từng sản phẩm — để quét ngay trên màn hình gộp
+                    // Serial hợp lệ để xuất và tình trạng của các serial hiện có trong kho nguồn.
                     Map<Integer, List<String>> availableSerials = new HashMap<>();
+                    Map<String, String> serialConditions = new HashMap<>();
                     if (selectedReq != null && selectedReq.getDetails() != null) {
-                        String cond = selectedReq.getRequestedCondition();
+                        String requestedCondition = selectedReq.getRequestedCondition() == null
+                                ? "NEW" : selectedReq.getRequestedCondition();
+                        String[] conditions = {"NEW", "USED", "DAMAGED"};
                         for (RequestDetail d : selectedReq.getDetails()) {
-                            List<ProductItem> items = itemService.getInStockItemsByProductId(
-                                    d.getProductId(), selectedReq.getWarehouseId(), cond);
                             List<String> serials = new ArrayList<>();
-                            for (ProductItem it : items) serials.add(it.getSerialNumber());
+                            for (String condition : conditions) {
+                                List<ProductItem> items = itemService.getInStockItemsByProductId(
+                                        d.getProductId(), selectedReq.getWarehouseId(), condition);
+                                for (ProductItem it : items) {
+                                    serialConditions.put(it.getSerialNumber(), condition);
+                                    if (requestedCondition.equals(condition)) {
+                                        serials.add(it.getSerialNumber());
+                                    }
+                                }
+                            }
                             availableSerials.put(d.getProductId(), serials);
                         }
                     }
 
                     httpReq.setAttribute("selectedReq", selectedReq);
-                    httpReq.setAttribute("stockMap", stockMap);
-                    httpReq.setAttribute("newStockMap", newStockMap);
-                    httpReq.setAttribute("usedStockMap", usedStockMap);
-                    httpReq.setAttribute("damagedStockMap", damagedStockMap);
-                    httpReq.setAttribute("totalStockMap", totalStockMap);
                     httpReq.setAttribute("availableSerials", availableSerials);
+                    httpReq.setAttribute("serialConditions", serialConditions);
                 }
                 httpReq.getRequestDispatcher("/export_ticket/ticket-add.jsp").forward(httpReq, response);
                 break;
@@ -187,7 +182,11 @@ public class ExportTicketServlet extends HttpServlet {
                             return;
                         }
                     }
-                    if (userWh != null && userWh != sourceWh) {
+                    // Nhất quán với luồng nhập: user phải được gán kho mới được xuất.
+                    if (userWh == null) {
+                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=RequiresWarehouseAssignment"); return;
+                    }
+                    if (userWh != sourceWh) {
                         response.sendRedirect(httpReq.getContextPath() + "/warehouse/export-ticket?action=add&request_id=" + reqId + "&error=WrongWarehouse"); return;
                     }
 

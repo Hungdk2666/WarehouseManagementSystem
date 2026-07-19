@@ -35,17 +35,17 @@ public class UserServlet extends HttpServlet {
 
         if ("list".equals(action) || "info".equals(action)) {
             if (!loggedInUser.hasPermission("USER_VIEW")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view users.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem người dùng.");
                 return;
             }
         } else if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("USER_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add users.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm người dùng.");
                 return;
             }
         } else if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("USER_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit users.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa người dùng.");
                 return;
             }
         }
@@ -114,17 +114,17 @@ public class UserServlet extends HttpServlet {
 
         if ("add".equals(action)) {
             if (!loggedInUser.hasPermission("USER_ADD")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to add users.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thêm người dùng.");
                 return;
             }
         } else if ("update".equals(action)) {
             if (!loggedInUser.hasPermission("USER_EDIT")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to edit users.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sửa người dùng.");
                 return;
             }
         } else if ("toggle".equals(action)) {
             if (!loggedInUser.hasPermission("USER_TOGGLE")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to disable/enable users.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền bật/tắt người dùng.");
                 return;
             }
         }

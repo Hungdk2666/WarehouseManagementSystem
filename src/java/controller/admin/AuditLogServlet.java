@@ -31,7 +31,7 @@ public class AuditLogServlet extends HttpServlet {
         boolean canSystem = loggedInUser.hasPermission("SYSTEM_LOG_VIEW");
         boolean canBusiness = loggedInUser.hasPermission("AUDIT_LOG_VIEW");
         if (!canSystem && !canBusiness) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not have permission to view logs.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem nhật ký.");
             return;
         }
         // Nếu (hiếm) có cả hai quyền, ưu tiên nhật ký hệ thống.

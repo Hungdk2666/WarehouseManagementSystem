@@ -28,8 +28,8 @@ public class ResetPasswordServlet extends HttpServlet {
         String newPassword = request.getParameter("newPassword");
         String confirmPassword = request.getParameter("confirmPassword");
 
-        if (!newPassword.equals(confirmPassword)) {
-            request.setAttribute("error", "Passwords do not match!");
+        if (newPassword == null || confirmPassword == null || !newPassword.equals(confirmPassword)) {
+            request.setAttribute("error", "Mật khẩu xác nhận không khớp!");
             request.getRequestDispatcher("reset_password.jsp").forward(request, response);
             return;
         }
@@ -48,10 +48,10 @@ public class ResetPasswordServlet extends HttpServlet {
             userService.clearResetCode(userId);
             session.invalidate();
             new AuditLogService().log(userId, "RESET_PASSWORD", "Password reset via OTP verification");
-            request.setAttribute("message", "Password reset successfully! You can now login.");
+            request.setAttribute("message", "Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.");
             request.getRequestDispatcher("login.jsp").forward(request, response);
         } else {
-            request.setAttribute("error", "Failed to reset password. Try again.");
+            request.setAttribute("error", "Đặt lại mật khẩu thất bại. Vui lòng thử lại.");
             request.getRequestDispatcher("reset_password.jsp").forward(request, response);
         }
     }
