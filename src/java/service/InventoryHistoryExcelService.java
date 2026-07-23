@@ -11,14 +11,14 @@ public class InventoryHistoryExcelService {
 
     private static final String[] HEADERS = {
         "Thời gian", "Loại giao dịch", "Mã phiếu", "Mã yêu cầu",
-        "SKU", "Tên sản phẩm", "Số lượng thay đổi", "Tồn sau GD",
+        "SKU", "Tên sản phẩm", "Biến động tổng", "Chi tiết tình trạng", "Tồn sau GD",
         "Kho", "Đối tác", "Đơn giá", "Thành tiền",
         "Người thực hiện", "Người duyệt YC"
     };
 
     public void export(List<HistoryEntry> data, OutputStream out) throws Exception {
         try (Workbook wb = new XSSFWorkbook()) {
-            Sheet sheet = wb.createSheet("Lịch sử xuất nhập kho");
+            Sheet sheet = wb.createSheet("Lịch sử biến động kho");
 
             CellStyle headerStyle = wb.createCellStyle();
             Font headerFont = wb.createFont();
@@ -75,7 +75,7 @@ public class InventoryHistoryExcelService {
                 }
 
                 row.createCell(1).setCellValue(e.getTransactionTypeLabel());
-                row.createCell(2).setCellValue(e.getTicketCode() != null ? e.getTicketCode() : "");
+                row.createCell(2).setCellValue(e.getDocumentCode() != null ? e.getDocumentCode() : "");
                 row.createCell(3).setCellValue(e.getRequestCode() != null ? e.getRequestCode() : "");
                 row.createCell(4).setCellValue(e.getSku() != null ? e.getSku() : "");
                 row.createCell(5).setCellValue(e.getProductName() != null ? e.getProductName() : "");
@@ -84,25 +84,27 @@ public class InventoryHistoryExcelService {
                 qtyCell.setCellValue(e.getChangeQuantity());
                 qtyCell.setCellStyle(e.getChangeQuantity() >= 0 ? positiveStyle : negativeStyle);
 
-                Cell balCell = row.createCell(7);
+                row.createCell(7).setCellValue(e.getConditionChangeSummary());
+
+                Cell balCell = row.createCell(8);
                 balCell.setCellValue(e.getBalanceQuantity());
                 balCell.setCellStyle(numberStyle);
 
-                row.createCell(8).setCellValue(e.getWarehouseName() != null ? e.getWarehouseName() : "");
-                row.createCell(9).setCellValue(e.getPartnerName() != null ? e.getPartnerName() : "");
+                row.createCell(9).setCellValue(e.getWarehouseName() != null ? e.getWarehouseName() : "");
+                row.createCell(10).setCellValue(e.getPartnerName() != null ? e.getPartnerName() : "");
 
                 if (e.getUnitCost() != null) {
-                    Cell priceCell = row.createCell(10);
+                    Cell priceCell = row.createCell(11);
                     priceCell.setCellValue(e.getUnitCost().doubleValue());
                     priceCell.setCellStyle(currencyStyle);
 
-                    Cell totalCell = row.createCell(11);
+                    Cell totalCell = row.createCell(12);
                     totalCell.setCellValue(Math.abs(e.getChangeQuantity()) * e.getUnitCost().doubleValue());
                     totalCell.setCellStyle(currencyStyle);
                 }
 
-                row.createCell(12).setCellValue(e.getCreatedByName() != null ? e.getCreatedByName() : "");
-                row.createCell(13).setCellValue(e.getApprovedByName() != null ? e.getApprovedByName() : "");
+                row.createCell(13).setCellValue(e.getCreatedByName() != null ? e.getCreatedByName() : "");
+                row.createCell(14).setCellValue(e.getApprovedByName() != null ? e.getApprovedByName() : "");
             }
 
             for (int i = 0; i < HEADERS.length; i++) {

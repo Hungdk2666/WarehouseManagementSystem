@@ -7,11 +7,15 @@ public class HistoryEntry {
     private int id;
     private String transactionType;
     private int changeQuantity;
+    private Integer changeNewQuantity;
+    private Integer changeUsedQuantity;
+    private Integer changeDamagedQuantity;
     private int balanceQuantity;
     private Timestamp createdAt;
 
     private int referenceId;
     private String ticketCode;
+    private String stocktakeCode;
     private String ticketType;
     private String requestCode;
     private String requestReason;
@@ -38,6 +42,15 @@ public class HistoryEntry {
     public int getChangeQuantity() { return changeQuantity; }
     public void setChangeQuantity(int changeQuantity) { this.changeQuantity = changeQuantity; }
 
+    public Integer getChangeNewQuantity() { return changeNewQuantity; }
+    public void setChangeNewQuantity(Integer value) { this.changeNewQuantity = value; }
+
+    public Integer getChangeUsedQuantity() { return changeUsedQuantity; }
+    public void setChangeUsedQuantity(Integer value) { this.changeUsedQuantity = value; }
+
+    public Integer getChangeDamagedQuantity() { return changeDamagedQuantity; }
+    public void setChangeDamagedQuantity(Integer value) { this.changeDamagedQuantity = value; }
+
     public int getBalanceQuantity() { return balanceQuantity; }
     public void setBalanceQuantity(int balanceQuantity) { this.balanceQuantity = balanceQuantity; }
 
@@ -49,6 +62,29 @@ public class HistoryEntry {
 
     public String getTicketCode() { return ticketCode; }
     public void setTicketCode(String ticketCode) { this.ticketCode = ticketCode; }
+
+    public String getStocktakeCode() { return stocktakeCode; }
+    public void setStocktakeCode(String stocktakeCode) { this.stocktakeCode = stocktakeCode; }
+
+    public String getDocumentCode() {
+        return "STOCKTAKE".equals(transactionType) ? stocktakeCode : ticketCode;
+    }
+
+    public String getConditionChangeSummary() {
+        StringBuilder result = new StringBuilder();
+        appendConditionChange(result, "Hàng mới", changeNewQuantity);
+        appendConditionChange(result, "Hàng cũ", changeUsedQuantity);
+        appendConditionChange(result, "Hàng hỏng", changeDamagedQuantity);
+        return result.toString();
+    }
+
+    private void appendConditionChange(StringBuilder result, String label, Integer value) {
+        if (value == null || value == 0) return;
+        if (result.length() > 0) result.append(" · ");
+        result.append(label).append(' ');
+        if (value > 0) result.append('+');
+        result.append(value);
+    }
 
     public String getTicketType() { return ticketType; }
     public void setTicketType(String ticketType) { this.ticketType = ticketType; }
@@ -94,6 +130,8 @@ public class HistoryEntry {
             case "TRANSFER_IN":  return "Nhận chuyển kho";
             case "TRANSFER_OUT": return "Chuyển kho đi";
             case "RETURN":       return "Trả hàng";
+            case "TRANSFER_RETURN": return "Nhập trả chuyển kho";
+            case "TRANSFER_RETURN_OUT": return "Xuất trả chuyển kho";
             case "STOCKTAKE":    return "Kiểm kê điều chỉnh";
             default:             return transactionType;
         }
@@ -107,6 +145,8 @@ public class HistoryEntry {
             case "TRANSFER_IN":  return "bg-info text-white";
             case "TRANSFER_OUT": return "bg-primary text-white";
             case "RETURN":       return "bg-warning text-dark";
+            case "TRANSFER_RETURN": return "bg-info text-white";
+            case "TRANSFER_RETURN_OUT": return "bg-primary text-white";
             case "STOCKTAKE":    return "bg-secondary text-white";
             default:             return "bg-secondary text-white";
         }
