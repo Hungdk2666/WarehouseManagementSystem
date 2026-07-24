@@ -35,14 +35,14 @@
 
     List<String> selectedActions = Arrays.asList(actionFilters);
 
-    // Build action filter query string for pagination links
+
     StringBuilder actionParams = new StringBuilder();
     for (String af : actionFilters) {
         if (af != null && !af.trim().isEmpty())
             actionParams.append("&actionFilter=").append(URLEncoder.encode(af.trim(), "UTF-8"));
     }
 
-    // Label for the action dropdown button
+
     String actionLabel;
     if (selectedActions.isEmpty()) actionLabel = "-- Tất cả --";
     else if (selectedActions.size() == 1) actionLabel = selectedActions.get(0);
@@ -55,14 +55,14 @@
 <head>
     <meta charset="UTF-8">
     <title><%= pageTitle %> - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -78,7 +78,7 @@
                     </div>
                 </div>
 
-                <!-- Filters -->
+                
                 <div class="card mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <form id="filterForm" action="audit-log" method="GET" class="row g-2 align-items-end">
@@ -161,10 +161,10 @@
                     </div>
                 </div>
 
-                <!-- Logs Table Card -->
+                
                 <div class="card">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-slate-800"><i class="bi bi-list-task me-2 text-primary"></i>Bản ghi nhật ký (<%= totalCount %> bản ghi)</span>
+                        <span class="fw-bold text-slate-800"><i class="bi bi-list-task me-2 text-primary"></i>Bản ghi nhật ký · <%= totalCount %></span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -197,7 +197,7 @@
                                                 }
                                                 
                                                 String userDisplay = log.getUsername() != null ? 
-                                                    "<strong>" + log.getUsername() + "</strong> <span class='text-muted small'>(" + log.getUserFullName() + ")</span>" : 
+                                                    "<strong>" + log.getUsername() + "</strong> <span class='text-muted small'>— " + log.getUserFullName() + "</span>" : 
                                                     "<span class='text-muted italic'>Hệ thống / Người dùng đã xóa</span>";
                                     %>
                                     <tr>
@@ -269,7 +269,7 @@
                             <span class="text-muted small">dòng</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
-                            <!-- Pagination -->
+                            
                             <% if (totalPages > 1) { %>
                             <nav aria-label="Page navigation" class="m-0">
                                 <ul class="pagination pagination-sm m-0 gap-1">
@@ -328,7 +328,7 @@
         </div>
     </div>
 
-    <!-- Modal details -->
+    
     <div class="modal fade" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
@@ -363,11 +363,11 @@
         </div>
     </div>
 
-    <!-- Bootstrap Bundle JS -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Multi-select hành động
+
             function updateActionLabel() {
                 var checked = document.querySelectorAll('#actionDropdownMenu .action-cb:checked');
                 var label = document.getElementById('actionLabel');

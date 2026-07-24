@@ -25,11 +25,12 @@
         String status = r.getStatus();
         if ("PENDING".equals(status)) pending++;
         else if ("APPROVED".equals(status) || "PARTIALLY_COMPLETED".equals(status)
-                || "PARTIALLY_IN_TRANSIT".equals(status) || "IN_TRANSIT".equals(status)
+                || "PARTIALLY_CLOSED_IN_TRANSIT".equals(status) || "IN_TRANSIT".equals(status)
                 || "RETURNING".equals(status)) approvedOrProcessing++;
-        else if ("COMPLETED".equals(status) || "RETURNED".equals(status)) completed++;
+        else if ("COMPLETED".equals(status) || "RETURNED".equals(status)
+                || "PARTIALLY_CLOSED".equals(status)) completed++;
         else if ("REJECTED".equals(status) || "CANCELLED".equals(status)
-                || "REVOKED".equals(status) || "PARTIALLY_CLOSED".equals(status)) rejectedOrCancelled++;
+                || "REVOKED".equals(status)) rejectedOrCancelled++;
     }
 
     List<Request> recent = myRequests.size() > 8 ? myRequests.subList(0, 8) : myRequests;
@@ -71,7 +72,7 @@
                     </div></div></div>
                     <div class="col-xl-3 col-sm-6"><div class="card border-0 shadow-sm"><div class="card-body p-3 stat-tile">
                         <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-arrow-repeat"></i></div>
-                        <div><div class="stat-label">Đã duyệt / đang xử lý</div><h3 class="stat-value"><%= approvedOrProcessing %></h3></div>
+                        <div><div class="stat-label">Đã xác nhận / đang xử lý</div><h3 class="stat-value"><%= approvedOrProcessing %></h3></div>
                     </div></div></div>
                     <div class="col-xl-3 col-sm-6"><div class="card border-0 shadow-sm"><div class="card-body p-3 stat-tile">
                         <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill"></i></div>
@@ -99,13 +100,13 @@
                                             String badge = "secondary";
                                             String statusLabel = r.getStatus();
                                             if ("PENDING".equals(r.getStatus())) { badge = "warning"; statusLabel = "Chờ duyệt"; }
-                                            else if ("APPROVED".equals(r.getStatus())) { badge = "info"; statusLabel = "Đã duyệt"; }
+                                            else if ("APPROVED".equals(r.getStatus())) { badge = "info"; statusLabel = "Đã xác nhận"; }
                                             else if ("PARTIALLY_COMPLETED".equals(r.getStatus())) { badge = "info"; statusLabel = "Đang xử lý"; }
-                                            else if ("PARTIALLY_IN_TRANSIT".equals(r.getStatus())) { badge = "info"; statusLabel = "Đang chuyển một phần"; }
-                                            else if ("IN_TRANSIT".equals(r.getStatus())) { badge = "info"; statusLabel = "Đang chuyển"; }
-                                            else if ("RETURNING".equals(r.getStatus())) { badge = "warning"; statusLabel = "Đang trả về nguồn"; }
-                                            else if ("RETURNED".equals(r.getStatus())) { badge = "success"; statusLabel = "Đã trả về nguồn"; }
-                                            else if ("PARTIALLY_CLOSED".equals(r.getStatus())) { badge = "secondary"; statusLabel = "Đã đóng một phần"; }
+                                            else if ("PARTIALLY_CLOSED_IN_TRANSIT".equals(r.getStatus())) { badge = "info"; statusLabel = "Đã đóng · Đang giao"; }
+                                            else if ("IN_TRANSIT".equals(r.getStatus())) { badge = "info"; statusLabel = "Đang giao"; }
+                                            else if ("RETURNING".equals(r.getStatus())) { badge = "warning"; statusLabel = "Đang hoàn trả"; }
+                                            else if ("RETURNED".equals(r.getStatus())) { badge = "success"; statusLabel = "Đã hoàn trả"; }
+                                            else if ("PARTIALLY_CLOSED".equals(r.getStatus())) { badge = "success"; statusLabel = "Hoàn tất 1 phần"; }
                                             else if ("REVOKED".equals(r.getStatus())) { badge = "secondary"; statusLabel = "Đã thu hồi"; }
                                             else if ("COMPLETED".equals(r.getStatus())) { badge = "success"; statusLabel = "Hoàn tất"; }
                                             else if ("REJECTED".equals(r.getStatus())) { badge = "danger"; statusLabel = "Bị từ chối"; }
@@ -164,7 +165,7 @@
         new Chart(document.getElementById('statusChart'), {
             type: 'doughnut',
             data: {
-                labels: ['Chờ duyệt', 'Đã duyệt/Đang xử lý', 'Hoàn tất', 'Từ chối/Hủy'],
+                labels: ['Chờ duyệt', 'Đã xác nhận/Đang xử lý', 'Hoàn tất', 'Từ chối/Hủy'],
                 datasets: [{
                     data: [<%= pending %>, <%= approvedOrProcessing %>, <%= completed %>, <%= rejectedOrCancelled %>],
                     backgroundColor: ['#f59e0b', '#0ea5e9', '#22c55e', '#94a3b8']

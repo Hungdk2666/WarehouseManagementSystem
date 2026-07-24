@@ -18,7 +18,7 @@
         return;
     }
 
-    // Build a quick lookup map: permission_name -> Permission
+
     java.util.Map<String, Permission> permMap = new java.util.LinkedHashMap<>();
     if (allPerms != null) {
         for (Permission p : allPerms) permMap.put(p.getPermissionName(), p);
@@ -26,10 +26,10 @@
 
     boolean isSystemAdmin = (roleInfo.getId() == 1);
 
-    // --- Category definitions ---
-    // Each category: label, icon, color, array of { resourceLabel, permissionNames[], isAdminResource }
+
+
     String[][] categories = {
-        // 0: category label, 1: icon, 2: badge color
+
         {"Quản trị hệ thống", "bi-gear-fill", "danger"},
         {"Dữ liệu gốc", "bi-database-fill", "primary"},
         {"Nhập kho", "bi-box-arrow-in-down", "success"},
@@ -38,15 +38,15 @@
         {"Báo cáo & Phân tích", "bi-graph-up-arrow", "secondary"},
     };
 
-    // Resources per category: { resourceLabel, isAdminResource, perm1, perm2, ... }
+
     String[][][] resources = {
-        // Category 0: Quản trị hệ thống
+
         {
             {"Người dùng", "admin", "USER_VIEW", "USER_ADD", "USER_EDIT", "USER_TOGGLE"},
             {"Vai trò", "admin", "ROLE_VIEW", "ROLE_ADD", "ROLE_EDIT", "ROLE_TOGGLE", "ROLE_ASSIGN"},
             {"Nhật ký hoạt động", "admin", "AUDIT_LOG_VIEW"},
         },
-        // Category 1: Dữ liệu gốc
+
         {
             {"Nhà cung cấp", "biz", "SUPPLIER_VIEW", "SUPPLIER_ADD", "SUPPLIER_EDIT", "SUPPLIER_TOGGLE"},
             {"Sản phẩm", "biz", "PRODUCT_VIEW", "PRODUCT_ADD", "PRODUCT_EDIT", "PRODUCT_TOGGLE"},
@@ -56,26 +56,26 @@
             {"Khách hàng", "biz", "CUSTOMER_VIEW", "CUSTOMER_ADD", "CUSTOMER_EDIT", "CUSTOMER_DELETE"},
             {"Kho hàng", "biz", "WAREHOUSE_VIEW", "WAREHOUSE_ADD", "WAREHOUSE_EDIT"},
         },
-        // Category 2: Nhập kho
+
         {
             {"Yêu cầu nhập kho", "biz", "REQUEST_VIEW_IN", "REQUEST_ADD_IN", "REQUEST_EDIT_IN", "REQUEST_CANCEL_IN", "REQUEST_APPROVE_IN", "REQUEST_REQUEST_CANCEL_IN", "REQUEST_APPROVE_CANCEL_IN"},
             {"Phiếu nhập kho", "biz", "TICKET_VIEW_IN", "TICKET_ADD_IN", "TICKET_CONFIRM_IN", "TICKET_CANCEL_IN"},
         },
-        // Category 3: Xuất kho
+
         {
             {"Yêu cầu xuất kho", "biz", "REQUEST_VIEW_OUT", "REQUEST_ADD_OUT", "REQUEST_EDIT_OUT", "REQUEST_CANCEL_OUT", "REQUEST_APPROVE_OUT", "REQUEST_REQUEST_CANCEL_OUT", "REQUEST_APPROVE_CANCEL_OUT"},
             {"Phiếu xuất kho", "biz", "TICKET_VIEW_OUT", "TICKET_ADD_OUT", "TICKET_CONFIRM_OUT", "TICKET_CANCEL_OUT"},
         },
-        // Category 4: Tồn kho & Kiểm kê
+
         {
             {"Tồn kho", "biz", "INVENTORY_VIEW", "INVENTORY_VIEW_ALL", "INVENTORY_EXPORT"},
             {"Kiểm kê", "biz", "STOCKTAKE_VIEW", "STOCKTAKE_CREATE", "STOCKTAKE_COUNT", "STOCKTAKE_SUBMIT", "STOCKTAKE_APPROVE_L1", "STOCKTAKE_REJECT", "STOCKTAKE_APPROVE_L2", "STOCKTAKE_CONFIG"},
         },
-        // Category 5: Báo cáo & Phân tích
+
         {
             {"Sổ kho", "biz", "STOCK_LEDGER_VIEW"},
             {"Cảnh báo sắp hết hàng", "biz", "LOW_STOCK_ALERT_VIEW"},
-            {"Dashboard", "biz", "DASHBOARD_VIEW"},
+            {"Bảng điều khiển", "biz", "DASHBOARD_VIEW"},
             {"Giá trị kho", "biz", "INVENTORY_VALUE_VIEW"},
         },
     };
@@ -129,7 +129,7 @@
                 <div class="mb-3">
                     <div class="input-group shadow-sm rounded-3">
                         <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                        <input type="text" id="permissionSearch" class="form-control border-start-0 ps-0" placeholder="Tìm quyền... (vd: tồn kho, duyệt, xuất)" style="box-shadow:none;">
+                        <input type="text" id="permissionSearch" class="form-control border-start-0 ps-0" placeholder="Tìm theo tên quyền hoặc nghiệp vụ" style="box-shadow:none;">
                     </div>
                 </div>
 
@@ -137,9 +137,9 @@
                     <input type="hidden" name="id" value="<%= roleInfo.getId() %>">
 
                     <%
-                        // Action label map
+
                         java.util.Map<String, String[]> actionMeta = new java.util.LinkedHashMap<>();
-                        // { vietnameseLabel, icon }
+
                         actionMeta.put("VIEW",             new String[]{"Xem",           "bi-eye"});
                         actionMeta.put("VIEW_ALL",         new String[]{"Xem tất cả kho","bi-globe2"});
                         actionMeta.put("ADD",              new String[]{"Thêm",          "bi-plus-circle"});
@@ -175,7 +175,12 @@
                             <i class="bi bi-chevron-down toggle-icon text-<%= catColor %>"></i>
                         </div>
                         <div class="card-body p-0 perm-cat-body" id="catBody<%= ci %>">
-                            <table class="table table-hover align-middle mb-0" style="font-size:0.88rem;">
+                            <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 editable-table" style="font-size:0.88rem; min-width:720px;">
+                                <colgroup>
+                                    <col style="width:210px">
+                                    <col>
+                                </colgroup>
                                 <tbody>
                                 <%
                                     for (int ri = 0; ri < catResources.length; ri++) {
@@ -200,7 +205,7 @@
                                                     boolean isEditable = isRowEditable;
                                                     if (isSystemAdmin && "ROLE_ASSIGN".equals(permName)) isEditable = false;
 
-                                                    // Extract action key
+
                                                     String actionKey = "";
                                                     if ((permName.startsWith("REQUEST_") || permName.startsWith("TICKET_")) && (permName.endsWith("_IN") || permName.endsWith("_OUT"))) {
                                                         String suffix = permName.endsWith("_IN") ? "_IN" : "_OUT";
@@ -242,6 +247,7 @@
                                 %>
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     </div>
                     <%
@@ -297,12 +303,12 @@
                         const match = q.split(/\s+/).every(w => rowText.includes(w));
                         row.style.display = match ? '' : 'none';
                     });
-                    // Show categories that have visible rows
+
                     document.querySelectorAll('.perm-category').forEach(card => {
                         const visibleRows = card.querySelectorAll('.perm-resource-row[style=""], .perm-resource-row:not([style])');
                         const allHidden = Array.from(card.querySelectorAll('.perm-resource-row')).every(r => r.style.display === 'none');
                         card.style.display = (q && allHidden) ? 'none' : '';
-                        // Expand when searching
+
                         if (q) {
                             const body = card.querySelector('.perm-cat-body');
                             if (body) body.style.display = '';

@@ -15,14 +15,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Điểm đến nội bộ - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -35,7 +35,7 @@
                 <div class="page-header">
                     <div>
                         <h2 class="page-title">Điểm đến nội bộ</h2>
-                        <p class="page-subtitle">Quản lý các điểm nhận hàng chuyển kho (Cửa hàng, Trung tâm bảo hành, v.v.)</p>
+                        <p class="page-subtitle">Quản lý cửa hàng, trung tâm bảo hành và các điểm nhận hàng chuyển kho.</p>
                     </div>
                     <div class="d-flex gap-2">
                         <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
@@ -44,7 +44,7 @@
                     </div>
                 </div>
 
-                <!-- Search Panel -->
+                
                 <div class="card mb-3">
                     <div class="card-body py-3">
                         <div class="row g-2">
@@ -79,7 +79,7 @@
                                         <th>Loại điểm đến</th>
                                         <th>Địa chỉ</th>
                                         <th class="text-center">Trạng thái</th>
-                                        <th class="text-center">Thao tác</th>
+                                    <th class="text-center table-actions-column">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -91,8 +91,8 @@
                                         <td class="fw-semibold text-muted text-center">#<%= d.getId() %></td>
                                         <td class="fw-bold text-slate-800"><%= d.getDestinationName() %></td>
                                         <td>
-                                            <% if ("STORE".equals(d.getDestinationType())) { %>
-                                                <span class="badge bg-light text-primary"><i class="bi bi-shop me-1"></i> Cửa hàng</span>
+                                            <% if ("SHOWROOM".equals(d.getDestinationType())) { %>
+                                                <span class="badge bg-light text-primary"><i class="bi bi-shop me-1"></i> Showroom</span>
                                             <% } else if ("WARRANTY_CENTER".equals(d.getDestinationType())) { %>
                                                 <span class="badge bg-info bg-opacity-10 text-info"><i class="bi bi-wrench-adjustable-circle me-1"></i> Bảo hành</span>
                                             <% } else { %>
@@ -107,18 +107,18 @@
                                                 <span class="status-chip chip-muted">Không hoạt động</span>
                                             <% } %>
                                         </td>
-                                        <td class="text-center">
-                                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                                <td class="text-center table-actions-cell">
+                                                    <div class="table-actions">
                                                  <% if (loggedInUser.hasPermission("DESTINATION_EDIT")) { %>
                                                  <a href="destination?action=update&id=<%= d.getId() %>" class="btn btn-table btn-outline-primary" title="Chỉnh sửa">
-                                                     <i class="bi bi-pencil-square"></i> Sửa
+                                                        <i class="bi bi-pencil-square"></i>
                                                  </a>
                                                  <% } %>
                                                 <% if (loggedInUser.hasPermission("DESTINATION_TOGGLE")) { %>
                                                 <form action="destination?action=toggle" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= d.getId() %>">
                                                     <button type="submit" class="btn btn-table <%= d.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= d.isStatus() ? "Vô hiệu hóa điểm đến" : "Kích hoạt điểm đến" %>">
-                                                        <i class="bi bi-power"></i> <%= d.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
+                                                        <i class="bi bi-power"></i>
                                                     </button>
                                                 </form>
                                                 <% } %>
@@ -153,7 +153,7 @@
                             <span class="text-muted small">dòng</span>
                         </div>
                         <div id="paginationContainer" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto">
-                            <!-- Dynamically populated entries info & pagination list -->
+                            
                         </div>
                     </div>
                 </div>
@@ -185,7 +185,7 @@
             
             const allRows = Array.from(tbody.querySelectorAll("tr"));
             if (allRows.length === 1 && allRows[0].querySelector("td[colspan]")) {
-                return; // No pagination for empty data
+                return;
             }
             
             const container = document.getElementById(containerId);
@@ -330,7 +330,7 @@
         }
     </script>
 
-    <!-- Bootstrap Bundle JS -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

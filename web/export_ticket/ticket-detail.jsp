@@ -76,8 +76,19 @@
                                         statusBadge = "bg-warning text-warning";
                                         displayStatus = "Bản nháp";
                                     } else if ("IN_TRANSIT".equals(ticket.getStatus())) {
-                                        statusBadge = "bg-info text-info";
-                                        displayStatus = "Đang vận chuyển";
+                                        if (ticket.isPartiallyReturned()) {
+                                            statusBadge = "bg-warning text-warning";
+                                            displayStatus = "Đang hoàn trả";
+                                        } else if (ticket.isTransferReturning()) {
+                                            statusBadge = "bg-warning text-warning";
+                                            displayStatus = "Đang hoàn trả";
+                                        } else {
+                                            statusBadge = "bg-info text-info";
+                                            displayStatus = "Đang giao";
+                                        }
+                                    } else if ("COMPLETED".equals(ticket.getStatus())) {
+                                        statusBadge = "bg-success text-success";
+                                        displayStatus = ticket.isFullyReturned() ? "Đã hoàn trả" : "Đã nhận";
                                     } else if ("CONFIRMED".equals(ticket.getStatus())) {
                                         statusBadge = "bg-success text-success";
                                         displayStatus = "Đã xác nhận";
@@ -168,14 +179,14 @@
                                     <td><%= d.getUnit() %></td>
                                     <td class="fw-bold"><%= d.getQuantity() %></td>
                                     <td>
-                                        <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus())) { %>
+                                        <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus()) || "COMPLETED".equals(ticket.getStatus())) { %>
                                             <%= String.format("%,.0f", d.getUnitCost() != null ? d.getUnitCost().doubleValue() : 0.0) %> VND
                                         <% } else { %>
                                             <span class="text-muted small">Chờ xác nhận</span>
                                         <% } %>
                                     </td>
                                     <td class="fw-bold">
-                                        <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus())) { %>
+                                        <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus()) || "COMPLETED".equals(ticket.getStatus())) { %>
                                             <%= String.format("%,.0f", itemCost) %> VND
                                         <% } else { %>
                                             <span class="text-muted small">Chờ xác nhận</span>
@@ -186,7 +197,7 @@
                                         }
                                     }
                                 %>
-                                <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus())) { %>
+                                <% if ("CONFIRMED".equals(ticket.getStatus()) || "IN_TRANSIT".equals(ticket.getStatus()) || "COMPLETED".equals(ticket.getStatus())) { %>
                                 <tr class="table-light fw-bold">
                                     <td colspan="6" class="text-end pe-4">Tổng giá trị xuất kho:</td>
                                     <td><%= String.format("%,.0f", totalCost) %> VND</td>
@@ -199,10 +210,15 @@
                     
                     
                     <% if ("IN_TRANSIT".equals(ticket.getStatus())) { %>
-                    <div class="card-footer bg-info bg-opacity-10 p-3 small text-info border-top-0">
+                    <div class="card-footer <%= ticket.isTransferReturning() ? "bg-warning text-warning" : "bg-info text-info" %> bg-opacity-10 p-3 small border-top-0">
                         <i class="bi bi-info-circle me-1"></i>
-                        Phiếu đang vận chuyển. Hệ thống đã tạo yêu cầu nhập liên kết khi xác nhận xuất kho.
-                        Kho đích cần vào <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list">Yêu cầu nhập kho</a> để tiếp tục xử lý.
+                        <% if (ticket.isTransferReturning()) { %>
+                            Lô hàng này đang trong quy trình hoàn trả. Kho nguồn cần xử lý yêu cầu nhập trả liên kết để xác nhận hàng thực tế quay về.
+                        <% } else { %>
+                            Lô hàng đang giao đến kho đích. Kho đích cần xử lý
+                            <a href="<%= request.getContextPath() %>/warehouse/import-request?action=detail&id=<%= ticket.getLinkedInRequestId() %>">yêu cầu nhập liên kết</a>
+                            khi nhận hàng thực tế.
+                        <% } %>
                     </div>
                     <% } %>
                 </div>

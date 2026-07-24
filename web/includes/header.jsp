@@ -9,7 +9,7 @@
             <i class="bi bi-box-seam-fill text-primary me-2 fs-4"></i>
             <span class="d-flex flex-column lh-sm">
                 <span>WMS</span>
-                <small class="text-muted fw-semibold" style="font-size: 0.68rem;">Warehouse Management</small>
+                <small class="text-muted fw-semibold" style="font-size: 0.68rem;">Quản lý kho</small>
             </span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,7 +18,7 @@
         <div class="collapse navbar-collapse" id="navbarContent">
             <ul class="navbar-nav ms-auto align-items-center gap-2">
                 <% if (loggedUser != null) { %>
-                <!-- Notification Dropdown -->
+                
                 <li class="nav-item dropdown me-2">
                     <a class="nav-link px-3 position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="if(typeof window.updateHeaderBadge === 'function') window.updateHeaderBadge();">
                         <i class="bi bi-bell fs-5" id="headerBellIcon"></i>
@@ -32,7 +32,7 @@
                             <a href="#" class="text-primary small fw-semibold text-decoration-none" onclick="event.stopPropagation(); headerMarkAllRead()">Đánh dấu tất cả là đã đọc</a>
                         </div>
                         <div class="list-group list-group-flush" id="headerNotiList" style="max-height: 300px; overflow-y: auto;">
-                            <!-- Dynamic Content -->
+                            
                             <div class="text-center py-4 text-muted small">Đang tải...</div>
                         </div>
                         <div class="p-2 border-top text-center bg-light">
@@ -70,7 +70,7 @@
 </nav>
 
 <% if (loggedUser != null) { %>
-<!-- Bootstrap Bundle JS Dynamic Loader -->
+
 <script>
     (function() {
         function loadBootstrap() {
@@ -89,7 +89,7 @@
     })();
 </script>
 
-<!-- CSS for Notification animations -->
+
 <style>
     @keyframes shake {
         0% { transform: rotate(0deg); }
@@ -135,7 +135,6 @@
         flex-shrink: 0;
     }
 
-    /* Header account identity */
     .profile-identity{display:inline-flex!important;align-items:center;gap:.58rem;min-height:2.65rem;padding:.25rem .55rem!important;border:1px solid transparent;color:var(--slate-700)!important;background:transparent;white-space:nowrap}
     .profile-identity:hover,.profile-identity:focus{border-color:var(--slate-200);background:var(--slate-50)!important;color:var(--slate-900)!important}
     .profile-avatar{width:2.15rem;height:2.15rem;display:inline-flex;flex:0 0 2.15rem;align-items:center;justify-content:center;border:1px solid rgba(37,99,235,.18);border-radius:50%;color:var(--primary);background:var(--primary-soft);font-size:1rem}
@@ -148,7 +147,7 @@
     @media (max-width:767.98px){.profile-identity{width:100%;justify-content:flex-start;padding:.55rem .7rem!important}.profile-name,.profile-role{max-width:calc(100vw - 7rem)}.profile-chevron{margin-left:auto}}
 </style>
 
-<!-- JS for Live Notification Polling -->
+
 <script>
     (function() {
         const headerCtxPath = '<%= request.getContextPath() %>';
@@ -165,13 +164,13 @@
                     const listContainer = document.getElementById('headerNotiList');
                     const bell = document.getElementById('headerBellIcon');
 
-                    // 1. Update Badge
+
                     const unread = data.unreadCount;
                     if (unread > 0) {
                         badge.innerText = unread > 99 ? '99+' : unread;
                         badge.classList.remove('d-none');
                         
-                        // Micro-animation: shake bell if unread count increased
+
                         if (unread > lastUnreadCount) {
                             bell.classList.add('bell-shake');
                             setTimeout(() => {
@@ -183,7 +182,7 @@
                     }
                     lastUnreadCount = unread;
 
-                    // 2. Render List
+
                     const list = data.notifications;
                     if (!list || list.length === 0) {
                         listContainer.innerHTML = `
@@ -219,7 +218,7 @@
                     listContainer.innerHTML = html;
                 })
                 .catch(err => {
-                    // Fail silently or clear interval if user logs out
+
                 });
         }
 
@@ -245,7 +244,7 @@
                 .then(data => {
                     if (data.success) {
                         updateHeaderNotifications();
-                        // If we are on the main notifications page, reload it too
+
                         if (window.location.pathname.endsWith('/notifications')) {
                             location.reload();
                         }
@@ -254,14 +253,13 @@
                 .catch(err => console.error('Error marking all as read:', err));
         };
 
-        // Expose global callback for other pages to trigger updates
+
         window.updateHeaderBadge = updateHeaderNotifications;
 
-        // Poll immediately and then every 15 seconds
+
         updateHeaderNotifications();
         setInterval(updateHeaderNotifications, 15000);
     })();
 </script>
 <% } %>
-
 

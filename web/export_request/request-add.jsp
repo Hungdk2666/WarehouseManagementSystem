@@ -1,4 +1,4 @@
-﻿<%@page import="model.InternalDestination"%>
+<%@page import="model.InternalDestination"%>
 <%@page import="model.Product"%>
 <%@page import="model.Warehouse"%>
 <%@page import="model.Customer"%>
@@ -15,6 +15,30 @@
     List<Product> productList = (List<Product>) request.getAttribute("productList");
     List<Warehouse> warehouseList = (List<Warehouse>) request.getAttribute("warehouseList");
     List<Customer> customerList = (List<Customer>) request.getAttribute("customerList");
+
+    String errorCode = request.getParameter("error");
+    String errorMessage = null;
+    if (errorCode != null) {
+        switch (errorCode) {
+            case "NoReason": errorMessage = "Vui lòng chọn lý do xuất kho."; break;
+            case "InvalidReason": errorMessage = "Lý do xuất kho không hợp lệ."; break;
+            case "InvalidCondition": errorMessage = "Tình trạng xuất không hợp lệ."; break;
+            case "ConditionNotAllowed": errorMessage = "Tình trạng xuất không phù hợp với lý do đã chọn."; break;
+            case "NoWarehouse": errorMessage = "Vui lòng chọn kho xuất."; break;
+            case "WarehouseFrozen": errorMessage = "Kho đang trong quá trình kiểm kê · Phiếu #" + request.getParameter("stk") + ". Không thể tạo yêu cầu xuất lúc này."; break;
+            case "NoTarget": errorMessage = "Vui lòng chọn kho đích khi chuyển kho."; break;
+            case "SameWarehouse": errorMessage = "Kho đích phải khác kho nguồn."; break;
+            case "NoCustomer": errorMessage = "Vui lòng chọn khách hàng."; break;
+            case "NoDestination": errorMessage = "Vui lòng chọn điểm đến nội bộ."; break;
+            case "DestinationPurposeMismatch": errorMessage = "Điểm đến đã chọn không đúng loại cho lý do xuất này — Bảo hành cần chọn Trung tâm bảo hành, Trưng bày cần chọn Showroom."; break;
+            case "NoProducts": errorMessage = "Vui lòng chọn ít nhất 1 sản phẩm."; break;
+            case "NoValidDetails": errorMessage = "Không có sản phẩm hợp lệ nào được chọn."; break;
+            case "InvalidProduct": errorMessage = "Sản phẩm đã chọn không hợp lệ."; break;
+            case "InsufficientStock": errorMessage = "Không đủ tồn kho khả dụng cho sản phẩm #" + request.getParameter("productId") + "."; break;
+            case "Failed": errorMessage = "Tạo yêu cầu xuất kho thất bại. Vui lòng thử lại."; break;
+            default: errorMessage = "Có lỗi xảy ra, vui lòng thử lại.";
+        }
+    }
 %>
 <!DOCTYPE html>
 <html>
@@ -28,6 +52,14 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <style>
+        .request-builder-card { border: 0; border-radius: 1rem; box-shadow: 0 12px 34px rgba(15, 23, 42, .08); }
+        .request-builder-card .card-header { border-radius: 1rem 1rem 0 0; }
+        .flow-guidance { background: linear-gradient(135deg, rgba(13,110,253,.08), rgba(13,202,240,.06)); border: 1px solid rgba(13,110,253,.16); }
+        .flow-guidance .condition-dot { width: .65rem; height: .65rem; border-radius: 50%; display: inline-block; }
+        .section-heading { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: #64748b; }
+        @media (max-width: 767.98px) { .container-fluid { padding-left: 1rem !important; padding-right: 1rem !important; } }
+    </style>
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -46,37 +78,36 @@
                     </a>
                 </div>
                 <div class="row justify-content-center">
-                    <div class="col-md-11">
+                    <div class="col-12">
                         <form action="<%= request.getContextPath() %>/warehouse/export-request?action=add" method="POST" id="requestForm">
-                            <div class="card bg-white" style="overflow: visible;">
+                            <div class="card bg-white request-builder-card" style="overflow: visible;">
                                 <div class="card-header bg-white py-3">
                                     <span class="fw-bold text-slate-800"><i class="bi bi-plus-circle-fill me-2 text-primary"></i>Thông tin Yêu cầu xuất kho</span>
                                 </div>
                                 <div class="card-body p-4">
-                                    <% if (request.getAttribute("error") != null) { %>
+                                    <% if (errorMessage != null) { %>
                                     <div class="alert alert-danger rounded-3 mb-3 d-flex align-items-center">
                                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                        <%= request.getAttribute("error") %>
+                                        <%= errorMessage %>
                                     </div>
                                     <% } %>
 
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
+                                    <div class="row g-3 mb-4">
+                                        <div class="col-xl-3 col-md-6">
                                             <label for="reasonSelect" class="form-label fw-semibold text-muted small mb-1">Lý do xuất kho <span class="text-danger">*</span></label>
                                             <select class="form-select shadow-sm rounded-3" id="reasonSelect" name="export_reason" required>
                                                 <option value=""></option>
-                                                <option value="TRANSFER">TRANSFER — Chuyển kho nội bộ</option>
-                                                <option value="CUSTOMER_SALE">CUSTOMER_SALE — Xuất bán cho khách hàng</option>
-                                                <option value="DISPLAY">DISPLAY — Hàng trưng bày</option>
-                                                <option value="WARRANTY">WARRANTY — Bảo hành / sửa chữa</option>
-                                                <option value="OTHER">OTHER — Lý do khác</option>
+                                                <option value="TRANSFER">Chuyển kho nội bộ</option>
+                                                <option value="CUSTOMER_SALE">Xuất bán cho khách hàng</option>
+                                                <option value="DISPLAY">Hàng trưng bày</option>
+                                                <option value="WARRANTY">Bảo hành / sửa chữa</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-xl-3 col-md-6">
                                             <label for="expectedDate" class="form-label fw-semibold text-muted small mb-1">Ngày xuất kho dự kiến <span class="text-danger">*</span></label>
                                             <input type="date" class="form-control shadow-sm rounded-3" id="expectedDate" name="expected_date" required>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-xl-3 col-md-6">
                                             <label for="sourceWarehouseSelect" class="form-label fw-semibold text-muted small mb-1">Kho nguồn <span class="text-danger">*</span></label>
                                             <select class="form-select shadow-sm rounded-3" id="sourceWarehouseSelect" name="source_warehouse_id" required>
                                                 <option value=""></option>
@@ -85,18 +116,24 @@
                                                 <% } } %>
                                             </select>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-xl-3 col-md-6">
                                             <label for="conditionSelect" class="form-label fw-semibold text-muted small mb-1">Tình trạng xuất <span class="text-danger">*</span></label>
                                             <select class="form-select shadow-sm rounded-3" id="conditionSelect" name="requested_condition" required>
                                                 <option value="NEW" selected>Hàng mới</option>
-                                                <option value="USED">Đã qua sử dụng</option>
+                                                <option value="USED">Hàng cũ</option>
                                                 <option value="DAMAGED">Hàng hỏng</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    <!-- Conditional destination fields -->
-                                    <!-- TRANSFER: target warehouse -->
+                                    <div class="flow-guidance rounded-3 px-3 py-2 mb-4 d-flex flex-wrap align-items-center gap-3 small">
+                                        <span class="fw-semibold text-primary"><i class="bi bi-shield-check me-1"></i>Quy tắc xuất:</span>
+                                        <span><i class="condition-dot bg-success me-1"></i>Hàng mới / hàng cũ: bán, trưng bày hoặc chuyển kho</span>
+                                        <span><i class="condition-dot bg-danger me-1"></i>Hàng hỏng: bảo hành hoặc chuyển kho</span>
+                                    </div>
+
+                                    
+                                    
                                     <div id="transferFields" class="row mb-3 d-none">
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold text-muted small mb-1">Kho đích <span class="text-danger">*</span></label>
@@ -109,31 +146,37 @@
                                         </div>
                                     </div>
 
-                                    <!-- CUSTOMER_SALE: customer + shipping address -->
+                                    
                                     <div id="customerSaleFields" class="row mb-3 d-none">
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold text-muted small mb-1">Khách hàng <span class="text-danger">*</span></label>
                                             <select class="form-select shadow-sm rounded-3" id="customerSelect" name="customer_id">
                                                 <option value=""></option>
                                                 <% if (customerList != null) { for (Customer cu : customerList) { %>
-                                                <option value="<%= cu.getId() %>"><%= cu.getCustomerName() %><%= cu.getPhone() != null ? " (" + cu.getPhone() + ")" : "" %></option>
+                                                <option value="<%= cu.getId() %>"><%= cu.getCustomerName() %><%= cu.getPhone() != null ? " — " + cu.getPhone() : "" %></option>
                                                 <% } } %>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold text-muted small mb-1">Địa chỉ giao hàng</label>
-                                            <input type="text" class="form-control shadow-sm rounded-3" name="shipping_address" placeholder="Địa chỉ giao hàng (nếu khác địa chỉ khách hàng)">
+                                            <input type="text" class="form-control shadow-sm rounded-3" name="shipping_address" placeholder="Nhập khi địa chỉ giao hàng khác địa chỉ khách hàng">
                                         </div>
                                     </div>
 
-                                    <!-- DISPLAY/WARRANTY/OTHER: internal destination -->
+                                    
                                     <div id="destinationFields" class="row mb-3 d-none">
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold text-muted small mb-1">Điểm đến nội bộ</label>
                                             <select class="form-select shadow-sm rounded-3" id="destinationSelect" name="destination_id">
                                                 <option value=""></option>
                                                 <% if (destinationList != null) { for (InternalDestination d : destinationList) { if (d.isStatus()) { %>
-                                                <option value="<%= d.getId() %>"><%= d.getDestinationName() %> (<%= d.getDestinationType() %>)</option>
+                                                <%
+                                                    String dt = d.getDestinationType();
+                                                    String dtLabel = "SHOWROOM".equals(dt) ? "Showroom"
+                                                            : "WARRANTY_CENTER".equals(dt) ? "Trung tâm bảo hành"
+                                                            : "OTHER".equals(dt) ? "Khác" : dt;
+                                                %>
+                                                <option value="<%= d.getId() %>" data-type="<%= dt %>"><%= d.getDestinationName() %> — <%= dtLabel %></option>
                                                 <% } } } %>
                                             </select>
                                         </div>
@@ -141,8 +184,9 @@
 
                                     <hr class="my-4 text-muted opacity-25">
 
-                                    <!-- Products -->
-                                    <h5 class="fw-bold text-slate-800 mb-3"><i class="bi bi-box-seam me-2 text-primary"></i>Chọn Sản Phẩm</h5>
+                                    
+                                    <div class="section-heading fw-bold mb-2">Danh sách hàng xuất</div>
+                                    <h5 class="fw-bold text-slate-800 mb-3"><i class="bi bi-box-seam me-2 text-primary"></i>Chọn sản phẩm theo tồn khả dụng</h5>
                                     <div class="row g-2 align-items-center mb-4">
                                         <div class="col-md-8">
                                             <select class="form-select shadow-sm rounded-3" id="productSelect">
@@ -153,7 +197,7 @@
                                                     data-unit="<%= p.getUnit() %>"
                                                     data-qty="<%= p.getPhysicalQty() %>"
                                                     data-avail="<%= p.getAvailableQty() %>">
-                                                    <%= p.getProductName() %> (SKU: <%= p.getSku() %>) [Khả dụng: <%= p.getAvailableQty() %>]
+                                                    <%= p.getProductName() %> — <%= p.getSku() %> · Khả dụng <%= p.getAvailableQty() %>
                                                 </option>
                                                 <% } } } %>
                                             </select>
@@ -166,7 +210,15 @@
                                     </div>
 
                                     <div class="table-responsive border rounded-3 mb-3">
-                                        <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.9rem;">
+                                        <table class="table table-hover align-middle mb-0 text-center editable-table" style="font-size: 0.9rem; min-width: 800px;">
+                                            <colgroup>
+                                                <col style="width:40%">
+                                                <col style="width:15%">
+                                                <col style="width:10%">
+                                                <col style="width:15%">
+                                                <col style="width:15%">
+                                                <col style="width:5%">
+                                            </colgroup>
                                             <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;">
                                                 <tr>
                                                     <th class="text-start ps-4" style="width: 40%;">Sản phẩm</th>
@@ -202,8 +254,9 @@
     <script>
         const addedProducts = new Set();
         let tsReason, tsProduct, tsTargetWarehouse, tsSourceWarehouse, tsCustomer, tsDestination, tsCondition;
+        let allTargetWarehouseOptions = [];
 
-        // Build warehouse -> product -> available quantity mapping from request attributes
+
         const warehouseStockNew = {
             <% 
             java.util.Map<Integer, java.util.Map<Integer, Integer>> stockMapNew = 
@@ -241,8 +294,8 @@
         };
 
         const warehouseStockDamaged = {
-            <% 
-            java.util.Map<Integer, java.util.Map<Integer, Integer>> stockMapDamaged = 
+            <%
+            java.util.Map<Integer, java.util.Map<Integer, Integer>> stockMapDamaged =
                 (java.util.Map<Integer, java.util.Map<Integer, Integer>>) request.getAttribute("warehouseProductStockDamaged");
             if (stockMapDamaged != null) {
                 for (java.util.Map.Entry<Integer, java.util.Map<Integer, Integer>> entry : stockMapDamaged.entrySet()) {
@@ -252,17 +305,15 @@
                         <%= pEntry.getKey() %>: <%= pEntry.getValue() %>,
                     <% } %>
                 },
-            <% 
+            <%
                 }
             }
             %>
         };
-
         function getActiveStockMap() {
             const cond = document.getElementById("conditionSelect").value;
-            if (cond === "USED") return warehouseStockUsed;
             if (cond === "DAMAGED") return warehouseStockDamaged;
-            return warehouseStockNew;
+            return cond === "USED" ? warehouseStockUsed : warehouseStockNew;
         }
 
         document.addEventListener("DOMContentLoaded", function () {
@@ -270,17 +321,29 @@
 
             tsReason = new TomSelect("#reasonSelect", { create: false, placeholder: "-- Chọn lý do --" });
             tsProduct = new TomSelect("#productSelect", { create: false, placeholder: "-- Chọn sản phẩm --" });
+            allTargetWarehouseOptions = Array.from(document.querySelectorAll("#targetWarehouseSelect option"))
+                .filter(o => o.value !== "")
+                .map(o => ({ value: o.value, text: o.textContent }));
             tsTargetWarehouse = new TomSelect("#targetWarehouseSelect", { create: false, placeholder: "-- Chọn kho đích --" });
             tsSourceWarehouse = new TomSelect("#sourceWarehouseSelect", { create: false, placeholder: "-- Chọn kho nguồn --" });
             tsCustomer = new TomSelect("#customerSelect", { create: false, placeholder: "-- Chọn khách hàng --" });
+
+            allDestinationOptions = Array.from(document.querySelectorAll("#destinationSelect option"))
+                .filter(o => o.value !== "")
+                .map(o => ({ value: o.value, text: o.textContent, type: o.dataset.type }));
             tsDestination = new TomSelect("#destinationSelect", { create: false, placeholder: "-- Chọn điểm đến --" });
             tsCondition = new TomSelect("#conditionSelect", { create: false, controlInput: null });
 
             document.getElementById("reasonSelect").addEventListener("change", onReasonChange);
-            document.getElementById("sourceWarehouseSelect").addEventListener("change", toggleProductSelector);
+            document.getElementById("sourceWarehouseSelect").addEventListener("change", function() {
+                configureTargetWarehouseOptions();
+                toggleProductSelector();
+            });
             document.getElementById("conditionSelect").addEventListener("change", toggleProductSelector);
 
-            // Initialize selector state on load
+
+            onReasonChange();
+            configureTargetWarehouseOptions();
             toggleProductSelector();
         });
 
@@ -297,7 +360,7 @@
         expectedDateInput.setAttribute('min', localToday);
 
         function validateDateInput(input) {
-            // Chỉ validate khi đã nhập đủ ngày tháng năm (10 ký tự YYYY-MM-DD)
+
             if (input.value && input.value.length === 10 && input.value < localToday) {
                 input.classList.add("is-invalid");
                 let errEl = document.getElementById("expectedDateError");
@@ -320,11 +383,11 @@
             }
         }
 
-        // Chỉ validate khi người dùng đã chọn xong (change = nhấp xong calendar picker)
+
         expectedDateInput.addEventListener("change", function() {
             validateDateInput(this);
         });
-        // Với input tay: chỉ validate khi đã nhập đủ 10 ký tự
+
         expectedDateInput.addEventListener("input", function() {
             if (this.value.length === 10) validateDateInput(this);
         });
@@ -337,6 +400,7 @@
 
             document.getElementById("targetWarehouseSelect").removeAttribute("required");
             document.getElementById("customerSelect").removeAttribute("required");
+            document.getElementById("destinationSelect").removeAttribute("required");
 
             if (reason === "TRANSFER") {
                 document.getElementById("transferFields").classList.remove("d-none");
@@ -344,9 +408,84 @@
             } else if (reason === "CUSTOMER_SALE") {
                 document.getElementById("customerSaleFields").classList.remove("d-none");
                 document.getElementById("customerSelect").setAttribute("required", "required");
-            } else if (reason === "DISPLAY" || reason === "WARRANTY" || reason === "OTHER") {
+            } else if (reason === "DISPLAY" || reason === "WARRANTY") {
                 document.getElementById("destinationFields").classList.remove("d-none");
+                document.getElementById("destinationSelect").setAttribute("required", "required");
             }
+
+            configureConditionOptions(reason);
+            configureDestinationOptions(reason);
+            configureTargetWarehouseOptions();
+        }
+
+
+        function configureTargetWarehouseOptions() {
+            if (!tsTargetWarehouse) return;
+
+            const sourceWarehouseId = document.getElementById("sourceWarehouseSelect").value;
+            const currentTargetId = tsTargetWarehouse.getValue();
+            const filtered = allTargetWarehouseOptions.filter(item => item.value !== sourceWarehouseId);
+
+            tsTargetWarehouse.clear(true);
+            tsTargetWarehouse.clearOptions();
+            filtered.forEach(item => tsTargetWarehouse.addOption(item));
+            tsTargetWarehouse.refreshOptions(false);
+
+            if (currentTargetId && currentTargetId !== sourceWarehouseId
+                    && filtered.some(item => item.value === currentTargetId)) {
+                tsTargetWarehouse.setValue(currentTargetId, true);
+            }
+        }
+
+
+
+        let allDestinationOptions = [];
+
+        function configureDestinationOptions(reason) {
+            let requiredType = null;
+            if (reason === "WARRANTY") requiredType = "WARRANTY_CENTER";
+            else if (reason === "DISPLAY") requiredType = "SHOWROOM";
+
+            const filtered = requiredType == null
+                ? allDestinationOptions
+                : allDestinationOptions.filter(item => item.type === requiredType);
+
+            if (tsDestination) {
+                const current = tsDestination.getValue();
+                tsDestination.clear(true);
+                tsDestination.clearOptions();
+                filtered.forEach(item => tsDestination.addOption({ value: item.value, text: item.text }));
+                tsDestination.refreshOptions(false);
+                if (filtered.some(item => item.value === current)) tsDestination.setValue(current, true);
+            }
+        }
+
+        const allConditionOptions = [
+            { value: "NEW", text: "Hàng mới" },
+            { value: "USED", text: "Hàng cũ" },
+            { value: "DAMAGED", text: "Hàng hỏng" }
+        ];
+
+        function configureConditionOptions(reason) {
+            let allowed = ["NEW", "USED", "DAMAGED"];
+            if (reason === "WARRANTY") allowed = ["DAMAGED"];
+            if (reason === "DISPLAY") allowed = ["NEW", "USED"];
+
+            const current = document.getElementById("conditionSelect").value;
+            const selected = allowed.includes(current) ? current : allowed[0];
+            if (tsCondition) {
+                tsCondition.clear(true);
+                tsCondition.clearOptions();
+                allConditionOptions.filter(item => allowed.includes(item.value)).forEach(item => tsCondition.addOption(item));
+                tsCondition.refreshOptions(false);
+                tsCondition.setValue(selected, true);
+            } else {
+                Array.from(document.getElementById("conditionSelect").options).forEach(opt => {
+                    opt.disabled = !allowed.includes(opt.value);
+                });
+                document.getElementById("conditionSelect").value = selected;
+            }
+            toggleProductSelector();
         }
 
         function updateProductOptions(warehouseId) {
@@ -362,9 +501,9 @@
                     : 0;
 
                 opt.dataset.avail = avail;
-                const productName = opt.text.split(" (SKU:")[0];
+                const productName = opt.text.split(" — ")[0];
                 const sku = opt.dataset.sku;
-                opt.text = productName + " (SKU: " + sku + ") [Khả dụng: " + avail + "]";
+                opt.text = productName + " — " + sku + " · Khả dụng " + avail;
             }
 
             if (tsProduct) {
@@ -448,7 +587,7 @@
             if (addedProducts.has(productId)) { alert("Sản phẩm này đã được thêm vào danh sách."); return; }
 
             const opt = productSelect.querySelector('option[value="' + productId + '"]');
-            const productName = opt.text.split(" (SKU:")[0];
+            const productName = opt.text.split(" — ")[0];
             const sku = opt.dataset.sku;
             const unit = opt.dataset.unit;
             const availableStock = opt.dataset.avail;
@@ -471,7 +610,7 @@
             document.getElementById("itemsBody").appendChild(tr);
             addedProducts.add(productId);
             
-            // Highlight row if available stock is 0
+
             if (parseInt(availableStock) === 0) {
                 tr.classList.add("table-danger");
             }

@@ -28,6 +28,11 @@
     <meta charset="UTF-8">
     <title>Tồn kho - WMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Warning column only shows low-stock alerts, not operational item states. */
+        #inventoryTable .status-chip.chip-danger,
+        #inventoryTable .status-chip.chip-info{display:none!important}
+    </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=inventory-layout-20260714">
 </head>
@@ -125,14 +130,14 @@
                 </div>
 
                 
-                <div class="card border-0 shadow-sm">
+                <div class="card border-0 shadow-sm inventory-matrix-card">
                     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                         <div><h5 class="mb-1 fw-bold">Ma trận tồn kho</h5><div class="small text-muted">Tổng hàng = hàng mới + hàng cũ + hàng hỏng</div></div>
                         <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-grid-3x3-gap me-1"></i>Theo tình trạng</span>
                     </div>
                     <div class="card-body p-0 table-responsive">
                     <% if (isGroupedView) { %>
-                        <table id="inventoryTable" class="table table-hover mb-0 align-middle inventory-table" style="min-width:1120px">
+                        <table id="inventoryTable" class="table table-hover mb-0 align-middle inventory-table inventory-table-grouped" style="min-width:1120px">
                             <thead class="table-light">
                                 <tr>
                                     <th>Sản phẩm</th>
@@ -199,7 +204,7 @@
                             </tbody>
                         </table>
                     <% } else { %>
-                        <table id="inventoryTable" class="table table-hover mb-0 align-middle" style="min-width:1180px">
+                        <table id="inventoryTable" class="table table-hover mb-0 align-middle inventory-table inventory-table-flat" style="min-width:1180px">
                             <thead class="table-light">
                                 <tr>
                                     <th>Sản phẩm</th><th>SKU</th><th>Kho</th>

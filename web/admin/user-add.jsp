@@ -14,14 +14,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Thêm người dùng mới</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -38,7 +38,7 @@
                             </div>
                             <div class="card-body p-4">
                                 <div class="alert alert-info border-0 bg-info bg-opacity-10 text-dark py-2.5 px-3 rounded-3 small mb-4">
-                                    <i class="bi bi-info-circle-fill me-1"></i> Mật khẩu mặc định cho người dùng mới là <strong>123456</strong> (sẽ được tự động băm).
+                                    <i class="bi bi-info-circle-fill me-1"></i> Mật khẩu mặc định cho người dùng mới là <strong>123456</strong>. Hệ thống sẽ tự động mã hóa mật khẩu.
                                 </div>
                                 <form action="user?action=add" method="POST">
                                     <div class="mb-3">

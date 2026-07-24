@@ -15,14 +15,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Quản lý người dùng - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -45,7 +45,7 @@
                     </div>
                 </div>
 
-                <!-- Server-Side Search and Filter Panel -->
+                
                 <div class="card mb-3">
                     <div class="card-body">
                         <form action="user" method="GET" class="row g-2">
@@ -83,7 +83,7 @@
                 <div class="card mb-4">
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table id="userTable" class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="ps-4">ID</th>
@@ -156,6 +156,10 @@
                             </table>
                         </div>
                     </div>
+                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
+                        <div class="d-flex align-items-center gap-2"><label class="text-muted small mb-0">Hiển thị</label><select id="userEntriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width:80px;border-radius:8px"><option value="10" selected>10</option><option value="25">25</option><option value="100">100</option></select><span class="text-muted small">dòng</span></div>
+                        <div id="userPagination" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto"></div>
+                    </div>
                 </div>
                 <div class="mt-4">
                     <a href="<%= request.getContextPath() %>/index.jsp" class="btn btn-outline-secondary">
@@ -165,5 +169,7 @@
             </div>
         </div>
     </div>
+    <script src="<%= request.getContextPath() %>/js/table-pagination.js"></script>
+    <script>initSimpleTablePagination("userTable", "userPagination", "userEntriesPerPage");</script>
 </body>
 </html>

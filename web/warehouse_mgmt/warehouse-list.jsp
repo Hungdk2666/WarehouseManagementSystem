@@ -53,7 +53,7 @@
                 <div class="card mb-4">
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                            <table id="warehouseTable" class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="text-center">#</th>
@@ -133,11 +133,17 @@
                             </table>
                         </div>
                     </div>
+                    <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
+                        <div class="d-flex align-items-center gap-2"><label class="text-muted small mb-0">Hiển thị</label><select id="warehouseEntriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width:80px;border-radius:8px"><option value="10" selected>10</option><option value="25">25</option><option value="100">100</option></select><span class="text-muted small">dòng</span></div>
+                        <div id="warehousePagination" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto"></div>
+                    </div>
                 </div>
 
             </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<%= request.getContextPath() %>/js/table-pagination.js"></script>
+    <script>initSimpleTablePagination("warehouseTable", "warehousePagination", "warehouseEntriesPerPage");</script>
 </body>
 </html>

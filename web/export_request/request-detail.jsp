@@ -1,4 +1,4 @@
-﻿<%@page import="model.Request"%>
+<%@page import="model.Request"%>
 <%@page import="model.RequestDetail"%>
 <%@page import="model.Ticket"%>
 <%@page import="java.util.List"%>
@@ -32,39 +32,62 @@
         }
     }
     boolean canRequestCancelAction = totalIssuedQty < totalReqQty;
+
+    int deliveringLots = 0, returningLots = 0, receivedLots = 0, returnedLots = 0;
+    if (ticketList != null && "TRANSFER".equals(req.getReason())) {
+        for (Ticket t : ticketList) {
+            if ("IN_TRANSIT".equals(t.getStatus())) {
+                if (t.isTransferReturning() || t.isPartiallyReturned()) returningLots++;
+                else deliveringLots++;
+            } else if ("COMPLETED".equals(t.getStatus())) {
+                if (t.isFullyReturned()) returnedLots++;
+                else receivedLots++;
+            }
+        }
+    }
 %>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>Chi tiết yêu cầu xuất kho - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=detail-grid-20260714">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
     <div class="container-fluid mt-4 px-4 animated-fade-in">
         <div class="row">
-            <!-- Left Sidebar -->
+            
             <jsp:include page="/includes/sidebar.jsp" />
 
-            <!-- Main Content -->
+            
             <div class="col-md-9 col-lg-10">
-                <!-- Back Button -->
+                
                 <div class="mb-3">
                     <a href="export-request?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1.5 px-3 py-2 rounded-3">
                         <i class="bi bi-arrow-left"></i> Quay lại danh sách
                     </a>
                 </div>
 
-                <% if (req.getCancelRequestedAt() != null && "APPROVED".equals(req.getStatus())) { %>
+                <% if ("CancelApprovalFailed".equals(request.getParameter("error"))) { %>
+                <div class="alert alert-danger border-0 mb-4">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>Không thể duyệt hủy ở trạng thái hiện tại. Không có thay đổi nào được ghi nhận.
+                </div>
+                <% } else if ("CancelApproved".equals(request.getParameter("success"))) { %>
+                <div class="alert alert-success border-0 mb-4">
+                    <i class="bi bi-check-circle-fill me-2"></i>Đã duyệt yêu cầu hủy và cập nhật các lô liên quan.
+                </div>
+                <% } %>
+
+                <% if (req.getCancelRequestedAt() != null && ("APPROVED".equals(req.getStatus()) || "PARTIALLY_COMPLETED".equals(req.getStatus()))) { %>
                 <div class="alert alert-warning border-0 d-flex align-items-center gap-3 p-3 mb-4" role="alert">
                     <i class="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
                     <div>
@@ -77,22 +100,35 @@
                 </div>
                 <% } %>
                 
-                <% if ("CANCELLED".equals(req.getStatus())) { %>
+                <% if ("CANCELLED".equals(req.getStatus()) || "REVOKED".equals(req.getStatus())
+                        || "PARTIALLY_CLOSED_IN_TRANSIT".equals(req.getStatus()) || "PARTIALLY_CLOSED".equals(req.getStatus()) || "RETURNING".equals(req.getStatus())
+                        || "RETURNED".equals(req.getStatus())) { %>
                 <div class="alert alert-secondary border-0 d-flex align-items-center gap-3 p-3 mb-4" role="alert">
                     <i class="bi bi-x-circle-fill fs-3 text-secondary"></i>
                     <div>
-                        <h6 class="alert-heading fw-bold mb-1">Yêu cầu xuất kho đã bị đóng/hủy</h6>
+                        <h6 class="alert-heading fw-bold mb-1"><%=
+                            "REVOKED".equals(req.getStatus()) ? "Yêu cầu xuất kho đã được thu hồi" :
+                            "PARTIALLY_CLOSED_IN_TRANSIT".equals(req.getStatus()) ? "Phần chưa xuất đã đóng; các lô đã xuất vẫn đang giao" :
+                            "PARTIALLY_CLOSED".equals(req.getStatus()) ? "Yêu cầu đã hoàn tất một phần" :
+                            "RETURNING".equals(req.getStatus()) ? "Tất cả lô còn mở đang hoàn trả" :
+                            "RETURNED".equals(req.getStatus()) ? "Hàng đã hoàn trả" :
+                            "Yêu cầu xuất kho đã bị hủy"
+                        %></h6>
                         <p class="mb-0 small text-dark">
                             <% if (req.getCancelReason() != null) { %>
                             <strong>Lý do hủy:</strong> <%= req.getCancelReason() %><br/>
                             <% } %>
+                            <% if (req.getCancelledAt() != null) { %>
                             <strong>Thực hiện bởi:</strong> <%= req.getCancelledByFullName() != null ? req.getCancelledByFullName() : "Hệ thống" %> lúc <%= req.getCancelledAt() %>
+                            <% } else { %>
+                            Trạng thái này được tổng hợp từ kết quả giao nhận và hoàn trả của các phiếu xuất liên kết.
+                            <% } %>
                         </p>
                     </div>
                 </div>
                 <% } %>
 
-                <!-- Header Info -->
+                
                 <div class="card mb-4">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <span class="fw-bold text-slate-800"><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin Yêu cầu xuất kho</span>
@@ -108,17 +144,35 @@
                                     displayStatus = "Chờ hủy";
                                 } else {
                                     statusBadge = "chip-success";
-                                    displayStatus = "Đã duyệt";
+                                    displayStatus = "Đã xác nhận";
                                 }
                             } else if ("PARTIALLY_COMPLETED".equals(req.getStatus())) {
                                 statusBadge = "chip-info";
-                                displayStatus = "Đang xuất dở";
+                                displayStatus = req.getCancelRequestedAt() != null ? "Chờ đóng phần còn lại" : "Đang xuất dở";
+                            } else if ("PARTIALLY_CLOSED_IN_TRANSIT".equals(req.getStatus())) {
+                                statusBadge = "chip-info";
+                                displayStatus = "Đã đóng · Đang giao";
+                            } else if ("IN_TRANSIT".equals(req.getStatus())) {
+                                statusBadge = "chip-info";
+                                displayStatus = "Đang giao";
+                            } else if ("PARTIALLY_CLOSED".equals(req.getStatus())) {
+                                statusBadge = "chip-muted";
+                                displayStatus = "Hoàn tất 1 phần";
+                            } else if ("RETURNING".equals(req.getStatus())) {
+                                statusBadge = "chip-warning";
+                                displayStatus = "Đang hoàn trả";
+                            } else if ("RETURNED".equals(req.getStatus())) {
+                                statusBadge = "chip-primary";
+                                displayStatus = "Đã hoàn trả";
+                            } else if ("REVOKED".equals(req.getStatus())) {
+                                statusBadge = "chip-muted";
+                                displayStatus = "Đã thu hồi";
                             } else if ("REJECTED".equals(req.getStatus())) {
                                 statusBadge = "chip-danger";
                                 displayStatus = "Từ chối";
                             } else if ("COMPLETED".equals(req.getStatus())) {
                                 statusBadge = "chip-primary";
-                                displayStatus = "Hoàn thành";
+                                displayStatus = "Hoàn tất";
                             } else if ("CANCELLED".equals(req.getStatus())) {
                                 statusBadge = "chip-muted";
                                 displayStatus = "Đã hủy";
@@ -153,7 +207,7 @@
                                     <div class="detail-label">Kho nguồn</div>
                                     <div class="detail-value"><%= req.getWarehouseName() != null ? req.getWarehouseName() : "-" %></div>
                                 </div>
-                                <%-- Polymorphic destination: show the right one based on reason --%>
+                                
                                 <div class="detail-item">
                                     <% if ("TRANSFER".equals(req.getReason())) { %>
                                     <div class="detail-label">Kho đích</div>
@@ -172,11 +226,7 @@
                                     <div class="detail-label">Tình trạng xuất</div>
                                     <div class="detail-value">
                                         <span class="badge bg-light text-dark border">
-                                            <%
-                                                if ("DAMAGED".equals(req.getRequestedCondition())) out.print("Hàng hỏng (DAMAGED)");
-                                                else if ("USED".equals(req.getRequestedCondition())) out.print("Hàng Cũ (USED)");
-                                                else out.print("Hàng Mới (NEW)");
-                                            %>
+                                            <%= "DAMAGED".equals(req.getRequestedCondition()) ? "Hàng hỏng" : ("USED".equals(req.getRequestedCondition()) ? "Hàng cũ" : "Hàng mới") %>
                                         </span>
                                     </div>
                                 </div>
@@ -203,7 +253,9 @@
                                     <div class="detail-value"><%= req.getApprovedAt() != null ? req.getApprovedAt() : "-" %></div>
                                 </div>
 
-                                <% if ("CANCELLED".equals(req.getStatus())) { %>
+                                <% if (req.getCancelledAt() != null && ("CANCELLED".equals(req.getStatus()) || "REVOKED".equals(req.getStatus())
+                                        || "PARTIALLY_CLOSED_IN_TRANSIT".equals(req.getStatus()) || "PARTIALLY_CLOSED".equals(req.getStatus()) || "RETURNING".equals(req.getStatus())
+                                        || "RETURNED".equals(req.getStatus()))) { %>
                                 <div class="detail-item">
                                     <div class="detail-label">Người hủy / đóng</div>
                                     <div class="detail-value"><%= req.getCancelledByFullName() != null ? req.getCancelledByFullName() : "Hệ thống" %></div>
@@ -221,7 +273,7 @@
                                 <% } %>
                         </div>
 
-                        <!-- Action Buttons -->
+                        
                         <%
                             boolean hasActions = false;
                             if ("PENDING".equals(req.getStatus()) && (canApprove || (canCancel && req.getStaffId() == loggedInUser.getId()))) {
@@ -278,7 +330,7 @@
                                     </form>
                                     <form action="export-request?action=approveCancel" method="POST" class="d-inline m-0">
                                         <input type="hidden" name="id" value="<%= req.getId() %>">
-                                        <button type="submit" class="btn btn-danger px-4 py-2"><i class="bi bi-check-circle-fill me-1"></i> Duyệt hủy & Đóng yêu cầu</button>
+                                        <button type="submit" class="btn btn-danger px-4 py-2"><i class="bi bi-check-circle-fill me-1"></i> <%= "PARTIALLY_COMPLETED".equals(req.getStatus()) ? "Duyệt đóng phần còn lại" : "Duyệt hủy & Đóng yêu cầu" %></button>
                                     </form>
                                     <% } %>
                                 <% } %>
@@ -288,7 +340,7 @@
                     </div>
                 </div>
 
-                <!-- Products Table -->
+                
                 <div class="card mb-4 bg-white">
                     <div class="card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-list-check me-2 text-primary"></i>Danh sách sản phẩm & Tiến độ xuất kho</h5>
@@ -349,11 +401,27 @@
                     </div>
                 </div>
 
-                <!-- Linked Export Tickets (GINs) -->
+                
                 <div class="card bg-white">
                     <div class="card-header bg-white py-3">
-                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-arrow-up-right me-2 text-primary"></i>Phiếu xuất kho liên kết (<%= ticketList != null ? ticketList.size() : 0 %>)</h5>
+                        <h5 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-arrow-up-right me-2 text-primary"></i>Phiếu xuất kho liên kết · <%= ticketList != null ? ticketList.size() : 0 %></h5>
                     </div>
+                    <% if ("TRANSFER".equals(req.getReason()) && ticketList != null && !ticketList.isEmpty()) { %>
+                    <div class="card-body py-3 border-bottom">
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <span class="small fw-semibold text-muted me-1">Tiến độ theo từng lô:</span>
+                            <span class="status-chip chip-info">Đang giao: <%= deliveringLots %></span>
+                            <span class="status-chip chip-warning">Đang hoàn trả: <%= returningLots %></span>
+                            <span class="status-chip chip-success">Đã nhận: <%= receivedLots %></span>
+                            <span class="status-chip chip-primary">Đã hoàn trả: <%= returnedLots %></span>
+                        </div>
+                        <% if (deliveringLots > 0 && returningLots > 0) { %>
+                        <div class="small text-muted mt-2">
+                            Yêu cầu vẫn được xem là đang vận chuyển vì còn lô đang giao bình thường; trạng thái hoàn trả được theo dõi riêng ở từng phiếu.
+                        </div>
+                        <% } %>
+                    </div>
+                    <% } %>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table align-middle mb-0 text-center" style="font-size: 0.9rem;">
@@ -380,6 +448,20 @@
                                                 } else if ("CONFIRMED".equals(t.getStatus())) {
                                                     tStatusBadge = "chip-success";
                                                     displayTStatus = "Đã xác nhận";
+                                                } else if ("IN_TRANSIT".equals(t.getStatus())) {
+                                                    if (t.isPartiallyReturned()) {
+                                                        tStatusBadge = "chip-warning";
+                                                        displayTStatus = "Đang hoàn trả";
+                                                    } else if (t.isTransferReturning()) {
+                                                        tStatusBadge = "chip-warning";
+                                                        displayTStatus = "Đang hoàn trả";
+                                                    } else {
+                                                        tStatusBadge = "chip-info";
+                                                        displayTStatus = "Đang giao";
+                                                    }
+                                                } else if ("COMPLETED".equals(t.getStatus())) {
+                                                    tStatusBadge = "chip-success";
+                                                    displayTStatus = t.isFullyReturned() ? "Đã hoàn trả" : "Đã nhận";
                                                 } else if ("CANCELLED".equals(t.getStatus())) {
                                                     tStatusBadge = "chip-danger";
                                                     displayTStatus = "Đã hủy";
@@ -395,8 +477,8 @@
                                         <td><%= t.getConfirmedBy() != null ? t.getConfirmedByFullName() : "-" %></td>
                                         <td class="small text-muted"><%= t.getConfirmedAt() != null ? t.getConfirmedAt() : "-" %></td>
                                         <td>
-                                            <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-sm btn-outline-primary py-0.5 px-2">
-                                                <i class="bi bi-eye"></i> Xem phiếu xuất
+                                            <a href="<%= request.getContextPath() %>/warehouse/export-ticket?action=detail&id=<%= t.getId() %>" class="btn btn-table btn-outline-primary" title="Xem chi tiết phiếu xuất" aria-label="Xem chi tiết phiếu xuất">
+                                                <i class="bi bi-eye" aria-hidden="true"></i>
                                             </a>
                                         </td>
                                     </tr>
@@ -417,7 +499,7 @@
             </div>
         </div>
     </div>
-    <!-- Request Cancellation Modal -->
+    
     <div class="modal fade" id="requestCancelModal" tabindex="-1" aria-labelledby="requestCancelModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -430,7 +512,7 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="cancelReason" class="form-label small fw-semibold text-muted">Lý do hủy yêu cầu xuất kho</label>
-                            <textarea class="form-control" id="cancelReason" name="reason" rows="4" required placeholder="Nhập lý do chi tiết để Business Admin duyệt..."></textarea>
+                            <textarea class="form-control" id="cancelReason" name="reason" rows="4" required placeholder="Nhập lý do chi tiết để Quản trị nghiệp vụ duyệt..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -442,7 +524,7 @@
         </div>
     </div>
     
-    <!-- Bootstrap JS Bundle -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

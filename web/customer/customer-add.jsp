@@ -73,7 +73,7 @@
                                                value="<%= isEdit && customer.getAddress() != null ? customer.getAddress() : "" %>">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label fw-semibold small text-muted">Mã đối chiếu ngoài (ERP/CRM ref)</label>
+                                        <label class="form-label fw-semibold small text-muted">Mã đối chiếu ERP/CRM</label>
                                         <input type="text" class="form-control" name="external_ref"
                                                value="<%= isEdit && customer.getExternalRef() != null ? customer.getExternalRef() : "" %>">
                                     </div>

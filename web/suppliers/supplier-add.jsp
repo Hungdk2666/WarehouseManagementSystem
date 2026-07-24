@@ -12,14 +12,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Tạo nhà cung cấp mới - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -36,7 +36,7 @@
                                 <form action="supplier?action=add" method="POST">
                                     <div class="mb-3">
                                         <label for="supplierName" class="form-label fw-semibold text-muted">Tên nhà cung cấp <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="supplierName" name="supplier_name" placeholder="Nhập tên nhà cung cấp (ví dụ: Panasonic VN)" required>
+                                        <input type="text" class="form-control" id="supplierName" name="supplier_name" placeholder="Ví dụ: Panasonic Việt Nam" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="contactName" class="form-label fw-semibold text-muted">Người liên hệ</label>

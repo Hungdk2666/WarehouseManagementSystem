@@ -18,14 +18,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Sửa thông tin vai trò</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -44,7 +44,7 @@
                                 <form action="role?action=update" method="POST">
                                     <input type="hidden" name="id" value="<%= roleInfo.getId() %>">
                                     <div class="mb-3">
-                                        <label class="form-label"><i class="bi bi-hash me-1 text-muted"></i> ID vai trò (Chỉ đọc)</label>
+                                        <label class="form-label"><i class="bi bi-hash me-1 text-muted"></i> ID vai trò</label>
                                         <input type="text" class="form-control text-muted bg-light" value="<%= roleInfo.getId() %>" disabled>
                                     </div>
                                     <div class="mb-4">

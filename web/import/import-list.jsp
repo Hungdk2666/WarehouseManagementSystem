@@ -196,9 +196,9 @@
                                         <td>
                                             <%
                                                 String displayTStatus = t.getStatus();
-                                                if ("CONFIRMED".equals(t.getStatus())) displayTStatus = "ĐÃ XÁC NHẬN";
-                                                else if ("DRAFT".equals(t.getStatus())) displayTStatus = "BẢN NHÁP";
-                                                else if ("CANCELLED".equals(t.getStatus())) displayTStatus = "ĐÃ HỦY";
+                                                if ("CONFIRMED".equals(t.getStatus())) displayTStatus = "Đã xác nhận";
+                                                else if ("DRAFT".equals(t.getStatus())) displayTStatus = "Bản nháp";
+                                                else if ("CANCELLED".equals(t.getStatus())) displayTStatus = "Đã hủy";
                                             %>
                                             <span class="status-chip <%= statusBadge %>"><%= displayTStatus %></span>
                                         </td>

@@ -18,24 +18,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Yêu cầu xuất kho - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
     <div class="container-fluid mt-4 px-4 animated-fade-in">
         <div class="row">
-            <!-- Left Sidebar -->
+            
             <jsp:include page="/includes/sidebar.jsp" />
 
-            <!-- Main Content -->
+            
             <div class="col-md-9 col-lg-10">
                 <jsp:include page="/includes/frozen-banner.jsp" />
                 <div class="page-header">
@@ -52,7 +52,7 @@
                     </div>
                 </div>
 
-                <!-- Filters -->
+                
                 <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
@@ -77,10 +77,18 @@
                                     </button>
                                     <ul class="dropdown-menu p-2 shadow-sm" id="statusDropdownMenu" style="min-width:170px;">
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ duyệt"> Chờ duyệt</label></li>
-                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã duyệt"> Đã duyệt</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã xác nhận"> Đã xác nhận</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ hủy"> Chờ hủy</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang xuất dở"> Đang xuất dở</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Chờ đóng phần còn lại"> Chờ đóng phần còn lại</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã đóng · Đang giao"> Đã đóng · Đang giao</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang giao"> Đang giao</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Hoàn tất 1 phần"> Hoàn tất 1 phần</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đang hoàn trả"> Đang hoàn trả</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã hoàn trả"> Đã hoàn trả</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã thu hồi"> Đã thu hồi</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Từ chối"> Từ chối</label></li>
-                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Hoàn thành"> Hoàn thành</label></li>
+                                        <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Hoàn tất"> Hoàn tất</label></li>
                                         <li><label class="d-flex align-items-center gap-2 px-2 py-1 rounded hover-item"><input type="checkbox" class="status-cb form-check-input flex-shrink-0 m-0" value="Đã hủy"> Đã hủy</label></li>
                                         <li><hr class="dropdown-divider my-1"></li>
                                         <li><button type="button" id="clearStatusBtn" class="btn btn-link btn-sm w-100 text-muted text-decoration-none py-1" style="font-size:0.8rem;"><i class="bi bi-x-circle me-1"></i>Xóa chọn</button></li>
@@ -103,7 +111,7 @@
                     </div>
                 </div>
 
-                <!-- Requests Directory Table -->
+                
                 <div class="card mb-4">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <span class="fw-bold text-slate-800"><i class="bi bi-list-task me-2 text-primary"></i>Danh sách yêu cầu xuất kho</span>
@@ -148,17 +156,35 @@
                                                         displayStatus = "Chờ hủy";
                                                     } else {
                                                         statusBadge = "chip-success";
-                                                        displayStatus = "Đã duyệt";
+                                                        displayStatus = "Đã xác nhận";
                                                     }
                                                 } else if ("PARTIALLY_COMPLETED".equals(r.getStatus())) {
                                                     statusBadge = "chip-info";
-                                                    displayStatus = "Đang xuất dở";
+                                                    displayStatus = r.getCancelRequestedAt() != null ? "Chờ đóng phần còn lại" : "Đang xuất dở";
+                                                } else if ("PARTIALLY_CLOSED_IN_TRANSIT".equals(r.getStatus())) {
+                                                    statusBadge = "chip-info";
+                                                    displayStatus = "Đã đóng · Đang giao";
+                                                } else if ("IN_TRANSIT".equals(r.getStatus())) {
+                                                    statusBadge = "chip-info";
+                                                    displayStatus = "Đang giao";
+                                                } else if ("PARTIALLY_CLOSED".equals(r.getStatus())) {
+                                                    statusBadge = "chip-muted";
+                                                    displayStatus = "Hoàn tất 1 phần";
+                                                } else if ("RETURNING".equals(r.getStatus())) {
+                                                    statusBadge = "chip-warning";
+                                                    displayStatus = "Đang hoàn trả";
+                                                } else if ("RETURNED".equals(r.getStatus())) {
+                                                    statusBadge = "chip-primary";
+                                                    displayStatus = "Đã hoàn trả";
+                                                } else if ("REVOKED".equals(r.getStatus())) {
+                                                    statusBadge = "chip-muted";
+                                                    displayStatus = "Đã thu hồi";
                                                 } else if ("REJECTED".equals(r.getStatus())) {
                                                     statusBadge = "chip-danger";
                                                     displayStatus = "Từ chối";
                                                 } else if ("COMPLETED".equals(r.getStatus())) {
                                                     statusBadge = "chip-primary";
-                                                    displayStatus = "Hoàn thành";
+                                                    displayStatus = "Hoàn tất";
                                                 } else if ("CANCELLED".equals(r.getStatus())) {
                                                     statusBadge = "chip-muted";
                                                     displayStatus = "Đã hủy";
@@ -182,8 +208,14 @@
                                                         out.print("CHUYỂN KHO");
                                                     } else if ("CUSTOMER_SALE".equals(r.getReason())) {
                                                         out.print("BÁN HÀNG");
+                                                    } else if ("DISPLAY".equals(r.getReason())) {
+                                                        out.print("TRƯNG BÀY");
+                                                    } else if ("WARRANTY".equals(r.getReason())) {
+                                                        out.print("BẢO HÀNH");
+                                                    } else if ("OTHER".equals(r.getReason())) {
+                                                        out.print("KHÁC");
                                                     } else {
-                                                        out.print(r.getReason());
+                                                        out.print(r.getReason() != null ? r.getReason() : "-");
                                                     }
                                                 %>
                                             </span>
@@ -202,22 +234,22 @@
                                                 <% if (canApprove && "PENDING".equals(r.getStatus())) { %>
                                                 <form action="export-request?action=approve" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= r.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                        <i class="bi bi-check-circle"></i> Duyệt
+                                                    <button type="submit" class="btn btn-table btn-success" title="Duyệt yêu cầu" aria-label="Duyệt yêu cầu">
+                                                        <i class="bi bi-check-circle" aria-hidden="true"></i>
                                                     </button>
                                                 </form>
                                                 <form action="export-request?action=reject" method="POST" class="d-inline m-0">
                                                     <input type="hidden" name="id" value="<%= r.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                        <i class="bi bi-x-circle"></i> Từ chối
+                                                    <button type="submit" class="btn btn-table btn-danger" title="Từ chối yêu cầu" aria-label="Từ chối yêu cầu">
+                                                        <i class="bi bi-x-circle" aria-hidden="true"></i>
                                                     </button>
                                                 </form>
                                                 <% } %>
                                                 <% if (canCancel && "PENDING".equals(r.getStatus())) { %>
                                                 <form action="export-request?action=cancel" method="POST" class="d-inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn hủy yêu cầu này không?');">
                                                     <input type="hidden" name="id" value="<%= r.getId() %>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 py-1 px-2.5">
-                                                        <i class="bi bi-trash"></i> Hủy
+                                                    <button type="submit" class="btn btn-table btn-outline-danger" title="Hủy yêu cầu" aria-label="Hủy yêu cầu">
+                                                        <i class="bi bi-trash" aria-hidden="true"></i>
                                                     </button>
                                                 </form>
                                                 <% } %>
@@ -241,7 +273,7 @@
                             </table>
                         </div>
                     </div>
-                    <!-- Pagination Container -->
+                    
                     <div class="card-footer bg-transparent py-3 border-0" id="paginationContainer"></div>
                 </div>
 
@@ -249,7 +281,7 @@
         </div>
     </div>
 
-    <!-- Client-Side Pagination & Filter Script -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -261,7 +293,7 @@
             const tbody = table.querySelector("tbody");
             const allRows = Array.from(tbody.querySelectorAll("tr"));
             
-            // If it's empty, skip
+
             if (allRows.length === 1 && allRows[0].cells.length === 1) return;
 
             const searchInput = document.getElementById("searchInput");
@@ -277,7 +309,7 @@
             });
             const creatorFilter = document.getElementById("creatorFilter");
 
-            // Multi-select trạng thái
+
             function getSelectedStatuses() {
                 return Array.from(document.querySelectorAll('#statusDropdownMenu .status-cb:checked')).map(cb => cb.value);
             }
@@ -311,7 +343,7 @@
 
                 filteredRows = allRows.filter(row => {
                     const cells = row.cells;
-                    if (cells.length < 7) return true; // safety
+                    if (cells.length < 7) return true;
 
                     const code = cells[0].textContent.toLowerCase();
                     const destination = cells[1].textContent.toLowerCase();
@@ -321,7 +353,7 @@
                     const status = cells[5].textContent.trim();
                     const createdAt = cells[6].textContent;
 
-                    // Match filters
+
                     if (searchVal && !code.includes(searchVal)) return false;
                     let matchesDate = true;
                     const createdAtDatePart = createdAt.trim().split(" ")[0];
@@ -372,7 +404,7 @@
                 const ul = document.createElement("ul");
                 ul.className = "pagination pagination-sm m-0";
 
-                // Prev
+
                 const prevLi = document.createElement("li");
                 prevLi.className = "page-item " + (currentPage === 1 ? "disabled" : "");
                 const prevA = document.createElement("a");
@@ -389,7 +421,7 @@
                 prevLi.appendChild(prevA);
                 ul.appendChild(prevLi);
 
-                // Pages
+
                 for (let i = 1; i <= totalPages; i++) {
                     const li = document.createElement("li");
                     li.className = "page-item " + (i === currentPage ? "active" : "");
@@ -406,7 +438,7 @@
                     ul.appendChild(li);
                 }
 
-                // Next
+
                 const nextLi = document.createElement("li");
                 nextLi.className = "page-item " + (currentPage === totalPages ? "disabled" : "");
                 const nextA = document.createElement("a");

@@ -7,6 +7,8 @@
         requestURI = request.getRequestURI();
     }
     boolean isInventoryHistoryPage = requestURI.contains("inventory-history") || requestURI.contains("/inventory/history");
+    boolean isStockReportPage = requestURI.contains("stock-report");
+    boolean isMovementReportPage = requestURI.contains("movement-report");
 %>
 <style>
     .sidebar-column {
@@ -89,7 +91,7 @@
 <div class="col-md-3 col-lg-2 mb-4 sidebar-column">
     <div class="list-group list-group-custom p-2 sidebar-sticky">
         
-        <!-- Navigation Section -->
+        
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
              data-custom-toggle="collapse" data-custom-target="#collapseNavigation" aria-expanded="false">
@@ -102,8 +104,8 @@
             </a>
         </div>
         
-        <!-- Administration Section -->
-        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("USER_VIEW") || loggedInUserSidebar.hasPermission("ROLE_VIEW") || loggedInUserSidebar.hasPermission("AUDIT_LOG_VIEW"))) { %>
+        
+        <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("USER_VIEW") || loggedInUserSidebar.hasPermission("ROLE_VIEW") || loggedInUserSidebar.hasPermission("AUDIT_LOG_VIEW") || loggedInUserSidebar.hasPermission("SYSTEM_LOG_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
              data-custom-toggle="collapse" data-custom-target="#collapseAdmin" aria-expanded="false">
@@ -121,15 +123,20 @@
                 <i class="bi bi-shield-lock-fill me-2"></i> Quản lý vai trò
             </a>
             <% } %>
+            <% if (loggedInUserSidebar.hasPermission("SYSTEM_LOG_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/admin/audit-log" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("audit-log") ? "active" : "" %>">
+                <i class="bi bi-journal-code me-2"></i> Nhật ký hệ thống
+            </a>
+            <% } %>
             <% if (loggedInUserSidebar.hasPermission("AUDIT_LOG_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/admin/audit-log" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("audit-log") ? "active" : "" %>">
-                <i class="bi bi-journal-text me-2"></i> Nhật ký hoạt động
+                <i class="bi bi-journal-text me-2"></i> Nhật ký nghiệp vụ
             </a>
             <% } %>
         </div>
         <% } %>
 
-        <!-- Inbound Operations Section -->
+        
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("REQUEST_VIEW_IN") || loggedInUserSidebar.hasPermission("TICKET_VIEW_IN"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
@@ -145,7 +152,7 @@
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("REQUEST_ADD_IN")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/import-request?action=addReturn" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("return-add") || "addReturn".equals(request.getParameter("action")) ? "active" : "" %>">
-                <i class="bi bi-arrow-counterclockwise me-2"></i> Tạo Return Request
+                <i class="bi bi-arrow-counterclockwise me-2"></i> Tạo yêu cầu trả hàng
             </a>
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("TICKET_VIEW_IN")) { %>
@@ -156,7 +163,7 @@
         </div>
         <% } %>
 
-        <!-- Outbound Operations Section -->
+        
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("REQUEST_VIEW_OUT") || loggedInUserSidebar.hasPermission("TICKET_VIEW_OUT"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
@@ -178,7 +185,7 @@
         </div>
         <% } %>
 
-        <!-- Inventory Section -->
+        
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("INVENTORY_VIEW") || loggedInUserSidebar.hasPermission("STOCK_LEDGER_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header"
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
@@ -194,13 +201,21 @@
             <% } %>
             <% if (loggedInUserSidebar.hasPermission("STOCK_LEDGER_VIEW")) { %>
             <a href="<%= request.getContextPath() %>/warehouse/inventory-history" class="list-group-item list-group-item-action d-flex align-items-center <%= isInventoryHistoryPage ? "active" : "" %>">
-                <i class="bi bi-clock-history me-2"></i> Lịch sử xuất nhập kho
+                <i class="bi bi-clock-history me-2"></i> Lịch sử biến động kho
+            </a>
+            <% } %>
+            <% if (loggedInUserSidebar.hasPermission("STOCK_LEDGER_VIEW")) { %>
+            <a href="<%= request.getContextPath() %>/warehouse/stock-report" class="list-group-item list-group-item-action d-flex align-items-center <%= isStockReportPage ? "active" : "" %>">
+                <i class="bi bi-calendar-check me-2"></i> Báo cáo tồn kho
+            </a>
+            <a href="<%= request.getContextPath() %>/warehouse/movement-report?type=daily" class="list-group-item list-group-item-action d-flex align-items-center <%= isMovementReportPage ? "active" : "" %>">
+                <i class="bi bi-journal-arrow-up me-2"></i> Báo cáo xuất - nhập
             </a>
             <% } %>
         </div>
         <% } %>
 
-        <!-- Stocktake Section -->
+        
         <% if (loggedInUserSidebar != null && loggedInUserSidebar.hasPermission("STOCKTAKE_VIEW")) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header"
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
@@ -220,30 +235,7 @@
         </div>
         <% } %>
 
-        <!-- Disposal Section -->
-        <% if (loggedInUserSidebar != null && loggedInUserSidebar.hasPermission("DISPOSAL_VIEW")) { %>
-        <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header"
-             style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
-             data-custom-toggle="collapse" data-custom-target="#collapseDisposal" aria-expanded="false">
-            <span><i class="bi bi-trash3-fill me-2"></i> Thanh lý sản phẩm hỏng</span>
-            <i class="bi bi-chevron-right chevron-icon"></i>
-        </div>
-        <div class="collapse" id="collapseDisposal">
-            <a href="<%= request.getContextPath() %>/warehouse/disposal?action=list" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/disposal") && !"config".equals(request.getParameter("action")) && !"dashboard".equals(request.getParameter("action")) ? "active" : "" %>">
-                <i class="bi bi-list-check me-2"></i> Phiếu thanh lý
-            </a>
-            <a href="<%= request.getContextPath() %>/warehouse/disposal?action=dashboard" class="list-group-item list-group-item-action d-flex align-items-center <%= "dashboard".equals(request.getParameter("action")) ? "active" : "" %>">
-                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-            </a>
-            <% if (loggedInUserSidebar.hasPermission("DISPOSAL_CONFIG")) { %>
-            <a href="<%= request.getContextPath() %>/warehouse/disposal?action=config" class="list-group-item list-group-item-action d-flex align-items-center <%= requestURI.contains("/disposal") && "config".equals(request.getParameter("action")) ? "active" : "" %>">
-                <i class="bi bi-sliders me-2"></i> Ngưỡng duyệt L2
-            </a>
-            <% } %>
-        </div>
-        <% } %>
-
-        <!-- Master Data Section -->
+        
         <% if (loggedInUserSidebar != null && (loggedInUserSidebar.hasPermission("PRODUCT_VIEW") || loggedInUserSidebar.hasPermission("CATEGORY_VIEW") || loggedInUserSidebar.hasPermission("BRAND_VIEW") || loggedInUserSidebar.hasPermission("DESTINATION_VIEW") || loggedInUserSidebar.hasPermission("SUPPLIER_VIEW") || loggedInUserSidebar.hasPermission("WAREHOUSE_VIEW"))) { %>
         <div class="list-group-item text-uppercase text-muted border-0 ps-3 mt-3 mb-2 d-flex justify-content-between align-items-center sidebar-header" 
              style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;"
@@ -294,7 +286,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Toggle collapse sections manually (independent of Bootstrap JS)
+
         const headers = document.querySelectorAll('.list-group-custom .sidebar-header');
         headers.forEach(header => {
             header.addEventListener('click', function() {
@@ -314,7 +306,7 @@
             });
         });
 
-        // Auto-expand the active section on load
+
         const activeLink = document.querySelector('.list-group-custom .list-group-item.active');
         if (activeLink) {
             const parentCollapse = activeLink.closest('.collapse');
@@ -340,7 +332,7 @@
                 });
             }
         } else {
-            // Default expand Navigation if no active link
+
             const firstCollapse = document.getElementById('collapseNavigation');
             if (firstCollapse) {
                 firstCollapse.classList.add('show');
@@ -352,4 +344,3 @@
         }
     });
 </script>
-

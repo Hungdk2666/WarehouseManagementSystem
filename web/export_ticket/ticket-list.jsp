@@ -9,9 +9,7 @@
         return;
     }
     List<Ticket> ticketList = (List<Ticket>) request.getAttribute("ticketList");
-    List<Ticket> incomingTransfers = (List<Ticket>) request.getAttribute("incomingTransfers");
     boolean canAdd = loggedInUser.hasPermission("TICKET_ADD_OUT");
-    boolean canConfirm = loggedInUser.hasPermission("TICKET_CONFIRM_OUT");
     boolean canCancel = loggedInUser.hasPermission("TICKET_CANCEL_OUT");
 %>
 <!DOCTYPE html>
@@ -52,54 +50,6 @@
                         <% } %>
                     </div>
                 </div>
-
-                
-                <% if (incomingTransfers != null && !incomingTransfers.isEmpty()) { %>
-                <div class="card mb-4" style="border-left: 4px solid #f59e0b !important;">
-                    <div class="card-header bg-warning bg-opacity-10 py-3 d-flex align-items-center gap-2">
-                        <i class="bi bi-truck fs-5 text-warning"></i>
-                        <span class="fw-bold text-warning">Hàng đang chuyển đến kho bạn</span>
-                        <span class="badge bg-warning text-dark ms-2"><%= incomingTransfers.size() %> phiếu</span>
-                        <span class="ms-auto text-muted small">Những phiếu chuyển kho này đang trên đường vận chuyển — tạo phiếu nhập khi nhận được hàng.</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.88rem;">
-                                <thead class="table-light text-uppercase text-muted" style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em;">
-                                    <tr>
-                                        <th>Mã phiếu</th>
-                                        <th>Mã yêu cầu</th>
-                                        <th>Kho nguồn</th>
-                                        <th>Thủ kho</th>
-                                        <th>Ngày xuất</th>
-                                        <% if (canConfirm) { %><th>Thao tác</th><% } %>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <% for (Ticket it : incomingTransfers) { %>
-                                    <tr>
-                                        <td class="fw-bold text-slate-800">#<%= it.getTicketCode() %></td>
-                                        <td class="fw-semibold text-primary">#<%= it.getRequestCode() %></td>
-                                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-building me-1"></i><%= it.getWarehouseName() != null ? it.getWarehouseName() : "-" %></span></td>
-                                        <td><%= it.getKeeperFullName() %></td>
-                                        <td class="text-muted small text-nowrap"><%= it.getConfirmedAt() != null ? it.getConfirmedAt().toString().substring(0, 16) : "-" %></td>
-                                        <% if (canConfirm) { %>
-                                        <td>
-                                            <div class="d-flex justify-content-center gap-1">
-                                                <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-sm btn-warning py-1 px-2">
-                                                    <i class="bi bi-box-arrow-in-down"></i> Vào tạo Phiếu nhập
-                                                </a>
-                                            </div>
-                                        </td>
-                                        <% } %>
-                                    </tr>
-                                    <% } %>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <% } %>
 
                 
                 <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
@@ -200,8 +150,19 @@
                                                     statusBadge = "chip-success";
                                                     displayStatus = "Đã xác nhận";
                                                 } else if ("IN_TRANSIT".equals(t.getStatus())) {
-                                                    statusBadge = "chip-info";
-                                                    displayStatus = "Đang vận chuyển";
+                                                    if (t.isPartiallyReturned()) {
+                                                        statusBadge = "chip-warning";
+                                                        displayStatus = "Đang hoàn trả";
+                                                    } else if (t.isTransferReturning()) {
+                                                        statusBadge = "chip-warning";
+                                                        displayStatus = "Đang hoàn trả";
+                                                    } else {
+                                                        statusBadge = "chip-info";
+                                                        displayStatus = "Đang giao";
+                                                    }
+                                                } else if ("COMPLETED".equals(t.getStatus())) {
+                                                    statusBadge = "chip-success";
+                                                    displayStatus = t.isFullyReturned() ? "Đã hoàn trả" : "Đã nhận";
                                                 } else if ("CANCELLED".equals(t.getStatus())) {
                                                     statusBadge = "chip-muted";
                                                     displayStatus = "Đã hủy";

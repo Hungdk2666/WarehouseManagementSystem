@@ -102,11 +102,11 @@
                                         #<%= r.getRequestCode() %> — <%= r.getPartnerName() %> · 
                                         <%
                                             if ("PENDING".equals(r.getStatus())) out.print("Chờ duyệt");
-                                            else if ("APPROVED".equals(r.getStatus())) out.print("Đã duyệt");
+                                            else if ("APPROVED".equals(r.getStatus())) out.print("Đã xác nhận");
                                             else if ("PARTIALLY_COMPLETED".equals(r.getStatus())) out.print("Đang xuất dở");
-                                            else if ("IN_TRANSIT".equals(r.getStatus())) out.print("Đang chuyển");
+                                            else if ("IN_TRANSIT".equals(r.getStatus())) out.print("Đang giao");
                                             else if ("REJECTED".equals(r.getStatus())) out.print("Từ chối");
-                                            else if ("COMPLETED".equals(r.getStatus())) out.print("Hoàn thành");
+                                            else if ("COMPLETED".equals(r.getStatus())) out.print("Hoàn tất");
                                             else if ("CANCELLED".equals(r.getStatus())) out.print("Đã hủy");
                                             else out.print(r.getStatus());
                                         %>

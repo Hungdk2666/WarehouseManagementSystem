@@ -15,14 +15,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Quản lý vai trò - WMS</title>
-    <!-- Google Fonts - Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS & Icons -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
+    
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
 </head>
 <body>
@@ -44,7 +44,14 @@
                     </div>
                 </div>
 
-                <!-- Navigation Tabs -->
+                <% if ("RoleInUse".equals(request.getParameter("error"))) { %>
+                <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    Không thể tắt vai trò này vì vẫn còn <strong><%= request.getParameter("count") %></strong> người dùng đang hoạt động mang vai trò đó. Hãy chuyển họ sang vai trò khác hoặc tắt các tài khoản đó trước.
+                </div>
+                <% } %>
+
+                
                 <ul class="nav nav-tabs border-bottom mb-4" id="rbacTabs" role="tablist" style="border-width: 2px !important;">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active fw-semibold text-primary border-bottom border-primary border-3 bg-transparent px-4 py-2.5" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles-pane" type="button" role="tab" aria-controls="roles-pane" aria-selected="true" style="border-radius: 0; border-top: 0; border-left: 0; border-right: 0;">
@@ -53,10 +60,10 @@
                     </li>
                 </ul>
 
-                <!-- Tabs Content -->
+                
                 <div class="tab-content" id="rbacTabsContent">
                     
-                    <!-- Roles Tab Pane -->
+                    
                     <div class="tab-pane fade show active" id="roles-pane" role="tabpanel" aria-labelledby="roles-tab">
                         <div class="card mb-4">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -69,13 +76,13 @@
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0">
+                                    <table id="roleTable" class="table table-hover align-middle mb-0">
                                         <thead class="table-light">
                                             <tr>
                                                 <th class="ps-4">ID</th>
                                                 <th>Tên vai trò</th>
                                                 <th>Trạng thái</th>
-                                                <th class="text-center" style="min-width: 330px;">Thao tác</th>
+                                                <th class="text-center">Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -94,22 +101,22 @@
                                                     <% } %>
                                                 </td>
                                                 <td class="text-center">
-                                                    <div class="d-flex flex-nowrap align-items-center justify-content-center gap-2 role-action-buttons">
+                                                    <div class="d-flex flex-nowrap align-items-center justify-content-center gap-1 role-action-buttons">
                                                         <% if (loggedInUser.hasPermission("ROLE_ASSIGN")) { %>
-                                                        <a href="role?action=permissions&id=<%= r.getId() %>" class="btn btn-sm btn-outline-secondary" title="Quản lý phân quyền">
-                                                            <i class="bi bi-shield-lock"></i> Phân quyền
+                                                        <a href="role?action=permissions&id=<%= r.getId() %>" class="btn btn-table btn-outline-secondary" title="Quản lý phân quyền" aria-label="Quản lý phân quyền">
+                                                            <i class="bi bi-shield-lock" aria-hidden="true"></i>
                                                         </a>
                                                         <% } %>
                                                         <% if (loggedInUser.hasPermission("ROLE_EDIT")) { %>
-                                                        <a href="role?action=update&id=<%= r.getId() %>" class="btn btn-sm btn-outline-primary" title="Sửa">
-                                                            <i class="bi bi-pencil-square"></i> Sửa
+                                                        <a href="role?action=update&id=<%= r.getId() %>" class="btn btn-table btn-outline-primary" title="Sửa" aria-label="Sửa vai trò">
+                                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                                         </a>
                                                         <% } %>
                                                         <% if (loggedInUser.hasPermission("ROLE_TOGGLE")) { %>
                                                         <form action="role?action=toggle" method="POST" class="d-inline m-0">
                                                             <input type="hidden" name="id" value="<%= r.getId() %>">
-                                                            <button type="submit" class="btn btn-sm <%= r.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= r.isStatus() ? "Vô hiệu hóa vai trò" : "Kích hoạt vai trò" %>">
-                                                                <i class="bi bi-power"></i> <%= r.isStatus() ? "Vô hiệu hóa" : "Kích hoạt" %>
+                                                            <button type="submit" class="btn btn-table <%= r.isStatus() ? "btn-outline-danger" : "btn-outline-success" %>" title="<%= r.isStatus() ? "Vô hiệu hóa vai trò" : "Kích hoạt vai trò" %>" aria-label="<%= r.isStatus() ? "Vô hiệu hóa vai trò" : "Kích hoạt vai trò" %>">
+                                                                <i class="bi bi-power" aria-hidden="true"></i>
                                                             </button>
                                                         </form>
                                                         <% } %>
@@ -128,6 +135,10 @@
                                     </table>
                                 </div>
                             </div>
+                            <div class="card-footer bg-transparent border-top d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 gap-3">
+                                <div class="d-flex align-items-center gap-2"><label class="text-muted small mb-0">Hiển thị</label><select id="roleEntriesPerPage" class="form-select form-select-sm border border-secondary-subtle bg-white shadow-none px-3 py-1" style="width:80px;border-radius:8px"><option value="10" selected>10</option><option value="25">25</option><option value="100">100</option></select><span class="text-muted small">dòng</span></div>
+                                <div id="rolePagination" class="d-flex align-items-center justify-content-between justify-content-sm-end gap-3 flex-wrap w-100 w-sm-auto"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -137,7 +148,7 @@
         </div>
     </div>
 
-    <!-- ADD ROLE MODAL -->
+    
     <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-3">
@@ -149,7 +160,7 @@
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label for="roleNameInput" class="form-label">Tên vai trò</label>
-                            <input type="text" class="form-control" id="roleNameInput" name="role_name" placeholder="Nhập tên vai trò (ví dụ: Quản lý kho)" required>
+                            <input type="text" class="form-control" id="roleNameInput" name="role_name" placeholder="Ví dụ: Quản lý kho" required>
                         </div>
                         <div class="mb-2">
                             <label for="roleStatusSelect" class="form-label">Trạng thái ban đầu</label>
@@ -168,7 +179,9 @@
         </div>
     </div>
 
-    <!-- Bootstrap Bundle JS (includes Popper) -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<%= request.getContextPath() %>/js/table-pagination.js"></script>
+    <script>initSimpleTablePagination("roleTable", "rolePagination", "roleEntriesPerPage");</script>
 </body>
 </html>
