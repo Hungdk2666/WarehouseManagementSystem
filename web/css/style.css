@@ -80,3 +80,153 @@ form[action="movement-report"]{padding:.15rem .2rem}form[action="movement-report
 .inventory-matrix-card .inventory-table tbody td:first-child{text-align:left!important;padding-left:1.05rem!important}
 .inventory-matrix-card .inventory-table tbody td:first-child strong{display:inline-block;line-height:1.25}
 .inventory-matrix-card .inventory-table tbody td:first-child small{font-size:.74rem;line-height:1.2}
+/* Dashboard layout: one consistent grid for KPI, workflow, reports and shortcuts. */ .dashboard-page{max-width:1920px}.dashboard-page .dashboard-kpi-grid,.dashboard-page .dashboard-workflow-grid,.dashboard-page .dashboard-content-grid,.dashboard-page .dashboard-quick-grid{display:grid;gap:1rem;margin-left:0;margin-right:0}.dashboard-page .dashboard-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.dashboard-page .dashboard-workflow-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.dashboard-page .dashboard-content-grid{grid-template-columns:minmax(0,1.35fr) minmax(360px,.9fr)}.dashboard-page .dashboard-quick-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.dashboard-page .dashboard-kpi-grid>[class*=col-],.dashboard-page .dashboard-workflow-grid>[class*=col-],.dashboard-page .dashboard-content-grid>[class*=col-],.dashboard-page .dashboard-quick-grid>[class*=col-]{width:auto;max-width:none;padding-left:0;padding-right:0}.dashboard-page .dashboard-kpi-grid>div>.card,.dashboard-page .dashboard-workflow-grid>div>.card,.dashboard-page .dashboard-content-grid>div>.card,.dashboard-page .dashboard-quick-grid>div>.card{height:100%;margin:0}.dashboard-page .stat-tile{min-height:6rem;padding:1rem 1.1rem!important}.dashboard-page .stat-tile .stat-label{line-height:1.25}.dashboard-page .stat-tile .stat-value{font-size:1.5rem}.dashboard-page .dashboard-content-grid .card{display:flex;flex-direction:column}.dashboard-page .dashboard-content-grid .card-header{min-height:3.55rem;display:flex;align-items:center;padding:.9rem 1.1rem!important}.dashboard-page .dashboard-content-grid .card-body{flex:1}.dashboard-page .dashboard-content-grid .card-body:has(canvas){min-height:320px}.dashboard-page .dashboard-content-grid canvas{max-height:270px}.dashboard-page .dashboard-quick-grid a.card{color:inherit;transition:transform .16s ease,box-shadow .16s ease}.dashboard-page .dashboard-quick-grid a.card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.1)!important}@media (max-width:1199.98px){.dashboard-page .dashboard-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-page .dashboard-content-grid{grid-template-columns:1fr}.dashboard-page .dashboard-content-grid .card-body:has(canvas){min-height:280px}}@media (max-width:767.98px){.dashboard-page .dashboard-kpi-grid,.dashboard-page .dashboard-workflow-grid,.dashboard-page .dashboard-content-grid,.dashboard-page .dashboard-quick-grid{grid-template-columns:1fr}.dashboard-page .dashboard-content-grid .card-body:has(canvas){min-height:250px}.dashboard-page .stat-tile{min-height:5.25rem}}
+
+/* Keep import/export ticket registers readable at all desktop widths. */
+.ticket-register-table {
+    table-layout: fixed;
+    min-width: 1120px;
+}
+.ticket-register-table th,
+.ticket-register-table td {
+    padding: .78rem .7rem;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ticket-register-table td:nth-child(3) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.import-ticket-table { min-width: 1280px; }
+.import-ticket-table th:nth-child(1), .import-ticket-table td:nth-child(1) { width: 130px; }
+.import-ticket-table th:nth-child(2), .import-ticket-table td:nth-child(2) { width: 135px; }
+.import-ticket-table th:nth-child(3), .import-ticket-table td:nth-child(3) { width: 190px; }
+.import-ticket-table th:nth-child(4), .import-ticket-table td:nth-child(4) { width: 125px; }
+.import-ticket-table th:nth-child(5), .import-ticket-table td:nth-child(5) { width: 120px; }
+.import-ticket-table th:nth-child(6), .import-ticket-table td:nth-child(6) { width: 115px; }
+.import-ticket-table th:nth-child(7), .import-ticket-table td:nth-child(7) { width: 155px; }
+.import-ticket-table th:nth-child(8), .import-ticket-table td:nth-child(8) { width: 145px; }
+.import-ticket-table th:nth-child(9), .import-ticket-table td:nth-child(9) { width: 170px; }
+.import-ticket-table th:nth-child(10), .import-ticket-table td:nth-child(10) { width: 75px; }
+.incoming-transfer-table { min-width: 900px; }
+.incoming-transfer-table th:nth-child(1), .incoming-transfer-table td:nth-child(1) { width: 145px; }
+.incoming-transfer-table th:nth-child(2), .incoming-transfer-table td:nth-child(2) { width: 165px; }
+.incoming-transfer-table th:nth-child(3), .incoming-transfer-table td:nth-child(3) { width: 150px; }
+.incoming-transfer-table th:nth-child(4), .incoming-transfer-table td:nth-child(4) { width: 145px; }
+.incoming-transfer-table th:nth-child(5), .incoming-transfer-table td:nth-child(5) { width: 165px; }
+.incoming-transfer-table th:nth-child(6), .incoming-transfer-table td:nth-child(6) { width: 130px; }
+.export-ticket-table { min-width: 1160px; }
+.export-ticket-table th:nth-child(1), .export-ticket-table td:nth-child(1) { width: 140px; }
+.export-ticket-table th:nth-child(2), .export-ticket-table td:nth-child(2) { width: 145px; }
+.export-ticket-table th:nth-child(3), .export-ticket-table td:nth-child(3) { width: 190px; }
+.export-ticket-table th:nth-child(4), .export-ticket-table td:nth-child(4) { width: 120px; }
+.export-ticket-table th:nth-child(5), .export-ticket-table td:nth-child(5) { width: 135px; }
+.export-ticket-table th:nth-child(6), .export-ticket-table td:nth-child(6) { width: 115px; }
+.export-ticket-table th:nth-child(7), .export-ticket-table td:nth-child(7) { width: 135px; }
+.export-ticket-table th:nth-child(8), .export-ticket-table td:nth-child(8) { width: 155px; }
+.export-ticket-table th:nth-child(9), .export-ticket-table td:nth-child(9) { width: 75px; }
+@media (max-width: 1200px) {
+    .ticket-register-table { min-width: 1080px; }
+}
+/* Ticket list final overflow guard: keep identifiers inside their own columns. */
+#grnTable.ticket-register-table,
+#ginTable.ticket-register-table {
+    table-layout: auto !important;
+    min-width: 1500px !important;
+}
+#grnTable.ticket-register-table th,
+#grnTable.ticket-register-table td,
+#ginTable.ticket-register-table th,
+#ginTable.ticket-register-table td {
+    white-space: nowrap !important;
+    overflow: visible;
+    text-overflow: clip;
+}
+#grnTable.ticket-register-table th:nth-child(1),
+#grnTable.ticket-register-table td:nth-child(1),
+#grnTable.ticket-register-table th:nth-child(2),
+#grnTable.ticket-register-table td:nth-child(2),
+#ginTable.ticket-register-table th:nth-child(1),
+#ginTable.ticket-register-table td:nth-child(1),
+#ginTable.ticket-register-table th:nth-child(2),
+#ginTable.ticket-register-table td:nth-child(2) {
+    min-width: 175px;
+}
+#grnTable.ticket-register-table th:nth-child(3),
+#grnTable.ticket-register-table td:nth-child(3),
+#ginTable.ticket-register-table th:nth-child(3),
+#ginTable.ticket-register-table td:nth-child(3) {
+    min-width: 210px;
+    max-width: 250px;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+}
+#grnTable.ticket-register-table th:nth-child(7),
+#grnTable.ticket-register-table td:nth-child(7),
+#grnTable.ticket-register-table th:nth-child(9),
+#grnTable.ticket-register-table td:nth-child(9),
+#ginTable.ticket-register-table th:nth-child(8),
+#ginTable.ticket-register-table td:nth-child(8) {
+    min-width: 175px;
+}
+/* Shared compact filter layout: keep short fields compact and actions on the same row. */
+@media (min-width: 768px) {
+    .filter-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+    .filter-toolbar > .col-md-3 {
+        flex: 1 1 300px;
+        width: auto;
+        min-width: 260px;
+    }
+    .filter-toolbar > .col-md-2,
+    .filter-toolbar > .col-md-auto:not(.ms-md-auto) {
+        flex: 0 0 185px;
+        width: 185px;
+    }
+    .filter-toolbar > .ms-md-auto {
+        flex: 0 0 auto;
+        width: auto;
+        margin-left: auto !important;
+        white-space: nowrap;
+    }
+    .filter-toolbar .form-control,
+    .filter-toolbar .form-select,
+    .filter-toolbar .dropdown,
+    .filter-toolbar .dropdown > .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .filter-toolbar > [class*="col-"] {
+        width: 100%;
+    }
+    .filter-toolbar > .ms-md-auto {
+        margin-left: 0 !important;
+    }
+}
+
+/* Stocktake condition header: keep the full label readable without widening the table. */
+.stocktake-condition-header {
+    min-width: 150px;
+    white-space: normal !important;
+    line-height: 1.15;
+    vertical-align: middle;
+}
+.stocktake-condition-header span,
+.stocktake-condition-header small {
+    display: block;
+}
+.stocktake-condition-header small {
+    margin-top: 3px;
+    font-size: .68rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}

@@ -26,7 +26,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=filter-toolbar-20260726-1">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -55,7 +55,7 @@
                 
                 <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
-                        <div class="row g-2 align-items-end">
+                        <div class="row g-2 align-items-end filter-toolbar">
                             <div class="col-12 col-md-3">
                                 <label for="searchInput" class="form-label small fw-semibold mb-1">Tìm kiếm</label>
                                 <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Mã yêu cầu, người tạo...">

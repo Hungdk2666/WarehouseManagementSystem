@@ -28,7 +28,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=filter-toolbar-20260726-1">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -62,7 +62,7 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.88rem;">
+                            <table class="table table-hover align-middle mb-0 text-center ticket-register-table incoming-transfer-table">
                                 <thead class="table-light text-uppercase text-muted" style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em;">
                                     <tr>
                                         <th>Mã phiếu xuất</th>
@@ -106,7 +106,7 @@
 
                 <div class="card card-overflow-visible mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
-                        <div class="row g-2 align-items-end">
+                        <div class="row g-2 align-items-end filter-toolbar">
                             <div class="col-12 col-md-3">
                                 <label for="importSearch" class="form-label small fw-semibold mb-1">Tìm kiếm</label>
                                 <input type="text" id="importSearch" class="form-control form-control-sm" placeholder="Mã phiếu, yêu cầu, thủ kho...">
@@ -164,7 +164,7 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table id="grnTable" class="table table-hover align-middle text-center mb-0">
+                            <table id="grnTable" class="table table-hover align-middle text-center mb-0 ticket-register-table import-ticket-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th>Mã phiếu</th>

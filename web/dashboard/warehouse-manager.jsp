@@ -42,7 +42,7 @@
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
-    <div class="container-fluid mt-4 px-4 animated-fade-in">
+    <div class="container-fluid mt-4 px-4 animated-fade-in dashboard-page">
         <div class="row">
             <jsp:include page="/includes/sidebar.jsp" />
             <div class="col-md-9 col-lg-10">
@@ -64,7 +64,7 @@
                 <div class="empty-state"><i class="bi bi-building-fill-exclamation"></i><p>Tài khoản của bạn chưa được gán vào kho nào. Liên hệ Quản trị hệ thống để được gán kho.</p></div>
                 <% } else { %>
 
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-4 dashboard-kpi-grid">
                     <div class="col-xl-3 col-sm-6"><div class="card border-0 shadow-sm"><div class="card-body p-3 stat-tile">
                         <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-upc-scan"></i></div>
                         <div><div class="stat-label">Tổng SKU</div><h3 class="stat-value"><%= kpi.totalSkus %></h3></div>
@@ -83,7 +83,7 @@
                     </div></div></div>
                 </div>
 
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-4 dashboard-workflow-grid">
                     <div class="col-xl-4 col-sm-6"><div class="card border-0 shadow-sm"><div class="card-body p-3 stat-tile">
                         <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-clipboard-check-fill"></i></div>
                         <div><div class="stat-label">Kiểm kê chờ duyệt cấp 1</div><h3 class="stat-value"><%= pendingStocktakeL1 %></h3></div>
@@ -98,7 +98,7 @@
                     </div></div></div>
                 </div>
 
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-4 dashboard-content-grid">
                     <div class="col-lg-7">
                         <div class="card border-0 shadow-sm">
                             <div class="card-header bg-white py-3"><span class="fw-bold text-slate-800"><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Top 5 sản phẩm tồn thấp tại kho</span></div>
@@ -134,7 +134,7 @@
                     </div>
                 </div>
 
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-4 dashboard-quick-grid">
                     <div class="col-xl-3 col-md-6">
                         <a href="<%= request.getContextPath() %>/warehouse/stocktake?action=list" class="card h-100 text-decoration-none">
                             <div class="card-body p-3 stat-tile"><div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-clipboard-check"></i></div>
