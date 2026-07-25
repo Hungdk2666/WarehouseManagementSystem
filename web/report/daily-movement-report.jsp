@@ -18,6 +18,7 @@
     String fromDate = (String) request.getAttribute("fromDate");
     String toDate = (String) request.getAttribute("toDate");
     String search = (String) request.getAttribute("search");
+    String reportError = (String) request.getAttribute("reportError");
     Integer warehouseId = (Integer) request.getAttribute("warehouseId");
     Boolean boundObj = (Boolean) request.getAttribute("userBoundToWarehouse");
     boolean userBoundToWarehouse = boundObj != null && boundObj;
@@ -60,7 +61,7 @@
         @media (max-width:767.98px){.nav.nav-pills{gap:.4rem;overflow-x:auto}.nav.nav-pills .nav-link{padding:.45rem .8rem!important;font-size:.82rem}}
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=filter-toolbar-20260726-1">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -99,7 +100,7 @@
                 
                 <div class="card mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
-                        <form id="filterForm" action="movement-report" method="GET" class="row g-2 align-items-end">
+                        <form id="filterForm" action="movement-report" method="GET" class="row g-2 align-items-end filter-toolbar" onsubmit="return validateReportDateRange(this);">
                             <input type="hidden" name="type" value="daily">
                             <div class="col-6 col-md-auto">
                                 <label class="form-label small fw-semibold mb-1">Từ ngày</label>
@@ -134,6 +135,10 @@
                         </form>
                     </div>
                 </div>
+
+                <% if (reportError != null) { %>
+                <div class="alert alert-danger py-2 mb-3"><i class="bi bi-exclamation-triangle me-2"></i><%= reportError %></div>
+                <% } %>
 
                 <% if (fromDate.isEmpty() || toDate.isEmpty()) { %>
                 <div class="empty-state">
@@ -325,5 +330,5 @@
             updateTable();
         }
     </script>
-</body>
+<script>function validateReportDateRange(form){var from=form.elements.fromDate.value,to=form.elements.toDate.value;if(!from||!to){return true;}if(from>to){alert("Ngày bắt đầu không được sau ngày kết thúc.");return false;}return true;}</script></body>
 </html>

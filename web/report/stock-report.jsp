@@ -17,6 +17,7 @@
 
     String date = (String) request.getAttribute("date");
     String search = (String) request.getAttribute("search");
+    String reportError = (String) request.getAttribute("reportError");
     Integer warehouseId = (Integer) request.getAttribute("warehouseId");
     Boolean includeZeroObj = (Boolean) request.getAttribute("includeZero");
     Boolean boundObj = (Boolean) request.getAttribute("userBoundToWarehouse");
@@ -53,7 +54,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css?v=filter-toolbar-20260726-1">
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -75,7 +76,7 @@
                 
                 <div class="card mb-3" style="position: relative; z-index: 20;">
                     <div class="card-body py-3">
-                        <form id="filterForm" action="stock-report" method="GET" class="row g-2 align-items-end">
+                        <form id="filterForm" action="stock-report" method="GET" class="row g-2 align-items-end filter-toolbar" onsubmit="return validateStockReportDate(this);">
                             <div class="col-6 col-md-auto">
                                 <label class="form-label small fw-semibold mb-1">Ngày báo cáo</label>
                                 <input type="date" name="date" class="form-control form-control-sm" value="<%= date %>">
@@ -113,6 +114,10 @@
                 </div>
 
                 
+                <% if (reportError != null) { %>
+                <div class="alert alert-danger py-2 mb-3"><i class="bi bi-exclamation-triangle me-2"></i><%= reportError %></div>
+                <% } %>
+
                 <div class="row g-2 mb-3">
                     <div class="col-xl-3 col-6"><div class="card border-0 shadow-sm px-3 py-2"><div class="small text-muted">Hàng mới</div><div class="fs-5 fw-bold text-success"><%= nf.format(totalNew) %></div></div></div>
                     <div class="col-xl-3 col-6"><div class="card border-0 shadow-sm px-3 py-2"><div class="small text-muted">Hàng cũ</div><div class="fs-5 fw-bold text-info"><%= nf.format(totalUsed) %></div></div></div>
@@ -290,5 +295,5 @@
             updateTable();
         }
     </script>
-</body>
+<script>function validateStockReportDate(form){var value=form.elements.date.value;if(value&&!/^\d{4}-\d{2}-\d{2}$/.test(value)){alert("Ngày báo cáo không hợp lệ.");return false;}return true;}</script></body>
 </html>

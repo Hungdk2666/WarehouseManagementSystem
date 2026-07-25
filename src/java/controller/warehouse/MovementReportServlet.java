@@ -1,6 +1,8 @@
 package controller.warehouse;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -44,14 +46,18 @@ public class MovementReportServlet extends HttpServlet {
         }
 
         String type = req.getParameter("type");
-        if (type == null || (!type.equals("period") && !type.equals("import") && !type.equals("export"))) type = "daily";
+        if (type == null || (!type.equals("daily") && !type.equals("period")
+                && !type.equals("import") && !type.equals("export"))) type = "daily";
 
         String fromDate = req.getParameter("fromDate");
         String toDate = req.getParameter("toDate");
+        if (fromDate != null) fromDate = fromDate.trim();
+        if (toDate != null) toDate = toDate.trim();
         String search = req.getParameter("search");
         boolean includeZero = "1".equals(req.getParameter("includeZero"));
 
-        Integer filterWh = parseIntegerOrNull(req.getParameter("warehouseId"));
+        String warehouseParam = req.getParameter("warehouseId");
+        Integer filterWh = parseIntegerOrNull(warehouseParam);
         Integer userWh = user.getWarehouseId();
         boolean canViewAll = user.hasPermission("INVENTORY_VIEW_ALL");
         if (userWh != null && !canViewAll) {
@@ -61,9 +67,21 @@ public class MovementReportServlet extends HttpServlet {
         String action = req.getParameter("action");
         boolean hasRange = fromDate != null && !fromDate.trim().isEmpty()
                 && toDate != null && !toDate.trim().isEmpty();
+        String reportError = null;
+        if (warehouseParam != null && !warehouseParam.trim().isEmpty() && filterWh == null) {
+            reportError = "Kho không hợp lệ.";
+        }
+        LocalDate parsedFrom = parseDate(fromDate);
+        LocalDate parsedTo = parseDate(toDate);
+        if (reportError == null && hasRange && (parsedFrom == null || parsedTo == null)) {
+            reportError = "Ngày không hợp lệ. Vui lòng chọn ngày theo định dạng YYYY-MM-DD.";
+        } else if (reportError == null && hasRange && parsedFrom.isAfter(parsedTo)) {
+            reportError = "Ngày bắt đầu không được sau ngày kết thúc.";
+        }
+        boolean validRange = hasRange && reportError == null;
 
         if ("export".equals(action)) {
-            if (!hasRange) {
+            if (!validRange) {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Vui lòng chọn khoảng ngày trước khi xuất Excel.");
                 return;
             }
@@ -104,24 +122,25 @@ public class MovementReportServlet extends HttpServlet {
         req.setAttribute("warehouseId", filterWh);
         req.setAttribute("includeZero", includeZero);
         req.setAttribute("userBoundToWarehouse", userWh != null && !canViewAll);
+        req.setAttribute("reportError", reportError);
         req.setAttribute("type", type);
 
         if ("period".equals(type)) {
-            List<PeriodSummaryRow> rows = hasRange
+            List<PeriodSummaryRow> rows = validRange
                     ? service.getPeriodSummary(fromDate, toDate, filterWh, search, includeZero)
                     : java.util.Collections.emptyList();
             req.setAttribute("periodRows", rows);
             req.getRequestDispatcher("/report/period-summary-report.jsp").forward(req, resp);
         } else if ("import".equals(type) || "export".equals(type)) {
             boolean importReport = "import".equals(type);
-            List<TicketReportRow> rows = hasRange
+            List<TicketReportRow> rows = validRange
                     ? service.getTicketReport(importReport ? "IN" : "OUT", fromDate, toDate, filterWh, search)
                     : java.util.Collections.emptyList();
             req.setAttribute("ticketRows", rows);
             req.setAttribute("ticketReportType", type);
             req.getRequestDispatcher("/report/ticket-report.jsp").forward(req, resp);
         } else {
-            List<DailyMovementRow> rows = hasRange
+            List<DailyMovementRow> rows = validRange
                     ? service.getDailyMovement(fromDate, toDate, filterWh, search)
                     : java.util.Collections.emptyList();
             req.setAttribute("dailyRows", rows);
@@ -129,6 +148,15 @@ public class MovementReportServlet extends HttpServlet {
         }
     }
 
+
+    private LocalDate parseDate(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
     private Integer parseIntegerOrNull(String v) {
         if (v == null || v.isEmpty()) return null;
         try { return Integer.parseInt(v); } catch (Exception e) { return null; }

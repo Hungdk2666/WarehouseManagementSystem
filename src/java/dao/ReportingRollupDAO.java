@@ -67,7 +67,7 @@ public class ReportingRollupDAO {
 
     public List<DailyMovementRow> getDailyMovement(String fromDate, String toDate,
             Integer warehouseId, String search) {
-        if (isBlank(fromDate) || isBlank(toDate) || !hasCoverage(fromDate.trim())) return null;
+        if (isBlank(fromDate) || isBlank(toDate) || !hasCoverage(fromDate.trim(), toDate.trim())) return null;
         List<DailyMovementRow> rows = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
             "SELECT p.sku, p.product_name, p.unit, w.id AS warehouse_id, w.warehouse_name, "
@@ -110,11 +110,12 @@ public class ReportingRollupDAO {
 
     public List<PeriodSummaryRow> getPeriodSummary(String fromDate, String toDate,
             Integer warehouseId, String search, boolean includeZero) {
-        if (isBlank(fromDate) || isBlank(toDate) || !hasCoverage(fromDate.trim())) return null;
+        if (isBlank(fromDate) || isBlank(toDate) || !hasCoverage(fromDate.trim(), toDate.trim())) return null;
         Map<String, ProductWarehouseInfo> info = new LinkedHashMap<>();
         Map<String, int[]> opening = loadBalances(fromDate.trim(), true, warehouseId, search, info);
         Map<String, int[]> closing = loadBalances(toDate.trim(), false, warehouseId, search, info);
         Map<String, int[]> movement = loadMovements(fromDate.trim(), toDate.trim(), warehouseId, search, info);
+        if (opening == null || closing == null || movement == null) return null;
         List<PeriodSummaryRow> result = new ArrayList<>();
 
         for (String key : info.keySet()) {
@@ -182,7 +183,7 @@ public class ReportingRollupDAO {
                 }
             }
         } catch (Exception e) {
-            return new LinkedHashMap<>();
+            return null;
         }
         return result;
     }
@@ -216,17 +217,24 @@ public class ReportingRollupDAO {
                 }
             }
         } catch (Exception e) {
-            return new LinkedHashMap<>();
+            return null;
         }
         return result;
     }
 
     private boolean hasCoverage(String requiredDate) {
+        return hasCoverage(requiredDate, requiredDate);
+    }
+
+    private boolean hasCoverage(String requiredStart, String requiredEnd) {
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                    "SELECT coverage_start FROM Reporting_Rollup_State WHERE rollup_name='LEDGER_DAILY'")) {
+                    "SELECT coverage_start, (SELECT MAX(snapshot_date) FROM Inventory_Daily_Snapshots) "
+                  + "FROM Reporting_Rollup_State WHERE rollup_name='LEDGER_DAILY'")) {
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() && rs.getDate(1).toString().compareTo(requiredDate) <= 0;
+                if (!rs.next() || rs.getDate(1) == null || rs.getDate(2) == null) return false;
+                return rs.getDate(1).toString().compareTo(requiredStart) <= 0
+                        && rs.getDate(2).toString().compareTo(requiredEnd) >= 0;
             }
         } catch (Exception e) {
             return false;

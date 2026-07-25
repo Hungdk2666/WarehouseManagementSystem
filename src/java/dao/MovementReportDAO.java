@@ -12,13 +12,14 @@ import model.PeriodSummaryRow;
 import utils.DBUtils;
 
 /**
- *  - getDailyMovement: "Báo cáo chi tiết xuất - nhập vật tư theo ngày" (1 dòng = 1 SP/1 kho/1 ngày phát sinh).
- *  - getPeriodSummary: "Báo cáo tổng hợp Nhập - Xuất - Tồn" (1 dòng = 1 SP/1 kho/1 tình trạng, đầu kỳ - phát sinh - cuối kỳ).
+ * Hai bĂ¡o cĂ¡o theo máº«u giáº¥y cá»§a giáº£ng viĂªn:
+ *  - getDailyMovement: "BĂ¡o cĂ¡o chi tiáº¿t xuáº¥t - nháº­p váº­t tÆ° theo ngĂ y" (1 dĂ²ng = 1 SP/1 kho/1 ngĂ y phĂ¡t sinh).
+ *  - getPeriodSummary: "BĂ¡o cĂ¡o tá»•ng há»£p Nháº­p - Xuáº¥t - Tá»“n" (1 dĂ²ng = 1 SP/1 kho/1 tĂ¬nh tráº¡ng, Ä‘áº§u ká»³ - phĂ¡t sinh - cuá»‘i ká»³).
  *
- * Đầu kỳ/Cuối kỳ tái dựng từ Product_Ledger theo đúng cách StockSnapshotDAO đang làm
- * (dòng ledger cuối cùng có created_at trước mốc cắt, cho mỗi cặp product/warehouse).
- * Phát sinh trong kỳ = tổng change_quantity (tách theo dấu) của các dòng ledger nằm trong khoảng ngày,
- * bỏ qua OPENING_BALANCE (mốc khởi tạo, không phải giao dịch thật).
+ * Äáº§u ká»³/Cuá»‘i ká»³ tĂ¡i dá»±ng tá»« Product_Ledger theo Ä‘Ăºng cĂ¡ch StockSnapshotDAO Ä‘ang lĂ m
+ * (dĂ²ng ledger cuá»‘i cĂ¹ng cĂ³ created_at trÆ°á»›c má»‘c cáº¯t, cho má»—i cáº·p product/warehouse).
+ * PhĂ¡t sinh trong ká»³ = tá»•ng change_quantity (tĂ¡ch theo dáº¥u) cá»§a cĂ¡c dĂ²ng ledger náº±m trong khoáº£ng ngĂ y,
+ * bá» qua OPENING_BALANCE (má»‘c khá»Ÿi táº¡o, khĂ´ng pháº£i giao dá»‹ch tháº­t).
  */
 public class MovementReportDAO {
 
@@ -32,10 +33,14 @@ public class MovementReportDAO {
       + "       COALESCE(pl.balance_damaged_quantity, 0) AS damaged_qty "
       + "FROM Product_Ledger pl "
       + "JOIN ( "
-      + "    SELECT product_id, warehouse_id, MAX(id) AS max_id "
-      + "    FROM Product_Ledger "
-      + "    WHERE created_at %s ? "
-      + "    GROUP BY product_id, warehouse_id "
+      + "    SELECT candidate.product_id, candidate.warehouse_id, candidate.id AS max_id "
+      + "    FROM Product_Ledger candidate "
+      + "    WHERE candidate.created_at %s ? "
+      + "      AND NOT EXISTS (SELECT 1 FROM Product_Ledger newer "
+      + "          WHERE newer.product_id = candidate.product_id AND newer.warehouse_id = candidate.warehouse_id "
+      + "            AND newer.created_at %s ? "
+      + "            AND (newer.created_at > candidate.created_at "
+      + "                 OR (newer.created_at = candidate.created_at AND newer.id > candidate.id))) "
       + ") latest ON latest.max_id = pl.id "
       + "JOIN Products p ON p.id = pl.product_id "
       + "JOIN Warehouses w ON w.id = pl.warehouse_id "
@@ -65,7 +70,7 @@ public class MovementReportDAO {
       + "WHERE pl.transaction_type <> 'OPENING_BALANCE' AND pl.created_at BETWEEN ? AND ? ";
 
     /**
-     * @param fromDate, toDate "yyyy-MM-dd" (bắt buộc phải có giá trị hợp lệ, không thì trả rỗng)
+     * @param fromDate, toDate "yyyy-MM-dd" (báº¯t buá»™c pháº£i cĂ³ giĂ¡ trá»‹ há»£p lá»‡, khĂ´ng thĂ¬ tráº£ rá»—ng)
      */
     public List<DailyMovementRow> getDailyMovement(String fromDate, String toDate,
             Integer warehouseId, String search) {
@@ -112,7 +117,7 @@ public class MovementReportDAO {
                     r.setImportQuantity(rs.getInt("import_qty"));
                     r.setExportQuantity(rs.getInt("export_qty"));
                     r.setAdjustmentQuantity(rs.getInt("adjustment_qty"));
-                    r.setNote(rs.getInt("has_adjustment") == 1 ? "Có điều chỉnh kiểm kê" : "");
+                    r.setNote(rs.getInt("has_adjustment") == 1 ? "CĂ³ Ä‘iá»u chá»‰nh kiá»ƒm kĂª" : "");
                     list.add(r);
                 }
             }
@@ -124,7 +129,7 @@ public class MovementReportDAO {
 
     /**
      * @param fromDate, toDate "yyyy-MM-dd"
-     * @param includeZero true = hiện cả dòng không phát sinh gì (đầu kỳ=cuối kỳ=0, không nhập không xuất)
+     * @param includeZero true = hiá»‡n cáº£ dĂ²ng khĂ´ng phĂ¡t sinh gĂ¬ (Ä‘áº§u ká»³=cuá»‘i ká»³=0, khĂ´ng nháº­p khĂ´ng xuáº¥t)
      */
     public List<PeriodSummaryRow> getPeriodSummary(String fromDate, String toDate,
             Integer warehouseId, String search, boolean includeZero) {
@@ -138,8 +143,8 @@ public class MovementReportDAO {
         String openingCutoff = fromDate.trim() + " 00:00:00";
         String closingCutoff = toDate.trim() + " 23:59:59";
 
-        // Map cục bộ theo lời gọi (không dùng field instance) để tránh lẫn dữ liệu
-        // giữa các request chạy đồng thời nếu DAO bị dùng chung 1 instance.
+        // Map cá»¥c bá»™ theo lá»i gá»i (khĂ´ng dĂ¹ng field instance) Ä‘á»ƒ trĂ¡nh láº«n dá»¯ liá»‡u
+        // giá»¯a cĂ¡c request cháº¡y Ä‘á»“ng thá»i náº¿u DAO bá»‹ dĂ¹ng chung 1 instance.
         Map<String, ProductWarehouseInfo> infoByKey = new LinkedHashMap<>();
 
         Map<String, int[]> opening = loadBalances(openingCutoff, "<", warehouseId, search, infoByKey);
@@ -193,9 +198,10 @@ public class MovementReportDAO {
     private Map<String, int[]> loadBalances(String cutoff, String operator,
             Integer warehouseId, String search, Map<String, ProductWarehouseInfo> infoOut) {
         Map<String, int[]> map = new LinkedHashMap<>();
-        String sql = String.format(LATEST_BALANCE_SELECT, operator);
+        String sql = String.format(LATEST_BALANCE_SELECT, operator, operator);
         StringBuilder sb = new StringBuilder(sql);
         List<Object> params = new ArrayList<>();
+        params.add(cutoff);
         params.add(cutoff);
         appendWarehouseAndSearch(sb, params, warehouseId, search);
         sb.append("ORDER BY w.warehouse_name, p.sku");
