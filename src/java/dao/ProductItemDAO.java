@@ -61,9 +61,22 @@ public class ProductItemDAO {
         try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
             for (int i = 0; i < quantity; i++) {
                 String mfrSerial = (manufacturerSerials != null && i < manufacturerSerials.size()) ? manufacturerSerials.get(i) : null;
+                String preprintedWmsSerial = null;
+                if (mfrSerial != null && mfrSerial.startsWith("WMS::")) {
+                    int separator = mfrSerial.indexOf("::", 5);
+                    if (separator <= 5 || separator == mfrSerial.length() - 2) {
+                        throw new IllegalArgumentException("Invalid preprinted WMS serial payload");
+                    }
+                    preprintedWmsSerial = mfrSerial.substring(5, separator).trim();
+                    mfrSerial = mfrSerial.substring(separator + 2).trim();
+                    if (!isValidPreprintedWmsSerial(preprintedWmsSerial) || mfrSerial.isEmpty()) {
+                        throw new IllegalArgumentException("Invalid preprinted WMS serial payload");
+                    }
+                }
                 while (true) {
                     nextIndex++;
                     String serial = String.format("%s-%03d", skuClean, nextIndex);
+                    if (preprintedWmsSerial != null) serial = preprintedWmsSerial;
                     ps.setInt(1, productId);
                     ps.setString(2, serial);
                     if (mfrSerial != null) {
@@ -79,6 +92,7 @@ public class ProductItemDAO {
                         serials.add(serial);
                         break;
                     } catch (java.sql.SQLIntegrityConstraintViolationException dup) {
+                        if (preprintedWmsSerial != null) throw dup;
                         if (!isInternalSerialCollision(dup)) throw dup;
                         // serial đã tồn tại → thử số kế tiếp (nextIndex đã tăng ở đầu vòng)
                     }
@@ -89,6 +103,28 @@ public class ProductItemDAO {
     }
 
     /** Legacy wrapper — delegates to addProductItemsAndReturnSerials via a fresh connection. */
+    private boolean isValidPreprintedWmsSerial(String serial) {
+        if (serial == null || serial.length() < 8 || serial.length() > 100) return false;
+        for (int i = 0; i < serial.length(); i++) {
+            char c = serial.charAt(i);
+            if (!(Character.isLetterOrDigit(c) || c == '-')) return false;
+        }
+        return true;
+    }
+
+    public int getExistingSerialCount(int productId) {
+        String sql = "SELECT COUNT(*) FROM Product_Items WHERE product_id = ?";
+        try (Connection conn = DBUtils.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
     private boolean isInternalSerialCollision(java.sql.SQLIntegrityConstraintViolationException error) {
         String message = error.getMessage() == null ? "" : error.getMessage().toLowerCase(Locale.ROOT);
         return message.contains("serial_number") && !message.contains("manufacturer");

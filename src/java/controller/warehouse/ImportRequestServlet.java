@@ -123,7 +123,7 @@ public class ImportRequestServlet extends HttpServlet {
                 
                 String sql = 
                     "SELECT pi.id AS item_id, pi.product_id, p.product_name, p.sku, p.unit, "
-                  + "       t.id AS ticket_id, t.ticket_code, r.partner_type, r.partner_id, "
+                  + "       t.id AS ticket_id, t.ticket_code, pi.status AS item_status, pi.item_condition, r.partner_type, r.partner_id, "
                   + "       CASE r.partner_type "
                   + "           WHEN 'SUPPLIER' THEN (SELECT supplier_name FROM Suppliers WHERE id = r.partner_id) "
                   + "           WHEN 'CUSTOMER' THEN (SELECT customer_name FROM Customers WHERE id = r.partner_id) "
@@ -135,7 +135,7 @@ public class ImportRequestServlet extends HttpServlet {
                   + "LEFT JOIN Product_Item_Movements m ON m.product_item_id = pi.id AND m.action IN ('EXPORT_OUT','TRANSFER_OUT') "
                   + "LEFT JOIN Tickets t ON t.id = m.ticket_id "
                   + "LEFT JOIN Requests r ON r.id = t.request_id "
-                  + "WHERE pi.serial_number = ? AND pi.status = 'EXPORTED' "
+                  + "WHERE pi.serial_number = ? AND pi.status IN ('EXPORTED','LOST') "
                   + "ORDER BY m.id DESC LIMIT 1";
                   
                 try (java.sql.Connection conn = utils.DBUtils.getConnection();
@@ -150,7 +150,9 @@ public class ImportRequestServlet extends HttpServlet {
                                 .append("\"sku\":\"").append(rs.getString("sku")).append("\",")
                                 .append("\"unit\":\"").append(rs.getString("unit")).append("\",")
                                 .append("\"ticketId\":").append(rs.getInt("ticket_id")).append(",")
-                                .append("\"ticketCode\":\"").append(rs.getString("ticket_code")).append("\",")
+                                .append("\"ticketCode\":\"").append(rs.getString("ticket_code") != null ? rs.getString("ticket_code") : "LOST").append("\",")
+                                .append("\"itemCondition\":\"").append(rs.getString("item_condition") != null ? rs.getString("item_condition") : "NEW").append("\",")
+                                .append("\"lost\":").append("LOST".equals(rs.getString("item_status"))).append(",")
                                 .append("\"partnerName\":\"").append(rs.getString("partner_name") != null ? rs.getString("partner_name").replace("\"", "\\\"") : "").append("\"")
                                 .append("}");
                             out.print(json.toString());
@@ -310,18 +312,22 @@ public class ImportRequestServlet extends HttpServlet {
                     String requestedCondition = httpReq.getParameter("requested_condition");
 
                     String refTicketIdStr = httpReq.getParameter("ref_ticket_id");
-                    if (refTicketIdStr == null || refTicketIdStr.trim().isEmpty()) {
-                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=NoRefTicket"); return;
+                    Integer refTicketId = null;
+                    Ticket refTicket = null;
+                    Request refTicketReq = null;
+                    // Có ref_ticket_id: nhập lại theo phiếu xuất gốc; bỏ trống để khôi phục serial LOST.
+                    if (refTicketIdStr != null && !refTicketIdStr.trim().isEmpty()) {
+                        refTicketId = Integer.parseInt(refTicketIdStr);
+                        refTicket = new TicketService().getById(refTicketId);
+                        if (refTicket == null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=InvalidTicket"); return;
+                        }
+                        refTicketReq = dao.getById(refTicket.getRequestId());
+                        if (refTicketReq == null) {
+                            response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=InvalidTicketRequest"); return;
+                        }
                     }
-                    int refTicketId = Integer.parseInt(refTicketIdStr);
-                    Ticket refTicket = new TicketService().getById(refTicketId);
-                    if (refTicket == null) {
-                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=InvalidTicket"); return;
-                    }
-                    Request refTicketReq = dao.getById(refTicket.getRequestId());
-                    if (refTicketReq == null) {
-                        response.sendRedirect(httpReq.getContextPath() + "/warehouse/import-request?action=addReturn&error=InvalidTicketRequest"); return;
-                    }
+
 
                     String[] productIds = httpReq.getParameterValues("product_id");
                     String[] scannedSerials = httpReq.getParameterValues("scanned_serials");
@@ -366,8 +372,8 @@ public class ImportRequestServlet extends HttpServlet {
                     req.setType(Request.TYPE_IN);
                     req.setReason(Request.REASON_RETURN);
                     req.setWarehouseId(warehouseId);
-                    req.setPartnerType(refTicketReq.getPartnerType());
-                    req.setPartnerId(refTicketReq.getPartnerId());
+                    req.setPartnerType(refTicketReq != null ? refTicketReq.getPartnerType() : Request.PARTNER_NONE);
+                    req.setPartnerId(refTicketReq != null ? refTicketReq.getPartnerId() : null);
                     req.setRefTicketId(refTicketId);
                     req.setReturnReason(returnReason.trim());
                     req.setRequestedCondition(requestedCondition);
@@ -438,7 +444,7 @@ public class ImportRequestServlet extends HttpServlet {
     }
 
     /**
-     * Láº¥y warehouse_id: form param Æ°u tiĂªn, fallback vá» user.warehouseId, cuá»‘i cĂ¹ng
+     * Lấy warehouse_id: form param ưu tiên, fallback về user.warehouseId, cuối cùng
      * 1.
      */
     private int parseWarehouseId(HttpServletRequest httpReq, User user) {

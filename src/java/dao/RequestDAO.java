@@ -693,7 +693,8 @@ public class RequestDAO {
             ps.setInt(7, outTicketId);
             ps.setString(8, String.join(",", expectedSerials));
             ps.setInt(9, userId);
-            ps.setString(10, "NEW");
+            ps.setString(10, cancelledInbound.getRequestedCondition() == null
+                    ? "NEW" : cancelledInbound.getRequestedCondition());
             ps.setString(11, Request.STATUS_APPROVED);
             ps.setInt(12, userId);
             ps.executeUpdate();

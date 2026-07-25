@@ -79,7 +79,7 @@
                 </div>
                 <ul class="nav nav-tabs" role="tablist">
                     <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#serialsTab">Serial · <%= serials == null ? 0 : serials.size() %></a></li>
-                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#goneTab">Đã xuất / Đã mất · <%= exportedOrLostSerials == null ? 0 : exportedOrLostSerials.size() %></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#goneTab">Đã xuất / Thất thoát · <%= exportedOrLostSerials == null ? 0 : exportedOrLostSerials.size() %></a></li>
                     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#ledgerTab">Lịch sử · 30 dòng</a></li>
                 </ul>
 
@@ -100,7 +100,7 @@
                                         if ("IN_STOCK".equals(it.getStatus())) b = "success";
                                         else if ("EXPORTED".equals(it.getStatus())) b = "primary";
                                         else if ("IN_TRANSIT".equals(it.getStatus())) b = "info";
-                                        else if ("QUARANTINE".equals(it.getStatus())) b = "danger";
+                                        else if ("QUARANTINE".equals(it.getStatus())) b = "success";
                                         else if ("LOST".equals(it.getStatus())) b = "dark";
 
                                         String c = "secondary";
@@ -115,7 +115,7 @@
                                                 if ("IN_STOCK".equals(it.getStatus())) out.print("Trong kho");
                                                 else if ("EXPORTED".equals(it.getStatus())) out.print("Đã xuất");
                                                 else if ("IN_TRANSIT".equals(it.getStatus())) out.print("Đang chuyển");
-                                                else if ("QUARANTINE".equals(it.getStatus())) out.print("Hàng hỏng");
+                                                else if ("QUARANTINE".equals(it.getStatus())) out.print("Trong kho");
                                                 else if ("LOST".equals(it.getStatus())) out.print("Thất thoát");
                                                 else out.print(it.getStatus());
                                             %></span></td>
@@ -144,7 +144,7 @@
                                     </thead>
                                     <tbody>
                                     <% if (exportedOrLostSerials == null || exportedOrLostSerials.isEmpty()) { %>
-                                        <tr><td colspan="5" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa có serial nào đã xuất hoặc đã mất.</p></div></td></tr>
+                                        <tr><td colspan="5" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa có serial nào đã xuất hoặc thất thoát.</p></div></td></tr>
                                     <% } else { for (ProductItem it : exportedOrLostSerials) {
                                         String b = "secondary";
                                         if ("EXPORTED".equals(it.getStatus())) b = "primary";

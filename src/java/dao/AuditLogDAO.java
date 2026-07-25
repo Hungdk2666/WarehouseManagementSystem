@@ -65,6 +65,24 @@ public class AuditLogDAO {
         }
     }
 
+    /**
+     * Ghi log DÙNG CHUNG connection của caller (nằm trong transaction đang mở).
+     * Nếu giao dịch bị rollback thì log cũng mất theo → tránh log mồ côi cho phiếu không tồn tại.
+     */
+    public void log(Connection conn, Integer userId, String action, String details) throws Exception {
+        String query = "INSERT INTO Audit_Logs (user_id, action, details) VALUES (?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            if (userId != null) {
+                ps.setInt(1, userId);
+            } else {
+                ps.setNull(1, java.sql.Types.INTEGER);
+            }
+            ps.setString(2, action);
+            ps.setString(3, details);
+            ps.executeUpdate();
+        }
+    }
+
     public List<AuditLog> getLogs(String category, String search, String[] actionFilters, String startDate, String endDate, int page, int pageSize) {
         List<AuditLog> list = new ArrayList<>();
         List<String> validActions = filterNonEmpty(actionFilters);

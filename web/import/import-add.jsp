@@ -1,6 +1,8 @@
 <%@page import="model.Request"%>
 <%@page import="model.RequestDetail"%>
+<%@page import="model.ProductItem"%>
 <%@page import="java.util.List"%>
+<%@page import="java.util.Map"%>
 <%@page import="model.User"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%!
@@ -21,13 +23,16 @@
     boolean isReturnRequest   = selectedRequest != null && "RETURN".equals(selectedRequest.getReason());
     boolean isTransferRequest = selectedRequest != null && "TRANSFER".equals(selectedRequest.getReason());
     boolean isTransferReturnRequest = isTransferRequest
-            && selectedRequest.getExpectedSerials() != null
-            && !selectedRequest.getExpectedSerials().trim().isEmpty();
+            && Boolean.TRUE.equals(request.getAttribute("transferReturnReceipt"));
+    boolean needsExistingSerialScan = isReturnRequest || isTransferRequest;
     boolean isPurchaseRequest = selectedRequest != null && "PURCHASE".equals(selectedRequest.getReason());
     boolean showCondition     = isReturnRequest || isTransferRequest;
+    List<ProductItem> eligibleTransferItems =
+            (List<ProductItem>) request.getAttribute("eligibleTransferItems");
 
     String error = request.getParameter("error");
     List<String> serialErrors = (List<String>) request.getAttribute("serialErrors");
+    Map<Integer, Integer> existingSerialCounts = (Map<Integer, Integer>) request.getAttribute("existingSerialCounts");
 %>
 <!DOCTYPE html>
 <html>
@@ -43,8 +48,21 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        #wmsPrintPreview { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+        .wms-label { border: 1px dashed #64748b; border-radius: 8px; padding: 12px; background: #fff; }
+        @media print {
+            body * { visibility: hidden !important; }
+            body > * { display: none !important; }
+            body > #wmsPrintHost { display: block !important; }
+            #wmsPrintHost, #wmsPrintHost * { visibility: visible !important; }
+            #wmsPrintPreview { display: grid !important; position: static !important; width: 100%; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .wms-label { break-inside: avoid; page-break-inside: avoid; }
+        }
+    </style>
     
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
     <jsp:include page="/includes/header.jsp" />
@@ -97,8 +115,12 @@
                         <i class="bi bi-exclamation-triangle-fill me-2"></i> Yêu cầu này chưa được duyệt hoặc đang chờ hủy, không thể nhập kho.
                     <% } else if ("ReceiveFailed".equals(error)) { %>
                         <i class="bi bi-exclamation-triangle-fill me-2"></i> Nhập kho thất bại do số lượng vượt yêu cầu, kho đang kiểm kê hoặc dữ liệu đã thay đổi. Vui lòng tải lại và thử lại.
+                    <% } else if ("MissingReturnSerial".equals(error) || "InvalidReturnSerial".equals(error)) { %>
+                        <i class="bi bi-upc-scan me-2"></i> Hàng nhập lại phải được quét đủ và đúng serial của hàng đã xuất trong yêu cầu này.
                     <% } else if ("MissingTransferReturnSerial".equals(error) || "InvalidTransferReturnSerial".equals(error)) { %>
                         <i class="bi bi-upc-scan me-2"></i> Hàng trả phải được quét đủ và đúng serial còn đang trên đường của phiếu xuất gốc.
+                    <% } else if ("MissingTransferSerial".equals(error) || "InvalidTransferSerial".equals(error)) { %>
+                        <i class="bi bi-upc-scan me-2"></i> Hàng chuyển kho phải được quét đủ và đúng serial của phiếu xuất chuyển kho liên kết.
                     <% } else { %>
                         <i class="bi bi-exclamation-triangle-fill me-2"></i> Thao tác thất bại. Mã lỗi: <%= error %>. Vui lòng thử lại.
                     <% } %>
@@ -224,6 +246,11 @@
                                         </td>
                                         <% if (showCondition) { %>
                                         <td>
+                                            <% if (isTransferRequest) { %>
+                                            <span class="badge bg-info bg-opacity-10 text-info">
+                                                Giữ theo serial
+                                            </span>
+                                            <% } else { %>
                                             <select class="form-select form-select-sm" name="item_condition" style="box-shadow: none;">
                                                 <% if (isReturnRequest) { %>
                                                 <option value="USED" selected>Hàng cũ</option>
@@ -235,6 +262,7 @@
                                                 <option value="DAMAGED">Hàng hỏng</option>
                                                 <% } %>
                                             </select>
+                                            <% } %>
                                         </td>
                                         <% } else { %>
                                         <input type="hidden" name="item_condition" value="NEW">
@@ -263,29 +291,82 @@
                             <div class="form-text">Nếu không đính kèm, hệ thống tự sinh serial cho hàng nhập mua.</div>
                         </div>
                         <% } %>
-                        <% if (isTransferReturnRequest) { %>
+                        <% if (needsExistingSerialScan && !isTransferRequest) { %>
                         <div class="card-body border-top p-4 bg-warning bg-opacity-10">
                             <div class="d-flex align-items-start gap-3 mb-3">
                                 <i class="bi bi-arrow-return-left fs-4 text-warning"></i>
                                 <div>
-                                    <h6 class="fw-bold mb-1">Quét serial hàng trả về kho nguồn</h6>
-                                    <div class="small text-muted">Chỉ serial của phiếu xuất chuyển kho đang bị hủy mới được nhận trả. Hệ thống sẽ đóng phiếu xuất gốc khi đã nhận đủ.</div>
+                                    <h6 class="fw-bold mb-1"><%= isReturnRequest
+                                            ? "Quét serial hàng nhập lại"
+                                            : (isTransferReturnRequest
+                                                ? "Quét serial hàng trả về kho nguồn"
+                                                : "Quét serial hàng chuyển kho thực nhận") %></h6>
+                                    <div class="small text-muted"><%= isReturnRequest
+                                            ? "Chỉ serial của hàng đã được xuất theo yêu cầu này mới được nhập lại. Quét đủ số lượng thực tế nhận."
+                                            : (isTransferReturnRequest
+                                                ? "Chỉ serial của phiếu xuất chuyển kho đang bị hủy mới được nhận trả. Hệ thống sẽ đóng phiếu xuất gốc khi đã nhận đủ."
+                                                : "Quét đúng serial WMS trên từng món hàng của phiếu xuất chuyển kho liên kết. Tình trạng hàng được giữ nguyên theo serial.") %></div>
                                 </div>
                             </div>
                             <div class="input-group">
-                                <input type="text" id="transferReturnSerialInput" class="form-control" autocomplete="off" placeholder="Quét hoặc nhập serial rồi nhấn Enter">
-                                <button type="button" class="btn btn-warning" id="addTransferReturnSerialButton"><i class="bi bi-plus-lg me-1"></i>Thêm serial</button>
+                                <input type="text" id="returnSerialInput" class="form-control" autocomplete="off" placeholder="Quét hoặc nhập serial WMS rồi nhấn Enter">
+                                <button type="button" class="btn btn-warning" id="addReturnSerialButton"><i class="bi bi-plus-lg me-1"></i>Thêm serial</button>
                             </div>
-                            <div id="transferReturnSerialProgress" class="small mt-2 text-muted">Chưa quét serial nào.</div>
-                            <div id="transferReturnSerialList" class="d-flex flex-wrap gap-2 mt-2"></div>
-                            <div id="transferReturnSerialInputs"></div>
+                            <div id="returnSerialProgress" class="small mt-2 text-muted">Chưa quét serial nào.</div>
+                            <div id="returnSerialList" class="d-flex flex-wrap gap-2 mt-2"></div>
+                            <div id="returnSerialInputs"></div>
                         </div>
                         <% } %>
                         <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 border-top-0">
                             <a href="import-ticket?action=list" class="btn btn-outline-secondary px-4"><i class="bi bi-x-circle me-1"></i> Hủy</a>
-                            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-box-arrow-in-down me-1"></i> Nhập kho</button>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi <%= isTransferRequest ? "bi-arrow-right-circle" : "bi-box-arrow-in-down" %> me-1"></i>
+                                <%= isTransferRequest ? "Tiếp tục: quét serial" : "Nhập kho" %>
+                            </button>
                         </div>
                     </div>
+
+                    <% if (isTransferRequest) { %>
+                    <div class="card bg-white mb-4 d-none" id="transferSerialCaptureCard">
+                        <div class="card-header bg-warning bg-opacity-10 py-3 border-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1 fw-bold text-warning">
+                                    <i class="bi bi-upc-scan me-2"></i>
+                                    <%= isTransferReturnRequest
+                                            ? "Quét serial hàng trả về kho nguồn"
+                                            : "Quét serial hàng chuyển kho thực nhận" %>
+                                </h5>
+                                <div class="small text-muted">
+                                    <%= isTransferReturnRequest
+                                            ? "Quét đúng các serial thuộc lô hàng đang được hoàn trả."
+                                            : "Quét đúng serial WMS trên từng món hàng thực tế nhận; condition được giữ nguyên theo serial." %>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="backToTransferQuantities()">
+                                <i class="bi bi-arrow-left me-1"></i>Sửa số lượng
+                            </button>
+                        </div>
+                        <div class="card-body p-4 bg-warning bg-opacity-10">
+                            <div class="input-group input-group-lg">
+                                <input type="text" id="returnSerialInput" class="form-control" autocomplete="off"
+                                       placeholder="Quét hoặc nhập serial WMS rồi nhấn Enter">
+                                <button type="button" class="btn btn-warning" id="addReturnSerialButton">
+                                    <i class="bi bi-plus-lg me-1"></i>Thêm serial
+                                </button>
+                            </div>
+                            <div id="returnSerialProgress" class="small mt-3 text-muted">Chưa quét serial nào.</div>
+                            <div id="returnSerialList" class="d-flex flex-wrap gap-2 mt-2"></div>
+                            <div id="returnSerialInputs"></div>
+                        </div>
+                        <div class="card-footer bg-light p-3 d-flex justify-content-between align-items-center">
+                            <span id="existingSerialCompletionText" class="small text-muted">Chưa quét đủ serial</span>
+                            <button type="submit" id="confirmTransferReceiptButton"
+                                    class="btn btn-secondary px-4" disabled>
+                                <i class="bi bi-box-arrow-in-down me-1"></i>Nhập kho
+                            </button>
+                        </div>
+                    </div>
+                    <% } %>
 
                     <% if (isPurchaseRequest) { %>
                     <input type="hidden" name="serial_capture_mode" id="serialCaptureMode" value="SCAN">
@@ -310,8 +391,28 @@
                             </div>
 
                             <div id="scanModeArea">
-                                <div class="alert alert-info py-2 small">
-                                    Chọn đúng sản phẩm bên dưới rồi quét lần lượt serial in trên sản phẩm. Hai sản phẩm khác nhau có thể có cùng chuỗi serial.
+                                <div class="alert alert-info py-2 small mb-3">
+                                    <i class="bi bi-printer me-1"></i> Hệ thống tạo tem WMS trước. In và dán tem, sau đó quét tem WMS để tự chọn sản phẩm rồi quét serial nhà sản xuất.
+                                </div>
+                                <div id="wmsPrintStep" class="border rounded-3 p-3 mb-3 bg-light">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                        <div>
+                                            <div class="fw-semibold">Bước 1 · In tem WMS</div>
+                                            <div class="small text-muted">Mỗi tem dưới đây là một mã WMS sẽ được lưu cho đúng món hàng khi nhập kho.</div>
+                                        </div>
+                                        <button type="button" class="btn btn-primary" id="printWmsLabelsButton"><i class="bi bi-printer me-1"></i>In tem & bắt đầu quét</button>
+                                    </div>
+                                    <div id="wmsPrintPreview"></div>
+                                </div>
+                                <div id="wmsScanStep" class="d-none">
+                                    <div class="mb-3">
+                                        <label for="wmsScannerInput" class="form-label fw-semibold"><i class="bi bi-upc-scan me-1"></i>Quét tem WMS</label>
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
+                                            <input type="text" id="wmsScannerInput" class="form-control border-primary" placeholder="Quét mã WMS vừa dán..." maxlength="100" autocomplete="off">
+                                        </div>
+                                        <div id="wmsScanAlert" class="alert d-none mt-2 mb-0 py-2" role="alert"></div>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="manufacturerScannerInput" class="form-label fw-semibold">
@@ -380,16 +481,31 @@
 
         <% if (selectedRequest != null) { %>
         const isPurchaseReceipt = <%= isPurchaseRequest ? "true" : "false" %>;
+        const existingSerialCounts = {
+            <% if (existingSerialCounts != null) { int countIndex = 0; for (Map.Entry<Integer, Integer> entry : existingSerialCounts.entrySet()) { %>
+            <%= entry.getKey() %>: <%= entry.getValue() %><%= (++countIndex < existingSerialCounts.size()) ? "," : "" %>
+            <% } } %>
+        };
+        const needsExistingSerialScan = <%= needsExistingSerialScan ? "true" : "false" %>;
+        const isTransferReceipt = <%= isTransferRequest ? "true" : "false" %>;
         const isTransferReturnReceipt = <%= isTransferReturnRequest ? "true" : "false" %>;
-        const expectedTransferReturnSerials = new Set([
-            <% if (isTransferReturnRequest) {
+        const expectedReceiptSerials = new Set([
+            <% if (isTransferRequest && eligibleTransferItems != null) {
+                for (int i = 0; i < eligibleTransferItems.size(); i++) {
+                    String serial = eligibleTransferItems.get(i).getSerialNumber(); %>
+            "<%= escapeHtml(serial).replace("\\", "\\\\").replace("\"", "\\\"") %>"<%= i + 1 < eligibleTransferItems.size() ? "," : "" %>
+            <%  }
+               } else if (isReturnRequest && selectedRequest.getExpectedSerials() != null) {
                 String[] serials = selectedRequest.getExpectedSerials().split(",");
                 for (int i = 0; i < serials.length; i++) { %>
             "<%= escapeHtml(serials[i].trim()).replace("\\", "\\\\").replace("\"", "\\\"") %>"<%= i + 1 < serials.length ? "," : "" %>
             <%  }
                } %>
         ]);
-        let scannedTransferReturnSerials = [];
+        let scannedReceiptSerials = [];
+        let existingSerialStepOpen = false;
+        let scannedWmsByProduct = {};
+        let activeManufacturerWmsSerial = null;
         let serialStepOpen = false;
         let serialMode = "SCAN";
         let serialProducts = [];
@@ -414,62 +530,123 @@
             
             recalculateTotals();
             if (isPurchaseReceipt) initializePurchaseSerialUi();
-            if (isTransferReturnReceipt) initializeTransferReturnSerialUi();
+            if (needsExistingSerialScan) initializeExistingSerialUi();
         });
 
-        function initializeTransferReturnSerialUi() {
-            const input = document.getElementById("transferReturnSerialInput");
-            const addButton = document.getElementById("addTransferReturnSerialButton");
+        function initializeExistingSerialUi() {
+            const input = document.getElementById("returnSerialInput");
+            const addButton = document.getElementById("addReturnSerialButton");
             input.addEventListener("keydown", function(event) {
-                if (event.key === "Enter") { event.preventDefault(); addTransferReturnSerial(); }
+                if (event.key === "Enter") { event.preventDefault(); addReceiptSerial(); }
             });
-            addButton.addEventListener("click", addTransferReturnSerial);
+            addButton.addEventListener("click", addReceiptSerial);
             document.getElementById("grnForm").addEventListener("submit", function(event) {
                 const needed = Array.from(document.querySelectorAll(".qty-input"))
                         .reduce(function(sum, el) { return sum + (parseInt(el.value) || 0); }, 0);
-                if (needed === 0 || scannedTransferReturnSerials.length !== needed) {
+                if (isTransferReceipt && !existingSerialStepOpen) {
                     event.preventDefault();
-                    alert("Số serial quét phải đúng bằng tổng số lượng nhập trả.");
+                    event.stopImmediatePropagation();
+                    if (needed <= 0) {
+                        alert("Bạn phải chọn ít nhất một sản phẩm với số lượng lớn hơn 0.");
+                        return;
+                    }
+                    openTransferSerialCapture();
+                    return;
                 }
-            });
-            input.focus();
+                if (needed === 0 || scannedReceiptSerials.length !== needed) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    alert("Số serial quét phải đúng bằng tổng số lượng thực tế nhận.");
+                }
+            }, true);
+            if (!isTransferReceipt) input.focus();
         }
 
-        function addTransferReturnSerial() {
-            const input = document.getElementById("transferReturnSerialInput");
+        function openTransferSerialCapture() {
+            existingSerialStepOpen = true;
+            document.getElementById("receiptDetailCard").classList.add("d-none");
+            const captureCard = document.getElementById("transferSerialCaptureCard");
+            captureCard.classList.remove("d-none");
+            document.querySelectorAll(".qty-input, .price-input").forEach(function(field) {
+                field.setAttribute("readonly", "readonly");
+            });
+            updateExistingSerialCompletion();
+            const input = document.getElementById("returnSerialInput");
+            input.focus();
+            window.scrollTo({ top: captureCard.offsetTop - 20, behavior: "smooth" });
+        }
+
+        function backToTransferQuantities() {
+            if (scannedReceiptSerials.length > 0
+                    && !confirm("Danh sách serial đã quét sẽ bị xóa. Bạn có muốn sửa số lượng không?")) {
+                return;
+            }
+            existingSerialStepOpen = false;
+            scannedReceiptSerials = [];
+            renderReceiptSerials();
+            document.getElementById("transferSerialCaptureCard").classList.add("d-none");
+            document.getElementById("receiptDetailCard").classList.remove("d-none");
+            document.querySelectorAll(".qty-input, .price-input").forEach(function(field) {
+                field.removeAttribute("readonly");
+            });
+            window.scrollTo({ top: document.getElementById("receiptDetailCard").offsetTop - 20, behavior: "smooth" });
+        }
+
+        function addReceiptSerial() {
+            const input = document.getElementById("returnSerialInput");
             const serial = input.value.trim();
             if (!serial) return;
-            if (!expectedTransferReturnSerials.has(serial)) {
-                alert("Serial không thuộc lô hàng chuyển kho đang chờ trả."); return;
+            if (!expectedReceiptSerials.has(serial)) {
+                alert(isTransferReturnReceipt
+                        ? "Serial không thuộc lô hàng chuyển kho đang chờ trả."
+                        : (isTransferReceipt
+                            ? "Serial không thuộc phiếu xuất chuyển kho đang chờ nhận."
+                            : "Serial không thuộc hàng đã xuất của yêu cầu nhập lại này.")); return;
             }
-            if (scannedTransferReturnSerials.includes(serial)) {
+            if (scannedReceiptSerials.includes(serial)) {
                 alert("Serial này đã được quét."); return;
             }
-            scannedTransferReturnSerials.push(serial);
+            scannedReceiptSerials.push(serial);
             input.value = "";
             input.focus();
-            renderTransferReturnSerials();
+            renderReceiptSerials();
         }
 
-        function renderTransferReturnSerials() {
-            const list = document.getElementById("transferReturnSerialList");
-            const inputs = document.getElementById("transferReturnSerialInputs");
+        function renderReceiptSerials() {
+            const list = document.getElementById("returnSerialList");
+            const inputs = document.getElementById("returnSerialInputs");
             list.replaceChildren(); inputs.replaceChildren();
-            scannedTransferReturnSerials.forEach(function(serial, index) {
+            scannedReceiptSerials.forEach(function(serial, index) {
                 const badge = document.createElement("span");
                 badge.className = "badge bg-white text-dark border font-monospace";
                 const text = document.createTextNode(serial + " ");
                 const remove = document.createElement("button");
                 remove.type = "button"; remove.className = "btn-close ms-1"; remove.style.fontSize = "0.55rem";
-                remove.addEventListener("click", function() { scannedTransferReturnSerials.splice(index, 1); renderTransferReturnSerials(); });
+                remove.addEventListener("click", function() { scannedReceiptSerials.splice(index, 1); renderReceiptSerials(); });
                 badge.append(text, remove); list.appendChild(badge);
                 const hidden = document.createElement("input");
                 hidden.type = "hidden"; hidden.name = "scanned_serials"; hidden.value = serial; inputs.appendChild(hidden);
             });
             const needed = Array.from(document.querySelectorAll(".qty-input"))
                     .reduce(function(sum, el) { return sum + (parseInt(el.value) || 0); }, 0);
-            document.getElementById("transferReturnSerialProgress").textContent = "Đã quét "
-                    + scannedTransferReturnSerials.length + "/" + needed + " serial.";
+            document.getElementById("returnSerialProgress").textContent = "Đã quét "
+                    + scannedReceiptSerials.length + "/" + needed + " serial.";
+            updateExistingSerialCompletion();
+        }
+
+        function updateExistingSerialCompletion() {
+            if (!isTransferReceipt) return;
+            const needed = Array.from(document.querySelectorAll(".qty-input"))
+                    .reduce(function(sum, el) { return sum + (parseInt(el.value) || 0); }, 0);
+            const complete = needed > 0 && scannedReceiptSerials.length === needed;
+            const button = document.getElementById("confirmTransferReceiptButton");
+            const text = document.getElementById("existingSerialCompletionText");
+            if (!button || !text) return;
+            button.disabled = !complete;
+            button.className = complete ? "btn btn-primary px-4" : "btn btn-secondary px-4";
+            text.textContent = complete
+                    ? "Đã đủ " + needed + " serial"
+                    : "Đã quét " + scannedReceiptSerials.length + "/" + needed + " serial";
         }
 
         function recalculateTotals() {
@@ -511,6 +688,42 @@
                 excelFile.addEventListener("change", updateSerialCompletion);
             }
 
+            const excelButton = document.getElementById("excelModeButton");
+            const excelArea = document.getElementById("excelModeArea");
+            if (excelButton) excelButton.classList.add("d-none");
+            if (excelArea) excelArea.classList.add("d-none");
+            const wmsScanner = document.getElementById("wmsScannerInput");
+            if (wmsScanner) wmsScanner.addEventListener("keydown", function(event) {
+                if (event.key === "Enter") { event.preventDefault(); processWmsLabelScan(this.value); this.value = ""; }
+            });
+            const printButton = document.getElementById("printWmsLabelsButton");
+            if (printButton) printButton.addEventListener("click", function() {
+                const preview = document.getElementById("wmsPrintPreview");
+                const originalParent = preview ? preview.parentElement : null;
+                const originalNextSibling = preview ? preview.nextSibling : null;
+                const printHost = document.createElement("div");
+                printHost.id = "wmsPrintHost";
+                if (preview && originalParent) {
+                    printHost.appendChild(preview);
+                    document.body.appendChild(printHost);
+                }
+                let restored = false;
+                const restorePrintPreview = function() {
+                    if (restored) return;
+                    restored = true;
+                    if (preview && originalParent) {
+                        originalParent.insertBefore(preview, originalNextSibling);
+                    }
+                    if (printHost.parentNode) printHost.parentNode.removeChild(printHost);
+                    window.removeEventListener("afterprint", restorePrintPreview);
+                };
+                window.addEventListener("afterprint", restorePrintPreview);
+                window.print();
+                document.getElementById("wmsPrintStep").classList.add("d-none");
+                document.getElementById("wmsScanStep").classList.remove("d-none");
+                if (wmsScanner) wmsScanner.focus();
+            });
+
             const scanner = document.getElementById("manufacturerScannerInput");
             if (scanner) {
                 scanner.addEventListener("keydown", function(event) {
@@ -543,12 +756,21 @@
 
             scannedManufacturerSerials = {};
             serialProducts.forEach(function(product) { scannedManufacturerSerials[product.id] = []; });
+            serialProducts.forEach(function(product) {
+                scannedWmsByProduct[product.id] = [];
+            });
             serialStepOpen = true;
+            const printStep = document.getElementById("wmsPrintStep");
+            const scanStep = document.getElementById("wmsScanStep");
+            if (printStep) printStep.classList.remove("d-none");
+            if (scanStep) scanStep.classList.add("d-none");
             document.getElementById("receiptDetailCard").classList.add("d-none");
             document.getElementById("serialCaptureCard").classList.remove("d-none");
             document.querySelectorAll(".qty-input, .price-input").forEach(function(input) {
                 input.setAttribute("readonly", "readonly");
             });
+            buildWmsPrintPreview();
+            document.getElementById("wmsScanStep").classList.add("d-none");
             buildManufacturerScanPanels();
             selectSerialMode("SCAN");
             window.scrollTo({ top: document.getElementById("serialCaptureCard").offsetTop - 20, behavior: "smooth" });
@@ -558,11 +780,19 @@
             const hasScans = Object.keys(scannedManufacturerSerials).some(function(productId) {
                 return scannedManufacturerSerials[productId].length > 0;
             });
-            if (hasScans && !confirm("Danh sách serial đã quét sẽ bị xóa. Bạn có muốn sửa số lượng không?")) return;
+            if (hasScans && !confirm("Danh sách serial và tem WMS đã in sẽ bị bỏ. Bạn có muốn sửa số lượng và in lại tem không?")) return;
 
             serialStepOpen = false;
             scannedManufacturerSerials = {};
+            scannedWmsByProduct = {};
             activeManufacturerProductId = null;
+            activeManufacturerWmsSerial = null;
+            const printStep = document.getElementById("wmsPrintStep");
+            const scanStep = document.getElementById("wmsScanStep");
+            if (printStep) printStep.classList.remove("d-none");
+            if (scanStep) scanStep.classList.add("d-none");
+            const preview = document.getElementById("wmsPrintPreview");
+            if (preview) preview.replaceChildren();
             document.getElementById("manufacturerSerialHiddenInputs").replaceChildren();
             document.getElementById("serialCaptureCard").classList.add("d-none");
             document.getElementById("receiptDetailCard").classList.remove("d-none");
@@ -583,8 +813,7 @@
                 card.className = "card h-100 border-2 manufacturer-product-card";
                 card.id = "manufacturer-card-" + product.id;
                 card.tabIndex = 0;
-                card.style.cursor = "pointer";
-                card.addEventListener("click", function() { activateManufacturerProduct(product.id); });
+                card.style.cursor = "default";
 
                 const body = document.createElement("div");
                 body.className = "card-body p-3";
@@ -606,7 +835,7 @@
 
                 const hint = document.createElement("div");
                 hint.className = "small text-primary mb-2";
-                hint.textContent = "Bấm vào thẻ này để quét cho sản phẩm";
+                hint.textContent = "Quét tem WMS đã in để chọn đúng sản phẩm";
 
                 const list = document.createElement("ul");
                 list.className = "list-group list-group-flush small border-top pt-1";
@@ -621,10 +850,6 @@
                 renderManufacturerProduct(product.id);
             });
 
-            const firstIncomplete = serialProducts.find(function(product) {
-                return scannedManufacturerSerials[product.id].length < product.qty;
-            });
-            if (firstIncomplete) activateManufacturerProduct(firstIncomplete.id);
             updateSerialCompletion();
         }
 
@@ -644,8 +869,8 @@
 
         function processManufacturerScan(rawSerial) {
             const serial = rawSerial.trim();
-            if (!activeManufacturerProductId) {
-                showManufacturerScanAlert("Hãy chọn sản phẩm trước khi quét.", false);
+            if (!activeManufacturerProductId || !activeManufacturerWmsSerial) {
+                showManufacturerScanAlert("Hãy quét tem WMS trước khi quét serial nhà sản xuất.", false);
                 playManufacturerBeep(false);
                 return;
             }
@@ -669,6 +894,8 @@
             }
 
             values.push(serial);
+            scannedWmsByProduct[activeManufacturerProductId].push(activeManufacturerWmsSerial);
+            activeManufacturerWmsSerial = null;
             renderManufacturerProduct(activeManufacturerProductId);
             rebuildManufacturerHiddenInputs();
             showManufacturerScanAlert("Đã nhận serial " + serial + ".", true);
@@ -678,7 +905,10 @@
                 const next = serialProducts.find(function(item) {
                     return scannedManufacturerSerials[item.id].length < item.qty;
                 });
-                if (next) activateManufacturerProduct(next.id);
+                activeManufacturerProductId = null;
+                document.getElementById("activeProductLabel").textContent = "Quét tem WMS tiếp theo";
+                const wmsScanner = document.getElementById("wmsScannerInput");
+                if (next && wmsScanner) wmsScanner.focus();
             }
             updateSerialCompletion();
         }
@@ -724,6 +954,7 @@
 
         function removeManufacturerSerial(productId, index) {
             scannedManufacturerSerials[productId].splice(index, 1);
+            scannedWmsByProduct[productId].splice(index, 1);
             renderManufacturerProduct(productId);
             rebuildManufacturerHiddenInputs();
             activateManufacturerProduct(productId);
@@ -734,7 +965,7 @@
             const container = document.getElementById("manufacturerSerialHiddenInputs");
             container.replaceChildren();
             serialProducts.forEach(function(product) {
-                (scannedManufacturerSerials[product.id] || []).forEach(function(serial) {
+                (scannedManufacturerSerials[product.id] || []).forEach(function(serial, serialIndex) {
                     const productInput = document.createElement("input");
                     productInput.type = "hidden";
                     productInput.name = "manufacturer_product_id";
@@ -743,8 +974,13 @@
                     serialInput.type = "hidden";
                     serialInput.name = "manufacturer_serial";
                     serialInput.value = serial;
-                    container.append(productInput, serialInput);
+                    const wmsInput = document.createElement("input");
+                    wmsInput.type = "hidden";
+                    wmsInput.name = "wms_serial";
+                    wmsInput.value = (scannedWmsByProduct[product.id] || [])[serialIndex] || "";
+                    container.append(productInput, serialInput, wmsInput);
                 });
+
             });
         }
 
@@ -759,7 +995,10 @@
                     ? "btn btn-success" : "btn btn-outline-success";
             updateSerialCompletion();
             if (mode === "SCAN") {
-                setTimeout(function() { document.getElementById("manufacturerScannerInput").focus(); }, 0);
+                setTimeout(function() {
+                    const wmsScanner = document.getElementById("wmsScannerInput");
+                    if (wmsScanner) wmsScanner.focus();
+                }, 0);
             }
         }
 
@@ -878,6 +1117,57 @@
             }
         });
         <% } %>
-    </script>
+
+        function getWmsLabels(product) {
+            if (!product.wmsLabels) {
+                const safeSku = (product.sku || "ITEM").replace(/[^A-Za-z0-9-]/g, "").slice(0, 42) || "ITEM";
+                product.wmsLabels = Array.from({ length: product.qty }, function(_, index) {
+                    return safeSku + "-" + String((existingSerialCounts[product.id] || 0) + index + 1).padStart(3, "0");
+                });
+            }
+            return product.wmsLabels;
+        }
+
+        function buildWmsPrintPreview() {
+            const preview = document.getElementById("wmsPrintPreview");
+            if (!preview) return;
+            preview.replaceChildren();
+            serialProducts.forEach(function(product) {
+                getWmsLabels(product).forEach(function(wms, index) {
+                    const label = document.createElement("div");
+                    label.className = "wms-label";
+                    label.innerHTML = "<div class='small text-muted'>" + product.sku + " · Tem " + (index + 1) + "/" + product.qty + "</div>"
+                            + "<div class='fw-bold mt-1'>" + product.name + "</div>"
+                            + "<div class='font-monospace fw-bold fs-5 mt-2'>" + wms + "</div>"
+                            + "<div class='small text-muted mt-1'>Quét mã này trước, rồi quét serial nhà sản xuất.</div>";
+                    const barcode = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                    barcode.setAttribute("class", "mt-2 w-100");
+                    try { if (window.JsBarcode) window.JsBarcode(barcode, wms, { format: "CODE128", displayValue: false, height: 42, margin: 0 }); } catch (ignored) {}
+                    label.appendChild(barcode);
+                    preview.appendChild(label);
+                });
+            });
+        }
+
+        function processWmsLabelScan(rawWms) {
+            const wms = rawWms.trim();
+            const alertBox = document.getElementById("wmsScanAlert");
+            const show = function(message, success) {
+                alertBox.textContent = message;
+                alertBox.className = "alert mt-2 mb-0 py-2 " + (success ? "alert-success" : "alert-danger");
+            };
+            const product = serialProducts.find(function(item) {
+                return getWmsLabels(item).some(function(label) { return label.toLowerCase() === wms.toLowerCase(); });
+            });
+            if (!product) { show("Mã WMS không thuộc phiếu nhập này.", false); playManufacturerBeep(false); return; }
+            if ((scannedWmsByProduct[product.id] || []).some(function(value) { return value.toLowerCase() === wms.toLowerCase(); })) {
+                show("Tem WMS này đã được ghép serial nhà sản xuất.", false); playManufacturerBeep(false); return;
+            }
+            activeManufacturerWmsSerial = getWmsLabels(product).find(function(label) { return label.toLowerCase() === wms.toLowerCase(); });
+            activateManufacturerProduct(product.id);
+            show("Đã chọn " + product.name + ". Quét serial nhà sản xuất ngay bây giờ.", true);
+            playManufacturerBeep(true);
+        }
+</script>
 </body>
 </html>

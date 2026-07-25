@@ -104,8 +104,8 @@ public class ImportTicketServlet extends HttpServlet {
                 break;
             }
             case "add": {
-                // Lá»c theo kho cá»§a user: staff_hcm chá»‰ tháº¥y yĂªu cáº§u nháº­p cá»§a TPHCM, staff_hn
-                // chá»‰ tháº¥y HN
+                // Lọc theo kho của user: staff_hcm chỉ thấy yêu cầu nhập của TPHCM, staff_hn
+                // chỉ thấy HN
                 Integer userWh = loggedInUser.getWarehouseId();
                 // Block khi kho đang có phiếu kiểm kê chạy
                 if (userWh != null) {
@@ -127,6 +127,47 @@ public class ImportTicketServlet extends HttpServlet {
                         return;
                     }
                     httpReq.setAttribute("selectedRequest", selectedRequest);
+                    Map<Integer, Integer> existingSerialCounts = new LinkedHashMap<>();
+                    ProductItemService itemService = new ProductItemService();
+                    for (model.RequestDetail detail : selectedRequest.getDetails()) {
+                        existingSerialCounts.put(detail.getProductId(), itemService.getExistingSerialCount(detail.getProductId()));
+                    }
+                    httpReq.setAttribute("existingSerialCounts", existingSerialCounts);
+
+                    // IN-TRANSFER always receives the exact physical serials. This list
+                    // only provides early UI feedback; TicketDAO revalidates and locks
+                    // every scanned item in the confirmation transaction.
+                    if (Request.REASON_TRANSFER.equals(selectedRequest.getReason())
+                            && selectedRequest.getRefTicketId() != null) {
+                        Ticket refOutTicket = ticketService.getById(selectedRequest.getRefTicketId());
+                        boolean transferReturnReceipt = refOutTicket != null
+                                && refOutTicket.getWarehouseId() == selectedRequest.getWarehouseId();
+                        Set<String> expectedReturnSerials = new HashSet<>();
+                        if (selectedRequest.getExpectedSerials() != null) {
+                            for (String value : selectedRequest.getExpectedSerials().split(",")) {
+                                if (value != null && !value.trim().isEmpty()) {
+                                    expectedReturnSerials.add(value.trim());
+                                }
+                            }
+                        }
+
+                        List<ProductItem> eligibleTransferItems = new ArrayList<>();
+                        for (ProductItem item : itemService.getItemsByTicketId(selectedRequest.getRefTicketId())) {
+                            boolean eligible;
+                            if (transferReturnReceipt) {
+                                eligible = expectedReturnSerials.contains(item.getSerialNumber())
+                                        && ("IN_TRANSIT".equals(item.getStatus())
+                                            || (item.getWarehouseId() == selectedRequest.getPartnerId()
+                                                && ("IN_STOCK".equals(item.getStatus())
+                                                    || "QUARANTINE".equals(item.getStatus()))));
+                            } else {
+                                eligible = "IN_TRANSIT".equals(item.getStatus());
+                            }
+                            if (eligible) eligibleTransferItems.add(item);
+                        }
+                        httpReq.setAttribute("transferReturnReceipt", transferReturnReceipt);
+                        httpReq.setAttribute("eligibleTransferItems", eligibleTransferItems);
+                    }
                 }
                 Object serialErrors = session.getAttribute("importSerialErrors");
                 if (serialErrors != null) {
@@ -331,12 +372,19 @@ public class ImportTicketServlet extends HttpServlet {
 
         String[] productIds = request.getParameterValues("manufacturer_product_id");
         String[] serials = request.getParameterValues("manufacturer_serial");
+        String[] wmsSerials = request.getParameterValues("wms_serial");
+        if (serials == null || wmsSerials == null || wmsSerials.length != serials.length) {
+            errors.add("Thiếu mã WMS đã in cho các serial vừa quét.");
+            return result;
+        }
+
         if (productIds == null || serials == null || productIds.length != serials.length) {
             errors.add("Danh sách serial quét không đầy đủ.");
             return result;
         }
 
         Map<Integer, Set<String>> seenByProduct = new LinkedHashMap<>();
+        Set<String> seenWmsSerials = new HashSet<>();
         for (int i = 0; i < productIds.length; i++) {
             int productId;
             try {
@@ -355,11 +403,18 @@ public class ImportTicketServlet extends HttpServlet {
                 errors.add("Serial nhà sản xuất trống, quá 100 ký tự hoặc chứa ký tự không hợp lệ.");
                 continue;
             }
+            String wmsSerial = wmsSerials[i] == null ? "" : wmsSerials[i].trim();
+            if (!isValidWmsSerial(wmsSerial) || !seenWmsSerials.add(wmsSerial.toLowerCase(Locale.ROOT))) {
+                errors.add("Mã WMS đã in không hợp lệ hoặc đã được quét hai lần.");
+                continue;
+            }
+
             Set<String> seen = seenByProduct.computeIfAbsent(productId, ignored -> new HashSet<>());
             if (!seen.add(serial.toLowerCase(Locale.ROOT))) {
                 errors.add("Serial '" + serial + "' đã được quét hai lần cho cùng một sản phẩm.");
                 continue;
             }
+            serial = "WMS::" + wmsSerial + "::" + serial;
             result.get(productId).add(serial);
         }
 
@@ -371,6 +426,15 @@ public class ImportTicketServlet extends HttpServlet {
             }
         }
         return result;
+    }
+
+    private boolean isValidWmsSerial(String serial) {
+        if (serial == null || serial.length() < 8 || serial.length() > 100) return false;
+        for (int i = 0; i < serial.length(); i++) {
+            char c = serial.charAt(i);
+            if (!(Character.isLetterOrDigit(c) || c == '-')) return false;
+        }
+        return true;
     }
 
     private void downloadManufacturerSerialTemplate(HttpServletRequest request, HttpServletResponse response,
@@ -484,3 +548,4 @@ public class ImportTicketServlet extends HttpServlet {
         return true;
     }
 }
+

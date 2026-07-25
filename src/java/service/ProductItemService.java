@@ -60,4 +60,7 @@ public class ProductItemService {
         return dao.addProductItems(arg0, arg1, arg2, arg3, arg4);
     }
 
+    public int getExistingSerialCount(int productId) {
+        return dao.getExistingSerialCount(productId);
+    }
 }

@@ -48,16 +48,16 @@ public class SecurityUtils {
 
     public static String validatePasswordStrength(String password) {
         if (password == null || password.trim().isEmpty()) {
-            return "Password cannot be empty.";
+            return "Mật khẩu không được để trống.";
         }
         if (password.length() < MIN_PASSWORD_LENGTH) {
-            return "Password must be at least " + MIN_PASSWORD_LENGTH + " characters.";
+            return "Mật khẩu phải có ít nhất " + MIN_PASSWORD_LENGTH + " ký tự.";
         }
         if (!password.matches(".*[A-Za-z].*")) {
-            return "Password must contain at least one letter.";
+            return "Mật khẩu phải chứa ít nhất một chữ cái.";
         }
         if (!password.matches(".*[0-9].*")) {
-            return "Password must contain at least one number.";
+            return "Mật khẩu phải chứa ít nhất một chữ số.";
         }
         return null;
     }

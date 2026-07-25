@@ -30,7 +30,7 @@
                 <div class="page-header">
                     <div>
                         <h2 class="page-title">Tạo yêu cầu trả hàng</h2>
-                        <p class="page-subtitle">Tạo yêu cầu nhập lại hàng trả từ khách hàng bằng mã Serial</p>
+                        <p class="page-subtitle">Tạo yêu cầu nhập lại hàng trả hoặc khôi phục hàng mất bằng mã Serial</p>
                     </div>
                     <a href="<%= request.getContextPath() %>/warehouse/import-request?action=list" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-arrow-left"></i> Hủy
@@ -112,6 +112,7 @@
                                                 <option value="NEW">Hàng mới</option>
                                                 <option value="DAMAGED">Hàng hỏng</option>
                                             </select>
+                                            <div id="conditionLockHint" class="form-text text-warning d-none"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -183,8 +184,57 @@
         const customerInfoCard = document.getElementById("customerInfoCard");
         const infoPartnerName = document.getElementById("infoPartnerName");
         const infoTicketCode = document.getElementById("infoTicketCode");
+        const requestedConditionSelect = document.getElementById("requestedCondition");
+        const conditionLockHint = document.getElementById("conditionLockHint");
  
         let addedSerials = new Set();
+        let lostMode = false;
+        let lostCondition = null;
+        const conditionLabels = { NEW: "Hàng mới", USED: "Hàng cũ", DAMAGED: "Hàng hỏng" };
+ 
+        function getConditionLabel(condition) {
+            return conditionLabels[condition] || condition;
+        }
+
+        function ensureConditionOption(condition) {
+            if (!requestedConditionSelect.querySelector("option[value='" + condition + "']")) {
+                const option = document.createElement("option");
+                option.value = condition;
+                option.textContent = getConditionLabel(condition);
+                option.dataset.lostOnly = "true";
+                requestedConditionSelect.appendChild(option);
+            }
+        }
+
+        function removeLostOnlyConditionOptions() {
+            requestedConditionSelect.querySelectorAll("option[data-lost-only='true']").forEach(option => option.remove());
+        }
+
+        function setLostConditionLock(condition) {
+            lostCondition = (condition || "NEW").toUpperCase();
+            if (!conditionLabels[lostCondition]) lostCondition = "NEW";
+            ensureConditionOption(lostCondition);
+            requestedConditionSelect.value = lostCondition;
+            requestedConditionSelect.dataset.locked = "true";
+            requestedConditionSelect.classList.add("bg-light");
+            conditionLockHint.textContent = "Serial hàng mất sẽ giữ nguyên tình trạng gốc: " + getConditionLabel(lostCondition) + ".";
+            conditionLockHint.classList.remove("d-none");
+        }
+
+        function clearLostConditionLock() {
+            lostCondition = null;
+            requestedConditionSelect.dataset.locked = "false";
+            requestedConditionSelect.classList.remove("bg-light");
+            conditionLockHint.textContent = "";
+            conditionLockHint.classList.add("d-none");
+            removeLostOnlyConditionOptions();
+        }
+
+        requestedConditionSelect.addEventListener("change", function() {
+            if (this.dataset.locked === "true" && lostCondition) {
+                this.value = lostCondition;
+            }
+        });
  
         function getLocalTodayString() {
             const today = new Date();
@@ -254,21 +304,40 @@
                     }
                     
                     const currentLockedTicket = refTicketIdInput.value;
-                    if (currentLockedTicket && currentLockedTicket !== String(res.ticketId)) {
-                        alert("Mã Serial này thuộc phiếu xuất #" + res.ticketCode + " của khách " + res.partnerName + ".\n" +
-                              "Mỗi yêu cầu trả hàng chỉ được phép chọn các Serial thuộc CÙNG MỘT đơn xuất gốc.\n" +
-                              "Vui lòng tạo yêu cầu trả hàng riêng biệt cho đơn này.");
-                        return;
+                    if (res.lost) {
+                        const restoredCondition = (res.itemCondition || "NEW").toUpperCase();
+                        if (addedSerials.size > 0 && !lostMode) {
+                            alert("Không thể trộn serial hàng mất với serial trả từ phiếu xuất khác.");
+                            return;
+                        }
+                        if (lostMode && lostCondition && restoredCondition !== lostCondition) {
+                            alert("Không thể trộn hàng mất khác tình trạng trong cùng một yêu cầu nhập lại.");
+                            return;
+                        }
+                        if (addedSerials.size === 0) {
+                            lostMode = true;
+                            refTicketIdInput.value = "";
+                            infoPartnerName.innerText = "Khôi phục hàng mất";
+                            infoTicketCode.innerText = "Không có phiếu xuất gốc";
+                            setLostConditionLock(restoredCondition);
+                            customerInfoCard.classList.remove("d-none");
+                        }
+                    } else {
+                        if (lostMode) {
+                            alert("Không thể trộn serial hàng mất với serial trả từ phiếu xuất khác.");
+                            return;
+                        }
+                        if (currentLockedTicket && currentLockedTicket !== String(res.ticketId)) {
+                            alert("Các serial trả hàng phải thuộc cùng một phiếu xuất gốc.");
+                            return;
+                        }
+                        if (!currentLockedTicket) {
+                            refTicketIdInput.value = res.ticketId;
+                            infoPartnerName.innerText = res.partnerName ? res.partnerName : "Khách vãng lai";
+                            infoTicketCode.innerText = res.ticketCode;
+                            customerInfoCard.classList.remove("d-none");
+                        }
                     }
-                    
-
-                    if (!currentLockedTicket) {
-                        refTicketIdInput.value = res.ticketId;
-                        infoPartnerName.innerText = res.partnerName ? res.partnerName : "Khách vãng lai";
-                        infoTicketCode.innerText = res.ticketCode;
-                        customerInfoCard.classList.remove("d-none");
-                    }
-                    
 
                     if (emptyRow && emptyRow.style.display !== "none") {
                         emptyRow.style.display = "none";
@@ -308,7 +377,9 @@
                 addedSerials.delete(serial);
             }
             if (addedSerials.size === 0) {
+                lostMode = false;
                 refTicketIdInput.value = "";
+                clearLostConditionLock();
                 customerInfoCard.classList.add("d-none");
                 if (emptyRow) emptyRow.style.display = "";
             } else {

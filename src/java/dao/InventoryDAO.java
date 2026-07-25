@@ -190,6 +190,7 @@ public class InventoryDAO {
                     it.setId(rs.getInt("id"));
                     it.setProductId(rs.getInt("product_id"));
                     it.setSerialNumber(rs.getString("serial_number"));
+                    it.setManufacturerSerial(rs.getString("manufacturer_serial"));
                     it.setStatus(rs.getString("status"));
                     it.setItemCondition(rs.getString("item_condition"));
                     it.setWarehouseId(rs.getInt("warehouse_id"));

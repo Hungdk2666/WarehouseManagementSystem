@@ -312,7 +312,11 @@ public class TicketDAO {
                             if (rs.next()) { requestedQty = rs.getInt("req_qty"); activeQty = rs.getInt("act_qty"); }
                         }
                     }
-                    if (activeQty + d.getQuantity() > requestedQty) { conn.rollback(); return false; }
+                    if (activeQty + d.getQuantity() > requestedQty) {
+                        lastErrorCode = "QuantityExceeded";
+                        conn.rollback();
+                        return false;
+                    }
                 }
 
                 // 2) Chèn phiếu (DRAFT) + chi tiết
@@ -453,15 +457,125 @@ public class TicketDAO {
                 && !validateManufacturerSerials(details, manufacturerSerialsByProductId, conn)) {
             return false;
         }
+        if (isTransfer && (serials == null || serials.isEmpty())) {
+            lastErrorCode = isTransferReturn ? "MissingTransferReturnSerial" : "MissingTransferSerial";
+            return false;
+        }
+        if (isTransfer) {
+            Set<String> normalizedSerials = new HashSet<>();
+            for (String serial : serials) {
+                String normalized = serial == null ? "" : serial.trim().toLowerCase(Locale.ROOT);
+                if (normalized.isEmpty() || !normalizedSerials.add(normalized)) {
+                    lastErrorCode = isTransferReturn
+                            ? "InvalidTransferReturnSerial" : "InvalidTransferSerial";
+                    return false;
+                }
+            }
+        }
 
         for (TicketDetail d : details) {
             int productId = d.getProductId();
             int recQty = d.getQuantity();
             double recPrice = d.getUnitCost() != null ? d.getUnitCost().doubleValue() : 0.0;
             String condition = req.getRequestedCondition() != null ? req.getRequestedCondition() : "NEW";
+            if (isReturn && req.getRefTicketId() == null) {
+                String restoredCondition = resolveLostReturnCondition(req, productId, recQty, ticket.getWarehouseId(), serials, conn);
+                if (restoredCondition == null) {
+                    lastErrorCode = "InvalidReturnSerial";
+                    return false;
+                }
+                condition = restoredCondition;
+            }
             boolean isDamaged = "DAMAGED".equals(condition);
             int receivedAtDestination = 0;
             int quarantinedAtDestination = 0;
+            int destinationRemovedNew = 0;
+            int destinationRemovedUsed = 0;
+            int destinationRemovedDamaged = 0;
+            int receivedNew = 0;
+            int receivedUsed = 0;
+            int receivedDamaged = 0;
+            List<Integer> transferItemIds = new ArrayList<>();
+            Map<Integer, String> transferItemStatuses = new java.util.HashMap<>();
+            Map<Integer, String> transferItemConditions = new java.util.HashMap<>();
+
+            if (isTransfer) {
+                Integer outTicketId = req.getRefTicketId();
+                if (outTicketId == null) {
+                    lastErrorCode = isTransferReturn ? "InvalidTransferReturnSerial" : "InvalidTransferSerial";
+                    return false;
+                }
+                Set<String> expectedReturnSerials = isTransferReturn
+                        ? splitExpectedSerials(req.getExpectedSerials()) : java.util.Collections.emptySet();
+                List<String> scannedForProduct = new ArrayList<>();
+                for (String rawSerial : new ArrayList<>(serials)) {
+                    String serial = rawSerial == null ? "" : rawSerial.trim();
+                    if (serial.isEmpty() || (isTransferReturn && !expectedReturnSerials.contains(serial))) {
+                        continue;
+                    }
+
+                    String itemSql;
+                    if (isTransferReturn) {
+                        itemSql = "SELECT pi.id, pi.status, pi.item_condition FROM Product_Items pi "
+                                + "JOIN Product_Item_Movements m ON m.product_item_id=pi.id "
+                                + "WHERE pi.serial_number=? AND pi.product_id=? "
+                                + "AND (pi.status='IN_TRANSIT' OR (pi.warehouse_id=? "
+                                + "AND pi.status IN ('IN_STOCK','QUARANTINE'))) "
+                                + "AND m.ticket_id=? AND m.action='TRANSFER_OUT' FOR UPDATE";
+                    } else {
+                        itemSql = "SELECT pi.id, pi.status, pi.item_condition FROM Product_Items pi "
+                                + "JOIN Product_Item_Movements m ON m.product_item_id=pi.id "
+                                + "WHERE pi.serial_number=? AND pi.product_id=? "
+                                + "AND pi.status='IN_TRANSIT' "
+                                + "AND m.ticket_id=? AND m.action='TRANSFER_OUT' "
+                                + "AND m.to_warehouse_id=? FOR UPDATE";
+                    }
+                    try (PreparedStatement ps = conn.prepareStatement(itemSql)) {
+                        ps.setString(1, serial);
+                        ps.setInt(2, productId);
+                        if (isTransferReturn) {
+                            ps.setInt(3, req.getPartnerId());
+                            ps.setInt(4, outTicketId);
+                        } else {
+                            ps.setInt(3, outTicketId);
+                            ps.setInt(4, ticket.getWarehouseId());
+                        }
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) {
+                                int itemId = rs.getInt("id");
+                                String oldStatus = rs.getString("status");
+                                String itemCondition = rs.getString("item_condition");
+                                if (itemCondition == null || itemCondition.trim().isEmpty()) {
+                                    itemCondition = "NEW";
+                                }
+                                transferItemIds.add(itemId);
+                                transferItemStatuses.put(itemId, oldStatus);
+                                transferItemConditions.put(itemId, itemCondition);
+                                scannedForProduct.add(rawSerial);
+
+                                if ("NEW".equals(itemCondition)) receivedNew++;
+                                else if ("USED".equals(itemCondition)) receivedUsed++;
+                                else receivedDamaged++;
+
+                                if (isTransferReturn && "IN_STOCK".equals(oldStatus)) {
+                                    receivedAtDestination++;
+                                    if ("NEW".equals(itemCondition)) destinationRemovedNew++;
+                                    else if ("USED".equals(itemCondition)) destinationRemovedUsed++;
+                                } else if (isTransferReturn && "QUARANTINE".equals(oldStatus)) {
+                                    quarantinedAtDestination++;
+                                    destinationRemovedDamaged++;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (transferItemIds.size() != recQty) {
+                    lastErrorCode = isTransferReturn ? "InvalidTransferReturnSerial" : "InvalidTransferSerial";
+                    return false;
+                }
+                serials.removeAll(scannedForProduct);
+
+            }
 
             // Lock current inventory
             int currentQty = 0;
@@ -488,8 +602,44 @@ public class TicketDAO {
                 }
             }
 
-            int newQty = isDamaged ? currentQty : (currentQty + recQty);
-            int newQuarantineQty = isDamaged ? (currentQuarantineQty + recQty) : currentQuarantineQty;
+            // Items that had already reached the cancelled destination must be
+            // removed from that warehouse only when the source confirms return.
+            // Lock the receiving inventory first, preserving the established lock order.
+            if (isTransferReturn && (receivedAtDestination > 0 || quarantinedAtDestination > 0)) {
+                int destinationQty = 0;
+                int destinationQuarantine = 0;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT quantity, quarantine_quantity FROM Inventories "
+                                + "WHERE warehouse_id=? AND product_id=? FOR UPDATE")) {
+                    ps.setInt(1, req.getPartnerId());
+                    ps.setInt(2, productId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            destinationQty = rs.getInt("quantity");
+                            destinationQuarantine = rs.getInt("quarantine_quantity");
+                        }
+                    }
+                }
+                if (destinationQty < receivedAtDestination
+                        || destinationQuarantine < quarantinedAtDestination) {
+                    lastErrorCode = "InvalidTransferReturnSerial";
+                    return false;
+                }
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE Inventories SET quantity=quantity-?, quarantine_quantity=quarantine_quantity-? "
+                                + "WHERE warehouse_id=? AND product_id=?")) {
+                    ps.setInt(1, receivedAtDestination);
+                    ps.setInt(2, quarantinedAtDestination);
+                    ps.setInt(3, req.getPartnerId());
+                    ps.setInt(4, productId);
+                    ps.executeUpdate();
+                }
+            }
+
+            int receivedUsableQty = isTransfer ? receivedNew + receivedUsed : (isDamaged ? 0 : recQty);
+            int receivedQuarantineQty = isTransfer ? receivedDamaged : (isDamaged ? recQty : 0);
+            int newQty = currentQty + receivedUsableQty;
+            int newQuarantineQty = currentQuarantineQty + receivedQuarantineQty;
             int totalPhysicalQty = currentQty + currentQuarantineQty;
             int newTotalPhysicalQty = newQty + newQuarantineQty;
 
@@ -522,136 +672,49 @@ public class TicketDAO {
             }
 
 
-            if (isTransfer && req.getRefTicketId() != null) {
-                // IN-TRANSFER thông thường tự lấy theo số lượng. Riêng nhập trả
-                // bắt buộc scan đúng serial đang trên đường của phiếu xuất gốc.
-                Integer outTicketId = req.getRefTicketId();
-                List<Integer> itemIds = new ArrayList<>();
-                Map<Integer, String> returnItemStatuses = new java.util.HashMap<>();
-                if (isTransferReturn) {
-                    if (serials == null || serials.isEmpty()) {
-                        lastErrorCode = "MissingTransferReturnSerial";
-                        return false;
-                    }
-                    Set<String> expected = splitExpectedSerials(req.getExpectedSerials());
-                    List<String> scannedForProduct = new ArrayList<>();
-                    for (String serial : serials) {
-                        if (!expected.contains(serial)) continue;
-                        try (PreparedStatement ps = conn.prepareStatement(
-                                "SELECT pi.id, pi.status FROM Product_Items pi "
-                                        + "JOIN Product_Item_Movements m ON m.product_item_id=pi.id "
-                                        + "WHERE pi.serial_number=? AND pi.product_id=? "
-                                        + "AND (pi.status='IN_TRANSIT' OR (pi.warehouse_id=? AND pi.status IN ('IN_STOCK','QUARANTINE'))) "
-                                        + "AND m.ticket_id=? AND m.action='TRANSFER_OUT' FOR UPDATE")) {
-                            ps.setString(1, serial);
-                            ps.setInt(2, productId);
-                            ps.setInt(3, req.getPartnerId());
-                            ps.setInt(4, outTicketId);
-                            try (ResultSet rs = ps.executeQuery()) {
-                                if (rs.next()) {
-                                    int itemId = rs.getInt("id");
-                                    itemIds.add(itemId);
-                                    returnItemStatuses.put(itemId, rs.getString("status"));
-                                    scannedForProduct.add(serial);
-                                }
-                            }
-                        }
-                    }
-                    if (new LinkedHashSet<>(serials).size() != serials.size()
-                            || itemIds.size() != recQty) {
-                        lastErrorCode = "InvalidTransferReturnSerial";
-                        return false;
-                    }
-                    serials.removeAll(scannedForProduct);
-                    for (String oldStatus : returnItemStatuses.values()) {
-                        if ("IN_STOCK".equals(oldStatus)) receivedAtDestination++;
-                        else if ("QUARANTINE".equals(oldStatus)) quarantinedAtDestination++;
-                    }
-
-                    // Nếu kho đích đã xác nhận một phần trước khi hủy, giảm
-                    // đúng phần tồn đó ngay khi kho nguồn xác nhận nhận trả.
-                    if (receivedAtDestination > 0 || quarantinedAtDestination > 0) {
-                        int destinationQty = 0, destinationQuarantine = 0;
-                        try (PreparedStatement ps = conn.prepareStatement(
-                                "SELECT quantity, quarantine_quantity FROM Inventories WHERE warehouse_id=? AND product_id=? FOR UPDATE")) {
-                            ps.setInt(1, req.getPartnerId());
-                            ps.setInt(2, productId);
-                            try (ResultSet rs = ps.executeQuery()) {
-                                if (rs.next()) {
-                                    destinationQty = rs.getInt("quantity");
-                                    destinationQuarantine = rs.getInt("quarantine_quantity");
-                                }
-                            }
-                        }
-                        if (destinationQty < receivedAtDestination || destinationQuarantine < quarantinedAtDestination) {
-                            lastErrorCode = "InvalidTransferReturnSerial";
-                            return false;
-                        }
-                        try (PreparedStatement ps = conn.prepareStatement(
-                                "UPDATE Inventories SET quantity=quantity-?, quarantine_quantity=quarantine_quantity-? "
-                                        + "WHERE warehouse_id=? AND product_id=?")) {
-                            ps.setInt(1, receivedAtDestination);
-                            ps.setInt(2, quarantinedAtDestination);
-                            ps.setInt(3, req.getPartnerId());
-                            ps.setInt(4, productId);
-                            ps.executeUpdate();
-                        }
-                    }
-                } else {
-                    try (PreparedStatement ps = conn.prepareStatement(
-                            "SELECT pi.id FROM Product_Items pi "
-                                    + "JOIN Product_Item_Movements m ON m.product_item_id = pi.id "
-                                    + "WHERE m.ticket_id = ? AND m.action = 'TRANSFER_OUT' "
-                                    + "  AND pi.product_id = ? AND pi.status = 'IN_TRANSIT' "
-                                    + "ORDER BY pi.id LIMIT ? FOR UPDATE")) {
-                        ps.setInt(1, outTicketId);
-                        ps.setInt(2, productId);
-                        ps.setInt(3, recQty);
-                        try (ResultSet rs = ps.executeQuery()) {
-                            while (rs.next()) itemIds.add(rs.getInt(1));
-                        }
-                    }
-                }
-                if (itemIds.size() < recQty) {
-                    // Không đủ hàng IN_TRANSIT để nhận → từ chối
-                    return false;
-                }
-                // Update: chỉ những item trong itemIds
-                String newStatus = isDamaged ? "QUARANTINE" : "IN_STOCK";
+            if (isTransfer) {
+                // The scanned serial determines the exact physical item. Preserve its
+                // condition; transfer receipt only changes location and stock status.
                 try (PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE Product_Items SET status = ?, warehouse_id = ?, item_condition = ? WHERE id = ?")) {
-                    for (int itemId : itemIds) {
-                        ps.setString(1, newStatus);
+                        "UPDATE Product_Items SET status = ?, warehouse_id = ? WHERE id = ?")) {
+                    for (int itemId : transferItemIds) {
+                        String itemCondition = transferItemConditions.get(itemId);
+                        ps.setString(1, "DAMAGED".equals(itemCondition) ? "QUARANTINE" : "IN_STOCK");
                         ps.setInt(2, ticket.getWarehouseId());
-                        ps.setString(3, condition);
-                        ps.setInt(4, itemId);
-                        ps.executeUpdate();
+                        ps.setInt(3, itemId);
+                        if (ps.executeUpdate() != 1) return false;
                     }
                 }
-                // Nhập trả dùng action RETURN_IN để phân biệt rõ với kho đích nhận hàng.
+
                 String insMov = "INSERT INTO Product_Item_Movements "
                         + "(product_item_id, ticket_id, action, from_warehouse_id, to_warehouse_id, condition_at_time, created_by) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement ps = conn.prepareStatement(insMov)) {
-                    for (int itemId : itemIds) {
+                    for (int itemId : transferItemIds) {
                         ps.setInt(1, itemId);
                         ps.setInt(2, ticket.getId());
                         ps.setString(3, isTransferReturn ? "RETURN_IN" : "TRANSFER_IN");
-                        if (isTransferReturn && "IN_TRANSIT".equals(returnItemStatuses.get(itemId))) {
+                        if (isTransferReturn && "IN_TRANSIT".equals(transferItemStatuses.get(itemId))) {
                             ps.setNull(4, Types.INTEGER);
                         } else {
                             ps.setInt(4, req.getPartnerId());
                         }
                         ps.setInt(5, ticket.getWarehouseId());
-                        ps.setString(6, condition);
+                        ps.setString(6, transferItemConditions.get(itemId));
                         ps.setInt(7, confirmedBy);
                         ps.executeUpdate();
                     }
                 }
             } else if (isReturn) {
                 // RETURN: user must provide scanned serials
-                if (serials == null || serials.isEmpty())
+                if (serials == null || serials.isEmpty()) {
+                    lastErrorCode = "MissingReturnSerial";
                     return false;
+                }
+                if (new LinkedHashSet<>(serials).size() != serials.size()) {
+                    lastErrorCode = "InvalidReturnSerial";
+                    return false;
+                }
                 List<String> expectedSerialsList = new ArrayList<>();
                 String expectedSerialsStr = req.getExpectedSerials();
                 if (expectedSerialsStr != null && !expectedSerialsStr.trim().isEmpty()) {
@@ -667,25 +730,34 @@ public class TicketDAO {
                 List<String> productSerials = new ArrayList<>();
                 for (String s : serials) {
                     if (!expectedSerialsList.contains(s)) continue;
+                    // Co ref_ticket_id: doi chieu phieu xuat goc nhu truoc.
+                    // Khong co ref_ticket_id: day la serial LOST duoc tim thay tai kho nhan.
                     String checkSql = (refTicketId != null)
                         ? "SELECT COUNT(*) FROM Product_Items pi "
                           + "JOIN Product_Item_Movements m ON m.product_item_id = pi.id "
                           + "WHERE pi.serial_number = ? AND pi.product_id = ? AND pi.status = 'EXPORTED' "
                           + "  AND m.ticket_id = ? AND m.action = 'EXPORT_OUT'"
                         : "SELECT COUNT(*) FROM Product_Items pi "
-                          + "WHERE pi.serial_number = ? AND pi.product_id = ? AND pi.status = 'EXPORTED'";
+                          + "WHERE pi.serial_number = ? AND pi.product_id = ? "
+                          + "  AND pi.status = 'LOST' AND pi.warehouse_id = ?";
                     try (PreparedStatement ps = conn.prepareStatement(checkSql)) {
                         ps.setString(1, s);
                         ps.setInt(2, productId);
-                        if (refTicketId != null) ps.setInt(3, refTicketId);
+                        if (refTicketId != null) {
+                            ps.setInt(3, refTicketId);
+                        } else {
+                            ps.setInt(3, ticket.getWarehouseId());
+                        }
                         try (ResultSet rs = ps.executeQuery()) {
                             if (rs.next() && rs.getInt(1) > 0)
                                 productSerials.add(s);
                         }
                     }
                 }
-                if (productSerials.size() != recQty)
+                if (productSerials.size() != recQty) {
+                    lastErrorCode = "InvalidReturnSerial";
                     return false;
+                }
 
                 String newStatus = isDamaged ? "QUARANTINE" : "IN_STOCK";
                 try (PreparedStatement ps = conn.prepareStatement(
@@ -745,6 +817,9 @@ public class TicketDAO {
             int[] balances = getConditionBalances(productId, ticket.getWarehouseId(), conn);
             String ledgerType = isReturn ? "RETURN"
                     : (isTransferReturn ? "TRANSFER_RETURN" : (isTransfer ? "TRANSFER_IN" : "IMPORT"));
+            int ledgerNew = isTransfer ? receivedNew : ("NEW".equals(condition) ? recQty : 0);
+            int ledgerUsed = isTransfer ? receivedUsed : ("USED".equals(condition) ? recQty : 0);
+            int ledgerDamaged = isTransfer ? receivedDamaged : ("DAMAGED".equals(condition) ? recQty : 0);
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO Product_Ledger (product_id, transaction_type, reference_id, change_quantity, balance_quantity, "
                             + "change_new_quantity, change_used_quantity, change_damaged_quantity, "
@@ -755,9 +830,9 @@ public class TicketDAO {
                 ps.setInt(3, ticket.getId());
                 ps.setInt(4, recQty);
                 ps.setInt(5, balances[0] + balances[1] + balances[2]);
-                ps.setInt(6, "NEW".equals(condition) ? recQty : 0);
-                ps.setInt(7, "USED".equals(condition) ? recQty : 0);
-                ps.setInt(8, "DAMAGED".equals(condition) ? recQty : 0);
+                ps.setInt(6, ledgerNew);
+                ps.setInt(7, ledgerUsed);
+                ps.setInt(8, ledgerDamaged);
                 ps.setInt(9, balances[0]);
                 ps.setInt(10, balances[1]);
                 ps.setInt(11, balances[2]);
@@ -777,9 +852,9 @@ public class TicketDAO {
                     ps.setInt(2, ticket.getId());
                     ps.setInt(3, delta);
                     ps.setInt(4, destinationBalances[0] + destinationBalances[1] + destinationBalances[2]);
-                    ps.setInt(5, "NEW".equals(condition) ? -receivedAtDestination : 0);
-                    ps.setInt(6, "USED".equals(condition) ? -receivedAtDestination : 0);
-                    ps.setInt(7, -quarantinedAtDestination);
+                    ps.setInt(5, -destinationRemovedNew);
+                    ps.setInt(6, -destinationRemovedUsed);
+                    ps.setInt(7, -destinationRemovedDamaged);
                     ps.setInt(8, destinationBalances[0]);
                     ps.setInt(9, destinationBalances[1]);
                     ps.setInt(10, destinationBalances[2]);
@@ -788,6 +863,15 @@ public class TicketDAO {
                     ps.executeUpdate();
                 }
             }
+        }
+
+        // Every scanned serial must be matched exactly once. Extra serials are rejected
+        // so a product from another request cannot be silently accepted.
+        if ((isReturn || isTransfer) && serials != null && !serials.isEmpty()) {
+            lastErrorCode = isTransfer
+                    ? (isTransferReturn ? "InvalidTransferReturnSerial" : "InvalidTransferSerial")
+                    : "InvalidReturnSerial";
+            return false;
         }
 
         // Update ticket status → CONFIRMED
@@ -1210,6 +1294,37 @@ public class TicketDAO {
         }
     }
 
+    private String resolveLostReturnCondition(Request req, int productId, int quantity, int warehouseId,
+            List<String> serials, Connection conn) throws Exception {
+        if (serials == null || serials.isEmpty()) return null;
+        Set<String> expected = splitExpectedSerials(req.getExpectedSerials());
+        if (expected.isEmpty()) return null;
+
+        Set<String> matchedSerials = new LinkedHashSet<>();
+        Set<String> matchedConditions = new LinkedHashSet<>();
+        String sql = "SELECT item_condition FROM Product_Items "
+                + "WHERE serial_number = ? AND product_id = ? AND status = 'LOST' AND warehouse_id = ? FOR UPDATE";
+        for (String serial : serials) {
+            if (serial == null) continue;
+            String value = serial.trim();
+            if (value.isEmpty() || !expected.contains(value)) continue;
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, value);
+                ps.setInt(2, productId);
+                ps.setInt(3, warehouseId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        matchedSerials.add(value);
+                        String originalCondition = rs.getString("item_condition");
+                        matchedConditions.add(originalCondition == null || originalCondition.trim().isEmpty()
+                                ? "NEW" : originalCondition.trim());
+                    }
+                }
+            }
+        }
+        if (matchedSerials.size() != quantity || matchedConditions.size() != 1) return null;
+        return matchedConditions.iterator().next();
+    }
     private Set<String> splitExpectedSerials(String value) {
         Set<String> result = new LinkedHashSet<>();
         if (value == null || value.trim().isEmpty()) return result;

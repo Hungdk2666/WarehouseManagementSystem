@@ -305,4 +305,5 @@ public class ProductServlet extends HttpServlet {
 
         response.sendRedirect(request.getContextPath() + "/warehouse/product?action=list");
     }
+
 }

@@ -155,8 +155,12 @@ public class WarehouseDAO {
              PreparedStatement ps = conn.prepareStatement(
                      "SELECT COUNT(*) FROM Tickets t "
                    + "JOIN Requests r ON t.request_id = r.id "
+                   + "JOIN Requests in_req ON in_req.ref_ticket_id = t.id "
+                   + "  AND in_req.type='IN' AND in_req.reason='TRANSFER' AND in_req.warehouse_id=r.partner_id "
                    + "WHERE t.type = 'OUT' AND t.status = 'IN_TRANSIT' "
-                   + "  AND r.reason = 'TRANSFER' AND r.partner_id = ?")) {
+                   + "  AND r.reason = 'TRANSFER' AND r.partner_id = ? "
+                   + "  AND in_req.status IN ('APPROVED','PARTIALLY_COMPLETED') "
+                   + "  AND in_req.cancel_requested_at IS NULL")) {
             ps.setInt(1, warehouseId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getInt(1);
