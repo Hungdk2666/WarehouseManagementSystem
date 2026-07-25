@@ -89,6 +89,12 @@ public class StocktakeDAO {
         d.setTheoreticalQty(rs.getInt("theoretical_qty"));
         d.setActualQty(rs.getInt("actual_qty"));
         d.setDamagedQty(rs.getInt("damaged_qty"));
+        d.setTheoreticalNewQty(rs.getInt("theoretical_new_qty"));
+        d.setTheoreticalUsedQty(rs.getInt("theoretical_used_qty"));
+        d.setTheoreticalDamagedQty(rs.getInt("theoretical_damaged_qty"));
+        d.setActualNewQty(rs.getInt("actual_new_qty"));
+        d.setActualUsedQty(rs.getInt("actual_used_qty"));
+        d.setActualDamagedQty(rs.getInt("actual_damaged_qty"));
         d.setVarianceReason(rs.getString("variance_reason"));
         d.setNote(rs.getString("note"));
         d.setProductName(rs.getString("product_name"));
@@ -222,39 +228,59 @@ public class StocktakeDAO {
                     }
                 }
 
-                // Lấy theoretical_qty
+                // Chốt số lý thuyết tại thời điểm tạo phiếu: mọi hàng còn hiện diện
+                // trong kho, gồm hàng dùng được và hàng hỏng/cách ly.
                 String detailSelect;
                 List<Object> selParams = new ArrayList<>();
                 if (Stocktake.SCOPE_FULL.equals(s.getScope()) || productIds == null || productIds.isEmpty()) {
-                    detailSelect = "SELECT product_id, quantity FROM Inventories WHERE warehouse_id = ?";
+                    detailSelect = "SELECT inv.product_id, inv.quantity, inv.quarantine_quantity, "
+                                 + "COALESCE(SUM(CASE WHEN pi.status='IN_STOCK' AND pi.item_condition='USED' THEN 1 ELSE 0 END),0) AS used_qty "
+                                 + "FROM Inventories inv LEFT JOIN Product_Items pi "
+                                 + "ON pi.product_id=inv.product_id AND pi.warehouse_id=inv.warehouse_id "
+                                 + "WHERE inv.warehouse_id=? GROUP BY inv.product_id, inv.quantity, inv.quarantine_quantity";
                     selParams.add(s.getWarehouseId());
                 } else {
                     StringBuilder marks = new StringBuilder();
                     for (int i = 0; i < productIds.size(); i++) marks.append(i == 0 ? "?" : ",?");
-                    detailSelect = "SELECT product_id, quantity FROM Inventories "
-                                 + "WHERE warehouse_id = ? AND product_id IN (" + marks + ")";
+                    detailSelect = "SELECT inv.product_id, inv.quantity, inv.quarantine_quantity, "
+                                 + "COALESCE(SUM(CASE WHEN pi.status='IN_STOCK' AND pi.item_condition='USED' THEN 1 ELSE 0 END),0) AS used_qty "
+                                 + "FROM Inventories inv LEFT JOIN Product_Items pi "
+                                 + "ON pi.product_id=inv.product_id AND pi.warehouse_id=inv.warehouse_id "
+                                 + "WHERE inv.warehouse_id=? AND inv.product_id IN (" + marks + ") "
+                                 + "GROUP BY inv.product_id, inv.quantity, inv.quarantine_quantity";
                     selParams.add(s.getWarehouseId());
                     selParams.addAll(productIds);
                 }
 
-                List<int[]> rows = new ArrayList<>(); // [productId, qty]
+                List<int[]> rows = new ArrayList<>(); // [productId, new, used, damaged]
                 try (PreparedStatement ps = conn.prepareStatement(detailSelect)) {
                     for (int i = 0; i < selParams.size(); i++) ps.setObject(i + 1, selParams.get(i));
                     try (ResultSet rs = ps.executeQuery()) {
-                        while (rs.next()) rows.add(new int[]{rs.getInt(1), rs.getInt(2)});
+                        while (rs.next()) {
+                            int goodQty = rs.getInt("quantity");
+                            int usedQty = Math.min(goodQty, rs.getInt("used_qty"));
+                            rows.add(new int[]{rs.getInt("product_id"), Math.max(0, goodQty - usedQty),
+                                    usedQty, rs.getInt("quarantine_quantity")});
+                        }
                     }
                 }
 
                 if (rows.isEmpty()) { conn.rollback(); return false; }
 
                 String insDet = "INSERT INTO Stocktake_Details "
-                    + "(stocktake_id, product_id, theoretical_qty, actual_qty, damaged_qty, variance_reason) "
-                    + "VALUES (?,?,?,0,0,'NONE')";
+                    + "(stocktake_id, product_id, theoretical_qty, actual_qty, damaged_qty, "
+                    + "theoretical_new_qty, theoretical_used_qty, theoretical_damaged_qty, "
+                    + "actual_new_qty, actual_used_qty, actual_damaged_qty, variance_reason) "
+                    + "VALUES (?,?,?,0,0,?,?,?,0,0,0,'NONE')";
                 try (PreparedStatement ps = conn.prepareStatement(insDet)) {
                     for (int[] r : rows) {
+                        int total = r[1] + r[2] + r[3];
                         ps.setInt(1, newId);
                         ps.setInt(2, r[0]);
-                        ps.setInt(3, r[1]);
+                        ps.setInt(3, total);
+                        ps.setInt(4, r[1]);
+                        ps.setInt(5, r[2]);
+                        ps.setInt(6, r[3]);
                         ps.addBatch();
                     }
                     ps.executeBatch();
@@ -311,18 +337,26 @@ public class StocktakeDAO {
      */
     public boolean saveQuantityCounts(int stocktakeId, List<StocktakeDetail> details) {
         String sql = "UPDATE Stocktake_Details SET actual_qty = ?, damaged_qty = ?, "
+                   + "actual_new_qty = ?, actual_used_qty = ?, actual_damaged_qty = ?, "
                    + "variance_reason = ?, note = ? "
                    + "WHERE stocktake_id = ? AND product_id = ?";
         try (Connection conn = DBUtils.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 for (StocktakeDetail d : details) {
-                    ps.setInt(1, d.getActualQty());
-                    ps.setInt(2, d.getDamagedQty());
-                    ps.setString(3, d.getVarianceReason() == null ? "NONE" : d.getVarianceReason());
-                    if (d.getNote() != null) ps.setString(4, d.getNote()); else ps.setNull(4, Types.VARCHAR);
-                    ps.setInt(5, stocktakeId);
-                    ps.setInt(6, d.getProductId());
+                    int newQty = Math.max(0, d.getActualNewQty());
+                    int usedQty = Math.max(0, d.getActualUsedQty());
+                    int damagedQty = Math.max(0, d.getActualDamagedQty());
+                    int actualTotal = newQty + usedQty + damagedQty;
+                    ps.setInt(1, actualTotal);
+                    ps.setInt(2, damagedQty);
+                    ps.setInt(3, newQty);
+                    ps.setInt(4, usedQty);
+                    ps.setInt(5, damagedQty);
+                    ps.setString(6, d.getVarianceReason() == null ? "NONE" : d.getVarianceReason());
+                    if (d.getNote() != null) ps.setString(7, d.getNote()); else ps.setNull(7, Types.VARCHAR);
+                    ps.setInt(8, stocktakeId);
+                    ps.setInt(9, d.getProductId());
                     ps.addBatch();
                 }
                 ps.executeBatch();
@@ -416,7 +450,9 @@ public class StocktakeDAO {
                 BigDecimal totalValue = BigDecimal.ZERO;
 
                 for (StocktakeDetail d : s.getDetails()) {
-                    int diff = Math.abs(d.getActualQty() - d.getTheoreticalQty()) + d.getDamagedQty();
+                    int diff = Math.abs(d.getActualNewQty() - d.getTheoreticalNewQty())
+                             + Math.abs(d.getActualUsedQty() - d.getTheoreticalUsedQty())
+                             + Math.abs(d.getActualDamagedQty() - d.getTheoreticalDamagedQty());
                     totalTheo  = totalTheo.add(BigDecimal.valueOf(d.getTheoreticalQty()));
                     totalAbsDiff = totalAbsDiff.add(BigDecimal.valueOf(diff));
                     totalValue = totalValue.add(BigDecimal.valueOf(diff).multiply(BigDecimal.valueOf(d.getUnitCost())));
@@ -616,9 +652,8 @@ public class StocktakeDAO {
         if (details == null || details.isEmpty()) return;
 
         // 1. Cập nhật Inventories + Ledger cho mỗi SKU
-        // actual_qty = TỔNG đếm được (bao gồm hỏng); damaged_qty = số hỏng trong đó
-        //   → quantity (bán được)   = actual - damaged
-        //   → quarantine_quantity  += damaged  (cộng thêm vào số đã cách ly)
+        // Gán lại số cuối cùng theo từng nhóm; không cộng dồn hàng hỏng cũ.
+        // quantity = hàng mới + hàng cũ, quarantine_quantity = hàng hỏng.
         String selInv = "SELECT quantity, quarantine_quantity FROM Inventories WHERE warehouse_id = ? AND product_id = ? FOR UPDATE";
         String upsertInv = "INSERT INTO Inventories (warehouse_id, product_id, quantity, quarantine_quantity) "
                          + "VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), quarantine_quantity = VALUES(quarantine_quantity)";
@@ -626,7 +661,7 @@ public class StocktakeDAO {
         Map<Integer, Integer> physicalChanges = new HashMap<>();
 
         for (StocktakeDetail d : details) {
-            int newGoodQty = Math.max(0, d.getActualQty() - d.getDamagedQty());
+            int newGoodQty = Math.max(0, d.getActualNewQty()) + Math.max(0, d.getActualUsedQty());
 
             int oldGoodQty = 0;
             int oldQuarantineQty = 0;
@@ -642,7 +677,7 @@ public class StocktakeDAO {
             }
             oldConditionBalances.put(d.getProductId(),
                     getConditionBalances(d.getProductId(), s.getWarehouseId(), conn));
-            int newQuarantineQty = oldQuarantineQty + d.getDamagedQty();
+            int newQuarantineQty = Math.max(0, d.getActualDamagedQty());
 
             try (PreparedStatement ps = conn.prepareStatement(upsertInv)) {
                 ps.setInt(1, s.getWarehouseId());
@@ -671,8 +706,9 @@ public class StocktakeDAO {
                 }
                 String updItemLost     = "UPDATE Product_Items SET status = 'LOST' WHERE id = ?";
                 String updItemDamaged  = "UPDATE Product_Items SET status = 'QUARANTINE', item_condition = 'DAMAGED' WHERE id = ?";
+                String updItemFound    = "UPDATE Product_Items SET status = ?, item_condition = ? WHERE id = ?";
                 String insNewItem      = "INSERT INTO Product_Items (product_id, serial_number, status, item_condition, warehouse_id) "
-                                       + "VALUES (?,?,'IN_STOCK','NEW',?)";
+                                       + "VALUES (?,?,?,?,?)";
                 String insMovement     = "INSERT INTO Product_Item_Movements "
                                        + "(product_item_id, ticket_id, action, from_warehouse_id, to_warehouse_id, condition_at_time, created_by) "
                                        + "VALUES (?,NULL,'STOCKTAKE_ADJUST',?,?,?,?)";
@@ -682,6 +718,8 @@ public class StocktakeDAO {
                     String scan = it.getScannedStatus();
 
                     if (StocktakeItem.STATUS_MISSING.equals(scan) && pid != null) {
+                        // Không quét thấy serial trong lần kiểm kê thì xác định là mất,
+                        // kể cả serial đó trước đây đang ở khu cách ly hàng hỏng.
                         try (PreparedStatement ps = conn.prepareStatement(updItemLost)) {
                             ps.setInt(1, pid);
                             ps.executeUpdate();
@@ -690,7 +728,23 @@ public class StocktakeDAO {
                             ps.setInt(1, pid);
                             ps.setInt(2, s.getWarehouseId());
                             ps.setInt(3, s.getWarehouseId());
-                            ps.setString(4, "NEW");
+                            ps.setString(4, it.getNewCondition() == null ? "NEW" : it.getNewCondition());
+                            ps.setInt(5, actorId);
+                            ps.executeUpdate();
+                        }
+                    } else if (StocktakeItem.STATUS_FOUND.equals(scan) && pid != null) {
+                        String condition = "USED".equals(it.getNewCondition()) ? "USED" : "NEW";
+                        try (PreparedStatement ps = conn.prepareStatement(updItemFound)) {
+                            ps.setString(1, "IN_STOCK");
+                            ps.setString(2, condition);
+                            ps.setInt(3, pid);
+                            ps.executeUpdate();
+                        }
+                        try (PreparedStatement ps = conn.prepareStatement(insMovement)) {
+                            ps.setInt(1, pid);
+                            ps.setInt(2, s.getWarehouseId());
+                            ps.setInt(3, s.getWarehouseId());
+                            ps.setString(4, condition);
                             ps.setInt(5, actorId);
                             ps.executeUpdate();
                         }
@@ -710,9 +764,13 @@ public class StocktakeDAO {
                     } else if (StocktakeItem.STATUS_EXTRA.equals(scan)) {
                         int newItemId;
                         try (PreparedStatement ps = conn.prepareStatement(insNewItem, Statement.RETURN_GENERATED_KEYS)) {
+                            String condition = "DAMAGED".equals(it.getNewCondition()) ? "DAMAGED"
+                                    : ("USED".equals(it.getNewCondition()) ? "USED" : "NEW");
                             ps.setInt(1, it.getProductId());
                             ps.setString(2, it.getSerialNumber());
-                            ps.setInt(3, s.getWarehouseId());
+                            ps.setString(3, "DAMAGED".equals(condition) ? "QUARANTINE" : "IN_STOCK");
+                            ps.setString(4, condition);
+                            ps.setInt(5, s.getWarehouseId());
                             ps.executeUpdate();
                             try (ResultSet keys = ps.getGeneratedKeys()) {
                                 if (!keys.next()) throw new Exception("Không insert được Product_Items mới");
@@ -723,7 +781,7 @@ public class StocktakeDAO {
                             ps.setInt(1, newItemId);
                             ps.setNull(2, Types.INTEGER);   // from_warehouse_id NULL (EXTRA = không có nguồn)
                             ps.setInt(3, s.getWarehouseId());
-                            ps.setString(4, "NEW");
+                            ps.setString(4, it.getNewCondition() == null ? "NEW" : it.getNewCondition());
                             ps.setInt(5, actorId);
                             ps.executeUpdate();
                         }
@@ -868,7 +926,7 @@ public class StocktakeDAO {
                 boolean needsVerification = false;
                 try (PreparedStatement ps = conn.prepareStatement(
                         "SELECT COUNT(*) FROM Stocktake_Details "
-                      + "WHERE stocktake_id = ? AND (actual_qty <> theoretical_qty OR damaged_qty > 0)")) {
+                      + "WHERE stocktake_id = ? AND (actual_new_qty <> theoretical_new_qty OR actual_used_qty <> theoretical_used_qty OR actual_damaged_qty <> theoretical_damaged_qty)")) {
                     ps.setInt(1, stocktakeId);
                     try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next()) needsVerification = rs.getInt(1) > 0;
@@ -970,17 +1028,18 @@ public class StocktakeDAO {
     private void autoFillMissingForVerification(int stocktakeId, int warehouseId, Connection conn) throws Exception {
         String sql =
             "INSERT INTO Stocktake_Items "
-          + "(stocktake_id, product_item_id, product_id, serial_number, scanned_status, note, phase) "
-          + "SELECT ?, pi.id, pi.product_id, pi.serial_number, 'MISSING', 'Auto: không tìm thấy khi xác minh', 'VERIFY' "
+          + "(stocktake_id, product_item_id, product_id, serial_number, scanned_status, new_condition, note, phase) "
+          + "SELECT ?, pi.id, pi.product_id, pi.serial_number, 'MISSING', pi.item_condition, "
+          + "'Auto: không tìm thấy khi xác minh', 'VERIFY' "
           + "FROM Product_Items pi "
           + "JOIN Stocktake_Details sd ON sd.product_id = pi.product_id AND sd.stocktake_id = ? "
           + "WHERE pi.warehouse_id = ? "
-          + "  AND pi.status = 'IN_STOCK' "
-          + "  AND sd.actual_qty <> sd.theoretical_qty "
-          + "  AND pi.id NOT IN ("
-          + "        SELECT product_item_id FROM Stocktake_Items "
-          + "        WHERE stocktake_id = ? AND phase = 'VERIFY' AND product_item_id IS NOT NULL"
-          + "  )";
+          + "  AND pi.status IN ('IN_STOCK','QUARANTINE') "
+          + "  AND (sd.actual_new_qty <> sd.theoretical_new_qty "
+          + "       OR sd.actual_used_qty <> sd.theoretical_used_qty "
+          + "       OR sd.actual_damaged_qty <> sd.theoretical_damaged_qty) "
+          + "  AND pi.id NOT IN (SELECT product_item_id FROM Stocktake_Items "
+          + "      WHERE stocktake_id = ? AND phase = 'VERIFY' AND product_item_id IS NOT NULL)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, stocktakeId);
             ps.setInt(2, stocktakeId);
@@ -990,99 +1049,56 @@ public class StocktakeDAO {
         }
     }
 
-    /**
-     * Rollup: cập nhật actual_qty / damaged_qty CHỈ cho các SKU đã xác minh (có item phase=VERIFY).
-     * Các SKU không lệch (không xác minh) giữ nguyên số đếm tay.
-     */
+    /** Rollup kết quả serial xác minh theo đủ ba tình trạng. */
     private void rollupVerificationCounts(int stocktakeId, Connection conn) throws Exception {
-        String varianceSql =
+        String sql =
             "UPDATE Stocktake_Details d "
-          + "SET d.actual_qty = ("
-          + "    SELECT COUNT(*) FROM Stocktake_Items i "
-          + "    WHERE i.stocktake_id = d.stocktake_id AND i.product_id = d.product_id "
-          + "      AND i.phase = 'VERIFY' AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA')"
-          + "), "
-          + "d.damaged_qty = ("
-          + "    SELECT COUNT(*) FROM Stocktake_Items i "
-          + "    WHERE i.stocktake_id = d.stocktake_id AND i.product_id = d.product_id "
-          + "      AND i.phase = 'VERIFY' AND i.scanned_status = 'DAMAGED'"
-          + ") "
-          + "WHERE d.stocktake_id = ? "
-          + "  AND d.actual_qty <> d.theoretical_qty "
-          + "  AND EXISTS ("
-          + "    SELECT 1 FROM Stocktake_Items i2 "
-          + "    WHERE i2.stocktake_id = d.stocktake_id AND i2.product_id = d.product_id AND i2.phase = 'VERIFY'"
-          + "  )";
-        try (PreparedStatement ps = conn.prepareStatement(varianceSql)) {
-            ps.setInt(1, stocktakeId);
-            ps.executeUpdate();
-        }
-
-        String damagedOnlySql =
-            "UPDATE Stocktake_Details d "
-          + "SET d.damaged_qty = ("
-          + "    SELECT COUNT(*) FROM Stocktake_Items i "
-          + "    WHERE i.stocktake_id = d.stocktake_id AND i.product_id = d.product_id "
-          + "      AND i.phase = 'VERIFY' AND i.scanned_status = 'DAMAGED'"
-          + ") "
-          + "WHERE d.stocktake_id = ? "
-          + "  AND d.actual_qty = d.theoretical_qty "
-          + "  AND d.damaged_qty > 0 "
-          + "  AND EXISTS ("
-          + "    SELECT 1 FROM Stocktake_Items i2 "
-          + "    WHERE i2.stocktake_id = d.stocktake_id AND i2.product_id = d.product_id AND i2.phase = 'VERIFY'"
-          + "  )";
-        try (PreparedStatement ps = conn.prepareStatement(damagedOnlySql)) {
+          + "SET d.actual_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.phase='VERIFY' AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA')), "
+          + "d.actual_new_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.phase='VERIFY' AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA') "
+          + " AND COALESCE(i.new_condition,'NEW')='NEW'), "
+          + "d.actual_used_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.phase='VERIFY' AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA') "
+          + " AND i.new_condition='USED'), "
+          + "d.actual_damaged_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.phase='VERIFY' AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA') "
+          + " AND (i.scanned_status='DAMAGED' OR i.new_condition='DAMAGED')), "
+          + "d.damaged_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.phase='VERIFY' AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA') "
+          + " AND (i.scanned_status='DAMAGED' OR i.new_condition='DAMAGED')) "
+          + "WHERE d.stocktake_id=? AND EXISTS (SELECT 1 FROM Stocktake_Items i2 WHERE i2.stocktake_id=d.stocktake_id "
+          + " AND i2.product_id=d.product_id AND i2.phase='VERIFY')";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, stocktakeId);
             ps.executeUpdate();
         }
     }
 
-    /**
-     * Lấy danh sách product_id có chênh lệch trong phiếu (dùng để hiện UI xác minh).
-     */
     public List<Integer> getVarianceProductIds(int stocktakeId) {
-        List<Integer> ids = new ArrayList<>();
-        try (Connection conn = DBUtils.getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                "SELECT product_id FROM Stocktake_Details "
-              + "WHERE stocktake_id = ? AND actual_qty <> theoretical_qty")) {
-            ps.setInt(1, stocktakeId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) ids.add(rs.getInt(1));
-            }
-        } catch (Exception e) { e.printStackTrace(); }
-        return ids;
+        return getConditionVarianceProductIds(stocktakeId);
     }
 
     public List<Integer> getVerificationProductIds(int stocktakeId) {
+        return getConditionVarianceProductIds(stocktakeId);
+    }
+
+    private List<Integer> getConditionVarianceProductIds(int stocktakeId) {
         List<Integer> ids = new ArrayList<>();
-        try (Connection conn = DBUtils.getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                "SELECT product_id FROM Stocktake_Details "
-              + "WHERE stocktake_id = ? AND (actual_qty <> theoretical_qty OR damaged_qty > 0)")) {
+        String sql = "SELECT product_id FROM Stocktake_Details WHERE stocktake_id=? "
+                + "AND (actual_new_qty <> theoretical_new_qty OR actual_used_qty <> theoretical_used_qty "
+                + "OR actual_damaged_qty <> theoretical_damaged_qty)";
+        try (Connection conn = DBUtils.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, stocktakeId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) ids.add(rs.getInt(1));
-            }
+            try (ResultSet rs = ps.executeQuery()) { while (rs.next()) ids.add(rs.getInt(1)); }
         } catch (Exception e) { e.printStackTrace(); }
         return ids;
     }
 
+    /** Không có chế độ chỉ quét hàng hỏng: SKU lệch luôn được xác minh đầy đủ. */
     public List<Integer> getDamagedOnlyProductIds(int stocktakeId) {
-        List<Integer> ids = new ArrayList<>();
-        try (Connection conn = DBUtils.getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                "SELECT product_id FROM Stocktake_Details "
-              + "WHERE stocktake_id = ? AND actual_qty = theoretical_qty AND damaged_qty > 0")) {
-            ps.setInt(1, stocktakeId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) ids.add(rs.getInt(1));
-            }
-        } catch (Exception e) { e.printStackTrace(); }
-        return ids;
+        return new ArrayList<>();
     }
-
     // ============================================================
     // Warehouse freeze check
     // ============================================================
@@ -1145,16 +1161,14 @@ public class StocktakeDAO {
     private void autoFillMissingSerials(int stocktakeId, int warehouseId, Connection conn) throws Exception {
         String sql =
             "INSERT INTO Stocktake_Items "
-          + "(stocktake_id, product_item_id, product_id, serial_number, scanned_status, note) "
-          + "SELECT ?, pi.id, pi.product_id, pi.serial_number, 'MISSING', 'Auto: chưa scan khi kiểm kê' "
+          + "(stocktake_id, product_item_id, product_id, serial_number, scanned_status, new_condition, note) "
+          + "SELECT ?, pi.id, pi.product_id, pi.serial_number, 'MISSING', pi.item_condition, "
+          + "'Auto: không tìm thấy khi kiểm kê' "
           + "FROM Product_Items pi "
           + "JOIN Stocktake_Details sd ON sd.product_id = pi.product_id AND sd.stocktake_id = ? "
-          + "WHERE pi.warehouse_id = ? "
-          + "  AND pi.status = 'IN_STOCK' "
-          + "  AND pi.id NOT IN ("
-          + "        SELECT product_item_id FROM Stocktake_Items "
-          + "        WHERE stocktake_id = ? AND product_item_id IS NOT NULL"
-          + "  )";
+          + "WHERE pi.warehouse_id = ? AND pi.status IN ('IN_STOCK','QUARANTINE') "
+          + "  AND pi.id NOT IN (SELECT product_item_id FROM Stocktake_Items "
+          + "      WHERE stocktake_id = ? AND product_item_id IS NOT NULL)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, stocktakeId);
             ps.setInt(2, stocktakeId);
@@ -1163,28 +1177,28 @@ public class StocktakeDAO {
             ps.executeUpdate();
         }
     }
-
     /** Tính lại actual_qty/damaged_qty cho mọi dòng detail dựa vào Stocktake_Items. */
     private void rollupSerialCounts(int stocktakeId, Connection conn) throws Exception {
         String sql =
             "UPDATE Stocktake_Details d "
-          + "SET d.actual_qty = ("
-          + "    SELECT COUNT(*) FROM Stocktake_Items i "
-          + "    WHERE i.stocktake_id = d.stocktake_id AND i.product_id = d.product_id "
-          + "      AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA')"
-          + "), "
-          + "d.damaged_qty = ("
-          + "    SELECT COUNT(*) FROM Stocktake_Items i "
-          + "    WHERE i.stocktake_id = d.stocktake_id AND i.product_id = d.product_id "
-          + "      AND i.scanned_status = 'DAMAGED'"
-          + ") "
-          + "WHERE d.stocktake_id = ?";
+          + "SET d.actual_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA')), "
+          + "d.actual_new_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA') "
+          + " AND COALESCE(i.new_condition,'NEW')='NEW'), "
+          + "d.actual_used_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA') AND i.new_condition='USED'), "
+          + "d.actual_damaged_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA') "
+          + " AND (i.scanned_status='DAMAGED' OR i.new_condition='DAMAGED')), "
+          + "d.damaged_qty = (SELECT COUNT(*) FROM Stocktake_Items i WHERE i.stocktake_id=d.stocktake_id "
+          + " AND i.product_id=d.product_id AND i.scanned_status IN ('FOUND','DAMAGED','EXTRA') "
+          + " AND (i.scanned_status='DAMAGED' OR i.new_condition='DAMAGED')) WHERE d.stocktake_id=?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, stocktakeId);
             ps.executeUpdate();
         }
     }
-
     // ============================================================
     // Generate code
     // ============================================================

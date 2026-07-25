@@ -89,8 +89,10 @@
                             <tbody>
                             <% if (details != null) for (StocktakeDetail d : details) {
                                 int diff = d.getVariance();
-                                boolean damagedOnly = diff == 0 && d.getDamagedQty() > 0;
-                                if (diff == 0 && d.getDamagedQty() <= 0) continue;
+                                boolean conditionVariance = d.getActualNewQty() != d.getTheoreticalNewQty()
+                                        || d.getActualUsedQty() != d.getTheoreticalUsedQty()
+                                        || d.getActualDamagedQty() != d.getTheoreticalDamagedQty();
+                                if (!conditionVariance) continue;
                                 String diffCls = diff < 0 ? "text-danger" : "text-warning";
                             %>
                                 <tr>
@@ -101,11 +103,7 @@
                                     <td class="text-end text-danger"><%= d.getDamagedQty() %></td>
                                     <td class="text-end <%= diffCls %>"><strong><%= diff > 0 ? "+" + diff : diff %></strong></td>
                                     <td>
-                                        <% if (damagedOnly) { %>
-                                            <span class="status-chip chip-danger">Hỏng</span>
-                                        <% } else { %>
-                                            <span class="status-chip chip-warning">Toàn bộ</span>
-                                        <% } %>
+                                        <span class="status-chip chip-warning">Toàn bộ</span>
                                     </td>
                                 </tr>
                             <% } %>
@@ -133,7 +131,8 @@
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">Tình trạng vật lý</label>
                                     <select id="scanCondition" class="form-select">
-                                        <option value="NEW">Tốt</option>
+                                        <option value="NEW">Hàng mới</option>
+                                        <option value="USED">Hàng cũ</option>
                                         <option value="DAMAGED">Hàng hỏng</option>
                                     </select>
                                 </div>
@@ -216,7 +215,7 @@
 
                 
                 <% if (details != null) for (StocktakeDetail d : details) {
-                    if (d.getVariance() == 0 && d.getDamagedQty() <= 0) continue;
+                    if (d.getActualNewQty() == d.getTheoreticalNewQty() && d.getActualUsedQty() == d.getTheoreticalUsedQty() && d.getActualDamagedQty() == d.getTheoreticalDamagedQty()) continue;
                 %>
                     <input type="hidden" class="phantom-product"
                            data-pid="<%= d.getProductId() %>"

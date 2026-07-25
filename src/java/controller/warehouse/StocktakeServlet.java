@@ -221,8 +221,14 @@ public class StocktakeServlet extends HttpServlet {
                         int pid = Integer.parseInt(pidStr);
                         StocktakeDetail d = new StocktakeDetail();
                         d.setProductId(pid);
-                        d.setActualQty(parseIntSafe(req.getParameter("actual_" + pid), 0));
-                        d.setDamagedQty(parseIntSafe(req.getParameter("damaged_" + pid), 0));
+                        int actualNew = parseIntSafe(req.getParameter("actual_new_" + pid), 0);
+                        int actualUsed = parseIntSafe(req.getParameter("actual_used_" + pid), 0);
+                        int actualDamaged = parseIntSafe(req.getParameter("actual_damaged_" + pid), 0);
+                        d.setActualNewQty(Math.max(0, actualNew));
+                        d.setActualUsedQty(Math.max(0, actualUsed));
+                        d.setActualDamagedQty(Math.max(0, actualDamaged));
+                        d.setActualQty(d.getActualNewQty() + d.getActualUsedQty() + d.getActualDamagedQty());
+                        d.setDamagedQty(d.getActualDamagedQty());
                         d.setVarianceReason(req.getParameter("reason_" + pid));
                         d.setNote(req.getParameter("note_" + pid));
                         details.add(d);
@@ -294,7 +300,7 @@ public class StocktakeServlet extends HttpServlet {
             }
 
             List<StocktakeItem> items = new ArrayList<>();
-            Set<Integer> damagedOnlyProductIds = new HashSet<>(service.getDamagedOnlyProductIds(id));
+
             String[] serials = req.getParameterValues("serial_number");
             String[] productIds = req.getParameterValues("item_product_id");
             String[] statuses = req.getParameterValues("scanned_status");
@@ -315,12 +321,6 @@ public class StocktakeServlet extends HttpServlet {
                     it.setNewCondition(conditions != null && i < conditions.length ? conditions[i] : null);
                     it.setNote(notes != null && i < notes.length ? notes[i] : null);
                     it.setPhase(StocktakeItem.PHASE_VERIFY);
-                    if (damagedOnlyProductIds.contains(it.getProductId())
-                            && !StocktakeItem.STATUS_DAMAGED.equals(it.getScannedStatus())) {
-                        resp.sendRedirect(req.getContextPath() + "/warehouse/stocktake?action=verify&id=" + id
-                                + "&error=DamagedOnlyRequiresDamagedSerials");
-                        return;
-                    }
                     items.add(it);
                 }
             }
@@ -444,10 +444,11 @@ public class StocktakeServlet extends HttpServlet {
         }
         try (java.sql.Connection conn = utils.DBUtils.getConnection();
              java.sql.PreparedStatement ps = conn.prepareStatement(
-                "SELECT i.id, i.product_id, i.status, i.item_condition, i.warehouse_id, p.product_name, p.sku "
+                "SELECT i.id, i.serial_number, i.manufacturer_serial, i.product_id, i.status, i.item_condition, i.warehouse_id, p.product_name, p.sku "
               + "FROM Product_Items i JOIN Products p ON p.id = i.product_id "
-              + "WHERE i.serial_number = ?")) {
+              + "WHERE LOWER(i.serial_number) = LOWER(?) OR LOWER(i.manufacturer_serial) = LOWER(?)")) {
             ps.setString(1, serial.trim());
+            ps.setString(2, serial.trim());
             try (java.sql.ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     int wh = rs.getInt("warehouse_id");
@@ -457,6 +458,8 @@ public class StocktakeServlet extends HttpServlet {
                     }
                     out.print("{\"success\":true,"
                             + "\"productItemId\":" + rs.getInt("id") + ","
+                            + "\"serialNumber\":\"" + escapeJson(rs.getString("serial_number")) + "\","
+                            + "\"manufacturerSerial\":\"" + escapeJson(rs.getString("manufacturer_serial")) + "\","
                             + "\"productId\":" + rs.getInt("product_id") + ","
                             + "\"productName\":\"" + escapeJson(rs.getString("product_name")) + "\","
                             + "\"sku\":\"" + escapeJson(rs.getString("sku")) + "\","

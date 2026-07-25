@@ -198,7 +198,7 @@
                                     <th>SKU</th>
                                     <th class="text-end">Lý thuyết</th>
                                     <th class="text-end">Thực tế</th>
-                                    <th class="text-end">Lỗi</th>
+                                    <th class="text-end stocktake-condition-header"><span>Hỏng</span><small>(lý thuyết / thực tế)</small></th>
                                     <th class="text-end">Chênh lệch</th>
                                     <th>Lý do</th>
                                     <th>Ghi chú</th>
@@ -212,9 +212,15 @@
                                 <tr>
                                     <td><%= d.getProductName() %></td>
                                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= d.getSku() %></span></td>
-                                    <td class="text-end"><%= d.getTheoreticalQty() %></td>
-                                    <td class="text-end"><strong><%= hasBeenCounted ? String.valueOf(d.getActualQty()) : "—" %></strong></td>
-                                    <td class="text-end"><%= hasBeenCounted ? String.valueOf(d.getDamagedQty()) : "—" %></td>
+                                    <td class="text-end">
+                                        <strong><%= d.getTheoreticalQty() %></strong>
+                                        <div class="small text-muted">Mới <%= d.getTheoreticalNewQty() %> · Cũ <%= d.getTheoreticalUsedQty() %> · Hỏng <%= d.getTheoreticalDamagedQty() %></div>
+                                    </td>
+                                    <td class="text-end"><% if (hasBeenCounted) { %>
+                                        <strong><%= d.getActualQty() %></strong>
+                                        <div class="small text-muted">Mới <%= d.getActualNewQty() %> · Cũ <%= d.getActualUsedQty() %> · Hỏng <%= d.getActualDamagedQty() %></div>
+                                    <% } else { %>—<% } %></td>
+                                    <td class="text-end"><%= hasBeenCounted ? (d.getTheoreticalDamagedQty() + " / " + d.getActualDamagedQty()) : "—" %></td>
                                     <td class="text-end <%= diffCls %>"><strong><%= hasBeenCounted ? (diff > 0 ? "+" + diff : String.valueOf(diff)) : "—" %></strong></td>
                                     <td><%= hasBeenCounted ? d.getVarianceReason() : "—" %></td>
                                     <td><%= d.getNote() == null ? "" : d.getNote() %></td>
@@ -233,8 +239,10 @@
                     java.util.Set<Integer> variancePids = new java.util.HashSet<>();
                     if (details != null) {
                         for (StocktakeDetail d : details) {
-                            if (d.getVariance() != 0) variancePids.add(d.getProductId());
-                            else if (d.getDamagedQty() > 0) damagedOnlyPids.add(d.getProductId());
+                            boolean conditionVariance = d.getActualNewQty() != d.getTheoreticalNewQty()
+                                    || d.getActualUsedQty() != d.getTheoreticalUsedQty()
+                                    || d.getActualDamagedQty() != d.getTheoreticalDamagedQty();
+                            if (conditionVariance) variancePids.add(d.getProductId());
                         }
                     }
                     for (StocktakeItem it : items) {

@@ -26,6 +26,14 @@ public class StocktakeDetail {
     private int theoreticalQty;
     private int actualQty;
     private int damagedQty;
+    // Snapshot theo tình trạng. Tổng vẫn được giữ ở các cột cũ để tương thích
+    // với phiếu lịch sử và các màn hình/báo cáo đang dùng tổng số lượng.
+    private int theoreticalNewQty;
+    private int theoreticalUsedQty;
+    private int theoreticalDamagedQty;
+    private int actualNewQty;
+    private int actualUsedQty;
+    private int actualDamagedQty;
     private String varianceReason;
     private String note;
 
@@ -53,6 +61,24 @@ public class StocktakeDetail {
 
     public int getDamagedQty() { return damagedQty; }
     public void setDamagedQty(int v) { this.damagedQty = v; }
+
+    public int getTheoreticalNewQty() { return theoreticalNewQty; }
+    public void setTheoreticalNewQty(int v) { this.theoreticalNewQty = v; }
+
+    public int getTheoreticalUsedQty() { return theoreticalUsedQty; }
+    public void setTheoreticalUsedQty(int v) { this.theoreticalUsedQty = v; }
+
+    public int getTheoreticalDamagedQty() { return theoreticalDamagedQty; }
+    public void setTheoreticalDamagedQty(int v) { this.theoreticalDamagedQty = v; }
+
+    public int getActualNewQty() { return actualNewQty; }
+    public void setActualNewQty(int v) { this.actualNewQty = v; }
+
+    public int getActualUsedQty() { return actualUsedQty; }
+    public void setActualUsedQty(int v) { this.actualUsedQty = v; }
+
+    public int getActualDamagedQty() { return actualDamagedQty; }
+    public void setActualDamagedQty(int v) { this.actualDamagedQty = v; }
 
     public String getVarianceReason() { return varianceReason; }
     public void setVarianceReason(String v) { this.varianceReason = v; }

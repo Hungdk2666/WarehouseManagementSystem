@@ -80,23 +80,27 @@
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                            <table class="table table-sm table-hover mb-0 align-middle editable-table" style="min-width: 1000px;">
+                            <table class="table table-sm table-hover mb-0 align-middle editable-table" style="min-width: 1250px;">
                                 <colgroup>
-                                    <col style="width:22%">
-                                    <col style="width:12%">
-                                    <col style="width:13%">
-                                    <col style="width:12%">
-                                    <col style="width:12%">
-                                    <col style="width:14%">
-                                    <col style="width:15%">
+                                    <col style="width:18%">
+                                    <col style="width:10%">
+                                    <col style="width:16%">
+                                    <col style="width:8%">
+                                    <col style="width:8%">
+                                    <col style="width:8%">
+                                    <col style="width:10%">
+                                    <col style="width:11%">
+                                    <col style="width:11%">
                                 </colgroup>
                                 <thead class="table-light">
                                     <tr>
                                         <th>Sản phẩm</th>
                                         <th>SKU</th>
-                                        <th class="text-end">Số sổ sách</th>
-                                        <th class="text-end" width="120">Số đếm được</th>
-                                        <th class="text-end" width="120">Trong đó lỗi</th>
+                                        <th class="text-end">Lý thuyết</th>
+                                        <th class="text-end" width="105">Thực tế mới</th>
+                                        <th class="text-end" width="105">Thực tế cũ</th>
+                                        <th class="text-end" width="105">Thực tế hỏng</th>
+                                        <th class="text-end" width="105">Tổng thực tế</th>
                                         <th width="140">Lý do</th>
                                         <th>Ghi chú</th>
                                     </tr>
@@ -109,12 +113,17 @@
                                             <input type="hidden" name="product_id" value="<%= d.getProductId() %>">
                                         </td>
                                         <td><span class="badge bg-secondary bg-opacity-10 text-secondary"><%= d.getSku() %></span></td>
-                                        <td class="text-end"><strong><%= d.getTheoreticalQty() %></strong> <%= d.getUnit() %></td>
-                                        <td><input type="number" min="0" class="form-control form-control-sm text-end actual"
-                                                   name="actual_<%= d.getProductId() %>" value="<%= d.getActualQty() %>"
-                                                   data-theo="<%= d.getTheoreticalQty() %>"></td>
-                                        <td><input type="number" min="0" class="form-control form-control-sm text-end"
-                                                   name="damaged_<%= d.getProductId() %>" value="<%= d.getDamagedQty() %>"></td>
+                                        <td class="text-end">
+                                            <strong><%= d.getTheoreticalQty() %></strong> <%= d.getUnit() %>
+                                            <div class="small text-muted mt-1">Mới <%= d.getTheoreticalNewQty() %> · Cũ <%= d.getTheoreticalUsedQty() %> · Hỏng <%= d.getTheoreticalDamagedQty() %></div>
+                                        </td>
+                                        <td><input type="number" min="0" class="form-control form-control-sm text-end condition-actual"
+                                                   name="actual_new_<%= d.getProductId() %>" value="<%= d.getActualNewQty() %>" data-pid="<%= d.getProductId() %>"></td>
+                                        <td><input type="number" min="0" class="form-control form-control-sm text-end condition-actual"
+                                                   name="actual_used_<%= d.getProductId() %>" value="<%= d.getActualUsedQty() %>" data-pid="<%= d.getProductId() %>"></td>
+                                        <td><input type="number" min="0" class="form-control form-control-sm text-end condition-actual"
+                                                   name="actual_damaged_<%= d.getProductId() %>" value="<%= d.getActualDamagedQty() %>" data-pid="<%= d.getProductId() %>"></td>
+                                        <td class="text-end"><strong class="actual-total" data-pid="<%= d.getProductId() %>"><%= d.getActualQty() %></strong> <%= d.getUnit() %></td>
                                         <td>
                                             <select class="form-select form-select-sm" name="reason_<%= d.getProductId() %>">
                                                 <% String[] reasons = {"NONE","LOST","FOUND","DAMAGED","EXPIRED","MISCOUNT","OTHER"};
@@ -143,17 +152,19 @@
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">Quét serial</label>
                                     <input type="text" id="serialInput" class="form-control" placeholder="Bấm vào ô này rồi quét hoặc nhập serial...">
+                                    <div class="form-text">WMS serial / manufacturer serial</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">Tình trạng vật lý</label>
                                     <select id="scanCondition" class="form-select">
-                                        <option value="NEW">Tốt</option>
+                                        <option value="NEW">Hàng mới</option>
+                                        <option value="USED">Hàng cũ</option>
                                         <option value="DAMAGED">Hàng hỏng</option>
                                     </select>
                                 </div>
                             </div>
                             <p class="small text-muted mt-2 mb-0">
-                                Serial chưa có trong hệ thống sẽ được ghi nhận là "phát hiện thêm". Khi gửi phiếu, các serial có trong sổ sách nhưng chưa quét sẽ tự động được đánh dấu "thiếu".
+                                Serial trong sổ nhưng không quét thấy sẽ được đánh dấu là "Thiếu" và chuyển thành "Mất" khi duyệt, kể cả hàng hỏng. Hàng hỏng còn trong kho bắt buộc phải quét serial.
                             </p>
                         </div>
                     </div>
@@ -241,6 +252,20 @@
         const CTX = "<%= request.getContextPath() %>";
         const WAREHOUSE_ID = <%= s.getWarehouseId() %>;
 
+        function refreshConditionTotals() {
+            document.querySelectorAll(".actual-total").forEach(function(total) {
+                var pid = total.dataset.pid;
+                var sum = 0;
+                document.querySelectorAll('.condition-actual[data-pid="' + pid + '"]').forEach(function(input) {
+                    sum += Math.max(0, parseInt(input.value || "0", 10) || 0);
+                });
+                total.textContent = sum;
+            });
+        }
+        document.querySelectorAll(".condition-actual").forEach(function(input) {
+            input.addEventListener("input", refreshConditionTotals);
+        });
+        refreshConditionTotals();
         document.getElementById("btnSubmit").addEventListener("click", function() {
         <% if (!serialMode) { %>
 
@@ -323,7 +348,10 @@
                     if (res.success) {
                         const cond = scanCondition.value;
                         const status = cond === "DAMAGED" ? "DAMAGED" : "FOUND";
-                        addRow(serial, res.productId, res.productName, res.sku, status, cond, "", res.productItemId);
+                        const canonicalSerial = res.serialNumber || serial;
+                        const lookupNote = res.manufacturerSerial && canonicalSerial.toLowerCase() !== serial.toLowerCase()
+                                ? "Manufacturer serial: " + res.manufacturerSerial : "";
+                        addRow(canonicalSerial, res.productId, res.productName, res.sku, status, cond, lookupNote, res.productItemId);
                     } else {
 
                         const pid = prompt("Serial " + serial + " chưa có trong hệ thống.\nNhập ID sản phẩm tương ứng:");
