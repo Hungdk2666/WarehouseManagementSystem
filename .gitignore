@@ -42,3 +42,11 @@ nb-configuration.xml
 hs_err_pid*
 replay_pid*
 /build/
+
+# Local database credentials
+/src/java/db.properties
+
+# Local editor metadata
+.idea/
+.DS_Store
+Thumbs.db

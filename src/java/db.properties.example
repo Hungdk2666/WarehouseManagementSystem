@@ -1,0 +1,4 @@
+# Copy this file to db.properties and update it for your local machine.
+db.url=jdbc:mysql://localhost:3306/wms_db?useUnicode=true&characterEncoding=UTF-8
+db.user=root
+db.password=your_mysql_password
