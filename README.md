@@ -128,6 +128,7 @@ The seed database contains demo users. The default password is:
 
 ## Useful Documents
 
+- [RDS Google Doc](https://docs.google.com/document/d/1x6crQ5Rcr8Nn2xQmBQ2TZg2tbv9-6mSD/edit?usp=sharing&ouid=100153851788808335048&rtpof=true&sd=true)
 - [Requirement & Design Specification](WMS_Requirement_Design_Specification.md)
 - [Database Setup](DATABASE_SETUP.md)
 - [Demo Preparation Guide](Demo_Preparation_Guide.md)
